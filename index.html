@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Page Title</title>
+<meta name="viewport" content="initial-scale=1.0, user-scalable=yes"/>
+<link rel="stylesheet" href="resources/web/style.css">
+<link rel="stylesheet" href="resources/web/leaflet-1.7.1.css"/>
+  <!-- Make sure you put this AFTER Leaflet's CSS -->
+<script src="resources/web/leaflet-1.7.1.js"></script>
+
+<script type="text/javascript" src="qrc:///qtwebchannel/qwebchannel.js"></script>
+</head>
+<body>
+
+ <div id="map"></div>
+
+ <script>
+  //var backend = null;
+  new QWebChannel(qt.webChannelTransport, function (channel) {
+      var backend = channel.objects.backend;
+      var modules_geojson;
+      var map = L.map('map');
+      L.tileLayer(
+          'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 22,
+          maxNativeZoom: 19,
+          zoom: 18,
+          zoomSnap: 0,
+          zoomDelta: 0.5,
+          wheelPxPerZoomLevel: 70,
+      }).addTo(map);
+
+      resetMap();
+
+      function resetMap() {
+        map.setView(new L.LatLng(48.1, 11.5), 8);
+      }
+
+      function loadModules(js_modules) {
+        var active_module;
+
+        // callback when module is clicked
+        function moduleClicked(e) {
+          var layer = e.target;
+          const track_id = layer.feature.properties.track_id;
+          backend.printObj(JSON.stringify("Clicked on module " + track_id));
+
+          // highlight active module
+          if (active_module) {
+            modules_geojson.resetStyle(active_module);
+          }
+          active_module = layer;
+          layer.setStyle({
+              color: 'red',
+              fillColor: 'red'
+          });
+
+          // load patches, annotations and source frame of module
+          //drawAnnotations(fault_annotations);
+          //loadAnnotatedFaults(track_id);
+
+          //loadPatches(track_id);
+
+          // update source frame and patches
+          backend.updateImages(JSON.stringify(track_id));
+        }
+
+        function onEachFeature(feature, layer) {
+          layer.on({
+              click: moduleClicked
+          });
+        }
+
+        // draw PV modules on map
+        modules_geojson = L.geoJSON(js_modules, {
+          onEachFeature: onEachFeature,
+          filter: function(feature, layer) {
+            return (feature.geometry.type == "Polygon");
+          },
+          style: {
+            "color": "#ff7800",
+            "fillColor": "#ff7800",
+            "weight": 1,
+            "opacity": 1,
+            "fill": true,
+            "fillOpacity": 0.5
+          }
+        }).addTo(map);
+
+        map.fitBounds(modules_geojson.getBounds());
+      }
+
+      // wait for modules to be updated
+      backend.openDatasetSignal.connect(function() {
+          // visualize modules
+          backend.loadModules(function(modules) {
+            js_modules = JSON.parse(modules);
+            loadModules(js_modules);
+          });
+      });
+
+      backend.closeDatasetSignal.connect(function() {
+          backend.printObj(JSON.stringify("Closing dataset, clearing data in JS"));
+          map.removeLayer(modules_geojson);
+          resetMap();
+      });
+  });
+ </script>
+
+</body>
+</html>

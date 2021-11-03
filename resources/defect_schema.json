@@ -1,0 +1,180 @@
+[
+	{
+		"name": "Zm",
+		"description": "Multiple cells overheated (< 10K)",
+		"examples": [
+			"cracks",
+			"short-circuited cells"
+		]
+	},
+	{
+		"name": "Ze",
+		"description": "Single cell overheated (< 10K)",
+		"examples": [
+			"cracks",
+			"short-circuited cells"
+		]
+	},
+	{
+		"name": "Mh",
+		"description": "Module homogenously overheated (> 3K)",
+		"examples": [
+			"module open circuit"
+		]
+	},
+	{
+		"name": "Pp",
+		"description": "Module homogenously overheated (< 3K)",
+		"examples": [
+			"module not in MPP"
+		]
+	},
+	{
+		"name": "Mp",
+		"description": "Module patchwork (> 10K)",
+		"examples": [
+			"module short circuited"
+		]
+	},
+	{
+		"name": "Sh",
+		"description": "Substring homogenously overheated",
+		"examples": [
+			"substring open circuit",
+			"current through bypass diode"
+		]
+	},
+	{
+		"name": "Sp",
+		"description": "Substring patchwork",
+		"examples": [
+			"substring short circuited",
+			"low resistance bypass diode"
+		]
+	},
+	{
+		"name": "Zhs",
+		"description": "Hotspot inside cell",
+		"examples": [
+			"soldering issue",
+			"cell-internal short circuit"
+		]
+	},
+	{
+		"name": "Ze+",
+		"description": "Single cell very overheated (> 10K)",
+		"examples": [
+			"bypass diode absent"
+		]
+	},
+	{
+		"name": "Zm+",
+		"description": "Multiple cells very overheated (> 10K)",
+		"examples": [
+			"defective bypass diode"
+		]
+	},
+	{
+		"name": "D",
+		"description": "Junction box (diode) overheated",
+		"examples": [
+			"defective bypass diode"
+		]
+	},
+	{
+		"name": "Qhs",
+		"description": "Hot spot at interconnect",
+		"examples": [
+			"soldering issue at interconnect"
+		]
+	},
+	{
+		"name": "Bhs",
+		"description": "Hot spot at bottom edge",
+		"examples": [
+			"moisture from ground"
+		]
+	},
+	{
+		"name": "Bh",
+		"description": "Bottom cells overheated",
+		"examples": [
+			"moisture from ground"
+		]
+	},
+	{
+		"name": "Zs",
+		"description": "Cell column(s) overheated (< 3K)",
+		"examples": [
+			"cell mismatch"
+		]
+	},
+	{
+		"name": "Mpid",
+		"description": "Module PID",
+		"examples": []
+	},
+	{
+		"name": "Ppid",
+		"description": "Module pseudo PID",
+		"examples": []
+	},
+	{
+		"name": "R",
+		"description": "Reflections",
+		"examples": [
+			"sun reflection",
+			"object reflection"
+		]
+	},
+	{
+		"name": "So",
+		"description": "Soiling",
+		"examples": []
+	},
+	{
+		"name": "V",
+		"description": "Shading",
+		"examples": []
+	},
+	{
+		"name": "G",
+		"description": "Glass breakage",
+		"examples": []
+	},
+	{
+		"name": "A",
+		"description": "Artefact",
+		"examples": [
+			"insects",
+			"pixel-errors",
+			"etc."
+		]
+	},
+	{
+		"name": "U",
+		"description": "Unknown anomaly",
+		"examples": []
+	},
+	{
+		"name": "Mpp",
+		"description": "String homogenously overheated (< 3K)",
+		"examples": [
+			"string not in MPP"
+		]
+	},
+	{
+		"name": "Msh",
+		"description": "String homogenously overheated (3K...5K)",
+		"examples": [
+			"string open circuit"
+		]
+	},
+	{
+		"name": "Msp",
+		"description": "String patchwork",
+		"examples": [
+			"string short-circuited"
+		]
+	}	
+]
