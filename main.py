@@ -10,7 +10,8 @@ import numpy as np
 from PySide6.QtWidgets import QApplication, QMainWindow, QToolBar, QWidget, \
     QDockWidget, QMessageBox, QCheckBox, QSpacerItem, QSizePolicy, QLabel, \
     QGridLayout, QFileDialog
-from PySide6.QtCore import Qt, Slot, Signal, QUrl, QDir, QObject, QSize
+from PySide6.QtCore import QThread, Qt, Slot, Signal, QUrl, QDir, QObject, \
+    QSize
 from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtWebChannel import QWebChannel
 
@@ -21,7 +22,7 @@ from ui_toolbar_colormap_selection import Ui_ColormapSelection
 from ui_analysis_module_temperatures import Ui_ModuleTemperatures
 
 from common import get_immediate_subdirectories, to_celsius, normalize
-from analysis.temperatures import compute_temperatures
+from analysis.temperatures import ModuleTemperaturesWorker
 
 
 class Backend(QObject):
@@ -128,23 +129,69 @@ class ColormapSelectionWidget(QWidget):
 
 class ModuleTemperatures(QWidget):
     def __init__(self, parent=None):
-        super().__init__()
+        super().__init__(parent)
+        self.setWindowFlags(Qt.Window)  # open in new window
         self.parent = parent
         self.ui = Ui_ModuleTemperatures()
         self.ui.setupUi(self)
+        self.reset()
         self.connectSignalsSlots()
 
     def connectSignalsSlots(self):
         self.ui.pushButtonCompute.clicked.connect(self.compute)
+        self.ui.pushButtonCancel.clicked.connect(self.cancel)
+
+    def reset(self):
+        self.thread = None
+        self.ui.pushButtonCancel.setEnabled(False)
+        self.ui.pushButtonCompute.setEnabled(True)
+        self.ui.truncateWidthSpinBox.setEnabled(True)
+        self.ui.neighborRadiusSpinBox.setEnabled(True)
+        self.ui.progressBar.setValue(0)
+        self.ui.progressLabel.setText("")
+
+    @Slot()
+    def reportProgress(self, progress, cancelled):
+        progress = round(progress*100)
+        self.ui.progressBar.setValue(progress)
+        if cancelled:
+            self.ui.progressLabel.setText("Cancelĺed")
+        else:
+            if progress < 100:
+                self.ui.progressLabel.setText("Computing...")
+            else:
+                self.ui.progressLabel.setText("Done")
+                #self.ui.pushButtonCancel.setEnabled(False)
+                #self.ui.pushButtonCompute.setEnabled(True)
+                #self.ui.pushButtonCompute.setText("Ok")
 
     @Slot()
     def compute(self):
         if self.parent.dataset_dir is None:
             return
-        # better: run in background thread and start/stop via the buttons
-        print("Compuitng temperatures")
-        compute_temperatures(self.parent.dataset_dir, self.ui.progressBar)
-        #self.ui.pushButtonCompute.setText("Done")
+        self.ui.pushButtonCancel.setEnabled(True)
+        self.ui.pushButtonCompute.setEnabled(False)
+        self.ui.truncateWidthSpinBox.setEnabled(False)
+        self.ui.neighborRadiusSpinBox.setEnabled(False)
+        border_margin = self.ui.truncateWidthSpinBox.value()
+        neighbour_radius = self.ui.neighborRadiusSpinBox.value()
+        
+        # start processing
+        self.thread = QThread()
+        self.worker = ModuleTemperaturesWorker(
+            self.parent.dataset_dir, border_margin, neighbour_radius)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.worker.progress.connect(self.reportProgress)
+        self.thread.start()
+
+    @Slot()
+    def cancel(self):
+        if self.thread is not None:
+            self.worker.is_cancelled = True
 
 
 class MainWindow(QMainWindow):
@@ -275,6 +322,13 @@ class MainWindow(QMainWindow):
     def save_annotation(self):
         pass
 
+    @Slot()
+    def show_analysis_module_temperatures(self):
+        if self.module_temperatures_window is None:
+            self.module_temperatures_window = ModuleTemperatures(self)
+        self.module_temperatures_window.reset()
+        self.module_temperatures_window.show()
+
     def about(self):
         QMessageBox.about(
             self,
@@ -355,12 +409,6 @@ class MainWindow(QMainWindow):
     # def updatePatches(self, track_id):
     #
     #     return max_temp_patch_idx
-
-    @Slot()
-    def show_analysis_module_temperatures(self):
-        if self.module_temperatures_window is None:
-            self.module_temperatures_window = ModuleTemperatures(self)
-        self.module_temperatures_window.show()
 
 
 
