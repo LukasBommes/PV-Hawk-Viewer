@@ -140,9 +140,12 @@ class ModuleTemperatures(QWidget):
     def connectSignalsSlots(self):
         self.ui.pushButtonCompute.clicked.connect(self.compute)
         self.ui.pushButtonCancel.clicked.connect(self.cancel)
+        self.ui.pushButtonOk.clicked.connect(self.close)
 
     def reset(self):
         self.thread = None
+        self.ui.pushButtonOk.hide()
+        self.ui.pushButtonCompute.show()
         self.ui.pushButtonCancel.setEnabled(False)
         self.ui.pushButtonCompute.setEnabled(True)
         self.ui.truncateWidthSpinBox.setEnabled(True)
@@ -156,14 +159,17 @@ class ModuleTemperatures(QWidget):
         self.ui.progressBar.setValue(progress)
         if cancelled:
             self.ui.progressLabel.setText("Cancelĺed")
+            self.ui.pushButtonCompute.hide()
+            self.ui.pushButtonOk.show()
+            self.ui.pushButtonCancel.setEnabled(False)
         else:
             if progress < 100:
                 self.ui.progressLabel.setText("Computing...")
             else:
-                self.ui.progressLabel.setText("Done")
-                #self.ui.pushButtonCancel.setEnabled(False)
-                #self.ui.pushButtonCompute.setEnabled(True)
-                #self.ui.pushButtonCompute.setText("Ok")
+                self.ui.progressLabel.setText("Done")                
+                self.ui.pushButtonCompute.hide()
+                self.ui.pushButtonOk.show()
+                self.ui.pushButtonCancel.setEnabled(False)
 
     @Slot()
     def compute(self):

@@ -15,26 +15,19 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QLabel, QProgressBar, QPushButton,
-    QSizePolicy, QSpinBox, QWidget)
+from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QProgressBar,
+    QPushButton, QSizePolicy, QSpinBox, QWidget)
 
 class Ui_ModuleTemperatures(object):
     def setupUi(self, ModuleTemperatures):
         if not ModuleTemperatures.objectName():
             ModuleTemperatures.setObjectName(u"ModuleTemperatures")
-        ModuleTemperatures.resize(430, 186)
+        ModuleTemperatures.resize(431, 189)
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(ModuleTemperatures.sizePolicy().hasHeightForWidth())
         ModuleTemperatures.setSizePolicy(sizePolicy)
-        self.pushButtonCompute = QPushButton(ModuleTemperatures)
-        self.pushButtonCompute.setObjectName(u"pushButtonCompute")
-        self.pushButtonCompute.setGeometry(QRect(340, 150, 80, 25))
-        self.pushButtonCancel = QPushButton(ModuleTemperatures)
-        self.pushButtonCancel.setObjectName(u"pushButtonCancel")
-        self.pushButtonCancel.setEnabled(False)
-        self.pushButtonCancel.setGeometry(QRect(254, 150, 80, 25))
         self.label = QLabel(ModuleTemperatures)
         self.label.setObjectName(u"label")
         self.label.setGeometry(QRect(9, 9, 341, 26))
@@ -45,11 +38,11 @@ class Ui_ModuleTemperatures(object):
         self.truncateWidthSpinBox.setValue(5)
         self.progressBar = QProgressBar(ModuleTemperatures)
         self.progressBar.setObjectName(u"progressBar")
-        self.progressBar.setGeometry(QRect(9, 116, 411, 25))
+        self.progressBar.setGeometry(QRect(9, 106, 411, 25))
         self.progressBar.setValue(0)
         self.progressLabel = QLabel(ModuleTemperatures)
         self.progressLabel.setObjectName(u"progressLabel")
-        self.progressLabel.setGeometry(QRect(9, 93, 87, 17))
+        self.progressLabel.setGeometry(QRect(9, 83, 87, 17))
         self.label_3 = QLabel(ModuleTemperatures)
         self.label_3.setObjectName(u"label_3")
         self.label_3.setGeometry(QRect(9, 41, 248, 17))
@@ -59,6 +52,28 @@ class Ui_ModuleTemperatures(object):
         self.neighborRadiusSpinBox.setMinimum(1)
         self.neighborRadiusSpinBox.setMaximum(100)
         self.neighborRadiusSpinBox.setValue(7)
+        self.horizontalLayoutWidget = QWidget(ModuleTemperatures)
+        self.horizontalLayoutWidget.setObjectName(u"horizontalLayoutWidget")
+        self.horizontalLayoutWidget.setGeometry(QRect(170, 150, 254, 31))
+        self.horizontalLayout = QHBoxLayout(self.horizontalLayoutWidget)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.pushButtonCancel = QPushButton(self.horizontalLayoutWidget)
+        self.pushButtonCancel.setObjectName(u"pushButtonCancel")
+        self.pushButtonCancel.setEnabled(False)
+
+        self.horizontalLayout.addWidget(self.pushButtonCancel)
+
+        self.pushButtonCompute = QPushButton(self.horizontalLayoutWidget)
+        self.pushButtonCompute.setObjectName(u"pushButtonCompute")
+
+        self.horizontalLayout.addWidget(self.pushButtonCompute)
+
+        self.pushButtonOk = QPushButton(self.horizontalLayoutWidget)
+        self.pushButtonOk.setObjectName(u"pushButtonOk")
+
+        self.horizontalLayout.addWidget(self.pushButtonOk)
+
 
         self.retranslateUi(ModuleTemperatures)
 
@@ -67,10 +82,11 @@ class Ui_ModuleTemperatures(object):
 
     def retranslateUi(self, ModuleTemperatures):
         ModuleTemperatures.setWindowTitle(QCoreApplication.translate("ModuleTemperatures", u"Module Temperatures", None))
-        self.pushButtonCompute.setText(QCoreApplication.translate("ModuleTemperatures", u"Compute", None))
-        self.pushButtonCancel.setText(QCoreApplication.translate("ModuleTemperatures", u"Cancel", None))
         self.label.setText(QCoreApplication.translate("ModuleTemperatures", u"Truncate Image Borders (percent of image width)", None))
         self.progressLabel.setText("")
         self.label_3.setText(QCoreApplication.translate("ModuleTemperatures", u"Local Neighborhood Radius (meters)", None))
+        self.pushButtonCancel.setText(QCoreApplication.translate("ModuleTemperatures", u"Cancel", None))
+        self.pushButtonCompute.setText(QCoreApplication.translate("ModuleTemperatures", u"Compute", None))
+        self.pushButtonOk.setText(QCoreApplication.translate("ModuleTemperatures", u"Ok", None))
     # retranslateUi
 
