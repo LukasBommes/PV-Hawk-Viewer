@@ -61,11 +61,12 @@ class ModuleTemperaturesWorker(QObject):
     progress = Signal(float, bool, str)
 
 
-    def __init__(self, dataset_dir, border_margin, neighbour_radius):
+    def __init__(self, dataset_dir, analysis_name, border_margin, neighbour_radius):
         super().__init__()
         self.is_cancelled = False
         self.timestamp = datetime.datetime.utcnow().isoformat()
         self.dataset_dir = dataset_dir
+        self.analysis_name = analysis_name
         self.border_margin = 0.01 * border_margin
         self.neighbour_radius = neighbour_radius
         self.progress_last_step = 0.0
@@ -131,10 +132,14 @@ class ModuleTemperaturesWorker(QObject):
         gdf_merged = gdf_corners.append(gdf_centers)
 
         # write results to disk
-        os.makedirs(os.path.join(self.dataset_dir, "analyses"), exist_ok=True)
+        self.progress.emit(1, False, "Saving analysis results...")
+        save_path = os.path.join(self.dataset_dir, "analyses", self.analysis_name)
+        print("Saving geojson in {}".format(os.path.join(save_path, "results.geojson")))
+        os.makedirs(save_path, exist_ok=True)
         gdf_merged = gdf_merged.to_crs(epsg=4326)
-        gdf_merged.to_file(os.path.join(self.dataset_dir, "analyses", "results.geojson"), driver='GeoJSON')
+        gdf_merged.to_file(os.path.join(save_path, "results.geojson"), driver='GeoJSON')
 
+        print("Saving meta json in {}".format(os.path.join(save_path, "meta.json")))
         meta = {
             "type": "module_temperatures",
             "timestamp": self.timestamp,
@@ -144,7 +149,7 @@ class ModuleTemperaturesWorker(QObject):
                 "neighbour_radius": self.neighbour_radius
             }
         }
-        json.dump(meta, open(os.path.join(self.dataset_dir, "analyses", "meta.json"), "w"))
+        json.dump(meta, open(os.path.join(save_path, "meta.json"), "w"))
 
         self.progress.emit(1, False, "Done")
         self.finished.emit()

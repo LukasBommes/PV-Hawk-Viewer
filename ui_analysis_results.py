@@ -30,11 +30,13 @@ class Ui_AnalysisResults(object):
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.pushButtonNewAnalysis = QPushButton(AnalysisResults)
         self.pushButtonNewAnalysis.setObjectName(u"pushButtonNewAnalysis")
+        self.pushButtonNewAnalysis.setEnabled(False)
 
         self.horizontalLayout.addWidget(self.pushButtonNewAnalysis)
 
         self.pushButtonDelete = QPushButton(AnalysisResults)
         self.pushButtonDelete.setObjectName(u"pushButtonDelete")
+        self.pushButtonDelete.setEnabled(False)
 
         self.horizontalLayout.addWidget(self.pushButtonDelete)
 

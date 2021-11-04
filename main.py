@@ -5,6 +5,7 @@ import shutil
 import glob
 import json
 import pickle
+import datetime
 import cv2
 import numpy as np
 
@@ -58,7 +59,7 @@ class AnnotationEditor(QWidget):
         self.ui = Ui_AnnotationEditor()
         self.ui.setupUi(self)
         self.loadDefectsScheme()
-        self.connectSignalsSlots()
+        # TODO: connect signals and slots
 
     def loadDefectsScheme(self):
         try:
@@ -73,9 +74,6 @@ class AnnotationEditor(QWidget):
                 self.ui.scrollAreaWidgetContents.layout().addWidget(checkbox)
             self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
             self.ui.scrollAreaWidgetContents.layout().addItem(self.verticalSpacer)
-
-    def connectSignalsSlots(self):
-        pass
 
 
 class SourceFrame(QWidget):
@@ -106,32 +104,34 @@ class AnalysisResults(QWidget):
         self.ui = Ui_AnalysisResults()
         self.ui.setupUi(self)
         self.update()
-        self.connectSignalsSlots()
-
-    def connectSignalsSlots(self):
+        # connect signals and slots
         self.ui.pushButtonDelete.clicked.connect(self.delete_analysis_result)
+        self.ui.pushButtonNewAnalysis.clicked.connect(self.parent.show_analysis_module_temperatures)      
 
     def load_data(self):
-        self.analysis_files = []
+        self.analysis_names = []
         self.analysis_types = []
         if self.parent.dataset_dir is not None:
-            self.analysis_files = sorted(get_immediate_subdirectories(
+            self.analysis_names = sorted(get_immediate_subdirectories(
                 os.path.join(self.parent.dataset_dir, "analyses")))
-            for analysis_file in self.analysis_files:
-                meta = json.load(open(os.path.join(self.parent.dataset_dir, "analyses", analysis_file, "meta.json"), "r"))
+            for analysis_name in self.analysis_names:
+                meta = json.load(open(os.path.join(self.parent.dataset_dir, "analyses", analysis_name, "meta.json"), "r"))
                 analysis_type = meta["type"]
                 self.analysis_types.append(analysis_type)
 
     def update(self):
         self.load_data()
         self.ui.analysisResultsListWidget.clear()
-        self.ui.analysisResultsListWidget.addItems(self.analysis_files)
+        self.ui.analysisResultsListWidget.addItems(self.analysis_names)
 
     def delete_analysis_result(self):
-        analysis_file = self.ui.analysisResultsListWidget.currentItem().text()
+        selected_analysis_name = self.ui.analysisResultsListWidget.currentItem()
+        if selected_analysis_name is None:
+            return
+
         delete_dialog_title = "Delete Analysis Result"
         delete_dialog_text = ("Are you sure you want to permanetely delete \"{}\"? "
-                              "All associated files will be permanentely removed.").format(analysis_file)
+                              "All associated files will be permanentely removed.").format(selected_analysis_name.text())
         delete_dialog = QMessageBox(
             QMessageBox.Question, 
             delete_dialog_title, 
@@ -139,11 +139,10 @@ class AnalysisResults(QWidget):
             QMessageBox.Yes|QMessageBox.No)
         
         if delete_dialog.exec() == QMessageBox.Yes:        
-            rmdir = os.path.join(self.parent.dataset_dir, "analyses", analysis_file)
+            rmdir = os.path.join(self.parent.dataset_dir, "analyses", selected_analysis_name.text())
             print("Deleting {}".format(rmdir))
-            shutil.rmtree(rmdir)
+            shutil.rmtree(rmdir, ignore_errors=True)
             self.update()
-
 
 
 class TempRangeWidget(QWidget):
@@ -152,9 +151,7 @@ class TempRangeWidget(QWidget):
         self.parent = parent
         self.ui = Ui_TempRange()
         self.ui.setupUi(self)
-        self.connectSignalsSlots()
-
-    def connectSignalsSlots(self):
+        # connect signals and slots
         self.ui.minTempSpinBox.valueChanged.connect(lambda: self.parent.setMinTemp(self.ui.minTempSpinBox.value()))
         self.ui.maxTempSpinBox.valueChanged.connect(lambda: self.parent.setMaxTemp(self.ui.maxTempSpinBox.value()))
 
@@ -167,9 +164,7 @@ class ColormapSelectionWidget(QWidget):
         self.ui.setupUi(self)
         self.ui.comboBox.addItems(["Gray", "Plasma", "Jet"])
         self.ui.comboBox.setCurrentIndex(0)
-        self.connectSignalsSlots()
-
-    def connectSignalsSlots(self):
+        # connect signals and slots
         self.ui.comboBox.currentIndexChanged.connect(lambda: self.parent.setColormap(self.ui.comboBox.currentIndex()))
 
 
@@ -181,9 +176,7 @@ class ModuleTemperatures(QWidget):
         self.ui = Ui_ModuleTemperatures()
         self.ui.setupUi(self)
         self.reset()
-        self.connectSignalsSlots()
-
-    def connectSignalsSlots(self):
+        # connect signals and slots
         self.ui.pushButtonCompute.clicked.connect(self.compute)
         self.ui.pushButtonCancel.clicked.connect(self.cancel)
         self.ui.pushButtonOk.clicked.connect(self.close)
@@ -198,12 +191,15 @@ class ModuleTemperatures(QWidget):
         self.ui.neighborRadiusSpinBox.setEnabled(True)
         self.ui.progressBar.setValue(0)
         self.ui.progressLabel.setText("")
+        time = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%S")
+        self.ui.nameLineEdit.setText("Analysis {}".format(time))
 
     @Slot()
     def reportProgress(self, progress, cancelled, description=None):
         progress = round(progress*100)
         self.ui.progressBar.setValue(progress)
         if cancelled:
+            print("Cancelled module temperature analysis")
             self.ui.progressLabel.setText(description)
             self.ui.pushButtonCompute.hide()
             self.ui.pushButtonOk.show()
@@ -215,6 +211,17 @@ class ModuleTemperatures(QWidget):
     def compute(self):
         if self.parent.dataset_dir is None:
             return
+        
+        # check if analysis name is not already used
+        analysis_name = self.ui.nameLineEdit.text()
+        if analysis_name in self.parent.analysis_results.analysis_names:
+            msg = QMessageBox()
+            msg.setWindowTitle("Error")
+            msg.setText("An analysis with this name already exists. Please specify a different name.")
+            msg.setIcon(QMessageBox.Critical)
+            msg.exec()
+            return
+
         self.ui.pushButtonCancel.setEnabled(True)
         self.ui.pushButtonCompute.setEnabled(False)
         self.ui.truncateWidthSpinBox.setEnabled(False)
@@ -225,7 +232,10 @@ class ModuleTemperatures(QWidget):
         # start processing
         self.thread = QThread()
         self.worker = ModuleTemperaturesWorker(
-            self.parent.dataset_dir, border_margin, neighbour_radius)
+            self.parent.dataset_dir, 
+            analysis_name, 
+            border_margin, 
+            neighbour_radius)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.worker.finished.connect(self.thread.quit)
@@ -243,6 +253,10 @@ class ModuleTemperatures(QWidget):
         self.ui.pushButtonCancel.setEnabled(False)
         # update analysis result files list
         self.parent.analysis_results.update()
+
+    def closeEvent(self, event):
+        self.cancel()
+        event.accept()
 
     @Slot()
     def cancel(self):
@@ -297,11 +311,7 @@ class MainWindow(QMainWindow):
         self.track_id = None  # currently selected module
         self.patch_idx = None
 
-        self.connectSignalsSlots()
-        self.registerBackend()
-        self.loadMainDocument()
-
-    def connectSignalsSlots(self):
+        # connect signals and slots
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionAbout.triggered.connect(self.about)
         self.ui.actionOpen_Dataset.triggered.connect(self.open_dataset)
@@ -313,6 +323,9 @@ class MainWindow(QMainWindow):
         self.ui.menuView.addAction(self.analysisResultsWidget.toggleViewAction())
         self.ui.menuView.addAction(self.annotationEditorWidget.toggleViewAction())
         self.ui.menuView.addAction(self.sourceFrameWidget.toggleViewAction())
+        
+        self.registerBackend()
+        self.loadMainDocument()
 
     def registerBackend(self):
         self.backend = Backend(self)
@@ -354,12 +367,14 @@ class MainWindow(QMainWindow):
             self.toolBarTempRange.setEnabled(True)
             self.toolBarColormapSelection.setEnabled(True)
             self.ui.actionModule_Temperatures.setEnabled(True)
+            self.analysis_results.ui.pushButtonNewAnalysis.setEnabled(True)
+            self.analysis_results.ui.pushButtonDelete.setEnabled(True)
         else:
             msg = QMessageBox()
             msg.setWindowTitle("Error")
             msg.setText("Not a valid PV Mapper Dataset.")
             msg.setIcon(QMessageBox.Critical)
-            msg.exec_()
+            msg.exec()
 
     @Slot()
     def close_dataset(self):
@@ -376,6 +391,7 @@ class MainWindow(QMainWindow):
         self.toolBarTempRange.setEnabled(False)
         self.toolBarColormapSelection.setEnabled(False)
         self.ui.actionModule_Temperatures.setEnabled(False)
+        self.analysis_results.ui.pushButtonDelete.setEnabled(False)
 
     @Slot()
     def new_annotation(self):
@@ -391,6 +407,8 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def show_analysis_module_temperatures(self):
+        if self.dataset_dir is None:
+            return
         if self.module_temperatures_window is None:
             self.module_temperatures_window = ModuleTemperatures(self)
         self.module_temperatures_window.reset()
@@ -478,7 +496,7 @@ class MainWindow(QMainWindow):
     #     return max_temp_patch_idx
 
 
-class AnalysisData:
+class AnalysisData: # update data depending on selected analysis result in list view, notify JS about data update and redraw in JS
     def __init__(self, dataset_dir):
         self.dataset_dir = dataset_dir
 
