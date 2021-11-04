@@ -29,7 +29,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Truncate Image Borders (percent of image width)</string>
+    <string>Truncate image borders (percent of image width)</string>
    </property>
   </widget>
   <widget class="QSpinBox" name="truncateWidthSpinBox">
@@ -66,7 +66,7 @@
     <rect>
      <x>9</x>
      <y>83</y>
-     <width>87</width>
+     <width>411</width>
      <height>17</height>
     </rect>
    </property>
@@ -84,7 +84,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Local Neighborhood Radius (meters)</string>
+    <string>Local neighborhood radius (meters)</string>
    </property>
   </widget>
   <widget class="QSpinBox" name="neighborRadiusSpinBox">

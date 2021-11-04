@@ -1,5 +1,7 @@
 import os
 import glob
+import json
+import datetime
 from collections import defaultdict
 import cv2
 import numpy as np
@@ -23,7 +25,7 @@ def truncate_patch(patch, margin=0.05):
 def load_modules_gdf(file):
     gdf = gpd.read_file(file)
     gdf = gdf.set_index("track_id")
-    gdf = gdf.to_crs(epsg=3857)    
+    gdf = gdf.to_crs(epsg=3857)
     gdf_corners = gdf.loc[gdf.geom_type == "Polygon"]
     gdf_centers = gdf.loc[gdf.geom_type == "Point"]
     return gdf_corners, gdf_centers
@@ -46,85 +48,105 @@ def get_patch_temps(patch_files, margin):
 def insert_temps(geodataframe, temps):
     """max_of_mean_temps means: compute the mean temperature over all pixels of each patch, and
     pick the patch with the maximum mean temperature for each module"""
-    for agg in ["min", "max", "mean", "median"]:  # aggregation over pixels of each patch
-        geodataframe["max_of_{}_temps".format(agg)] = pd.Series({track_id: np.max(t[agg]) for track_id, t in temps.items()})
-        geodataframe["min_of_{}_temps".format(agg)] = pd.Series({track_id: np.min(t[agg]) for track_id, t in temps.items()})
-        geodataframe["mean_of_{}_temps".format(agg)] = pd.Series({track_id: np.mean(t[agg]) for track_id, t in temps.items()})
-        geodataframe["median_of_{}_temps".format(agg)] = pd.Series({track_id: np.median(t[agg]) for track_id, t in temps.items()})
-        geodataframe["first_of_{}_temps".format(agg)] = pd.Series({track_id: t[agg][0] for track_id, t in temps.items()})
-
-
-def get_neighbours_median_temp(gdf_centers, neighbour_radius=7, column="mean_of_max_temps"):
-    """Returns a list of mean temperatures of the neighbours of each module in `gdf_centers`.
-    The `neighbour_radius` defines the circle radius in which to look for neighbouring modules.
-    The `column` specifies which temperature column to use."""
-    centers = np.array([[d.xy[0][0], d.xy[1][0]] for d in gdf_centers["geometry"]])
-    tree = KDTree(centers)
-    neighbor_idxs = tree.query_radius(centers, r=neighbour_radius)
-    
-    # get mean temperature of neighbors
-    neighbour_mean_temps = []
-    for row_idx, neighbor_idx in enumerate(neighbor_idxs):
-        neighbor_idx = np.delete(neighbor_idx, np.nonzero(neighbor_idx == row_idx))  # remove the current module from list of neighbors
-        mean_temp = gdf_centers.iloc[neighbor_idx][column].median()
-        neighbour_mean_temps.append(mean_temp)
-    return neighbour_mean_temps
+    for patch_area_agg in ["min", "max", "mean", "median"]:  # aggregation over pixels of each patch
+        geodataframe["max_of_{}_temps".format(patch_area_agg)] = pd.Series({track_id: np.max(t[patch_area_agg]) for track_id, t in temps.items()})
+        geodataframe["min_of_{}_temps".format(patch_area_agg)] = pd.Series({track_id: np.min(t[patch_area_agg]) for track_id, t in temps.items()})
+        geodataframe["mean_of_{}_temps".format(patch_area_agg)] = pd.Series({track_id: np.mean(t[patch_area_agg]) for track_id, t in temps.items()})
+        geodataframe["median_of_{}_temps".format(patch_area_agg)] = pd.Series({track_id: np.median(t[patch_area_agg]) for track_id, t in temps.items()})
+        geodataframe["first_of_{}_temps".format(patch_area_agg)] = pd.Series({track_id: t[patch_area_agg][0] for track_id, t in temps.items()})
 
 
 class ModuleTemperaturesWorker(QObject):
     finished = Signal()
-    progress = Signal(float, bool)
+    progress = Signal(float, bool, str)
 
-    def __init__(self, work_dir, border_margin, neighbour_radius):
+
+    def __init__(self, dataset_dir, border_margin, neighbour_radius):
         super().__init__()
         self.is_cancelled = False
-        self.work_dir = work_dir
+        self.timestamp = datetime.datetime.utcnow().isoformat()
+        self.dataset_dir = dataset_dir
         self.border_margin = 0.01 * border_margin
         self.neighbour_radius = neighbour_radius
+        self.progress_last_step = 0.0
 
-    def run(self):
-        file = os.path.join(self.work_dir, "mapping", "module_geolocations_refined.geojson")
-        gdf_corners, gdf_centers = load_modules_gdf(file)
 
-        temps = {}
-        track_ids = sorted(get_immediate_subdirectories(os.path.join(self.work_dir, "patches_final", "radiometric")))
-        for i, track_id in enumerate(track_ids):
-            progress = i / len(track_ids)
+    def get_neighbours_median_temp(self, gdf_centers, neighbour_radius=7, column="mean_of_max_temps"):
+        """Returns a list of mean temperatures of the neighbours of each module in `gdf_centers`.
+        The `neighbour_radius` defines the circle radius in which to look for neighbouring modules.
+        The `column` specifies which temperature column to use."""
+        centers = np.array([[d.xy[0][0], d.xy[1][0]] for d in gdf_centers["geometry"]])
+        tree = KDTree(centers)
+        neighbor_idxs = tree.query_radius(centers, r=neighbour_radius)
+        
+        # get mean temperature of neighbors
+        neighbour_mean_temps = []
+        for row_idx, neighbor_idx in enumerate(neighbor_idxs):
+            progress = self.progress_last_step + (row_idx / len(neighbor_idxs)) / 3
             if self.is_cancelled:
-                self.progress.emit(progress, True)
+                self.progress.emit(progress, True, "Cancelled")
                 self.finished.emit()
                 return
 
-            patch_files = sorted(glob.glob(os.path.join(self.work_dir, "patches_final", "radiometric", track_id, "*")))
+            neighbor_idx = np.delete(neighbor_idx, np.nonzero(neighbor_idx == row_idx))  # remove the current module from list of neighbors
+            mean_temp = gdf_centers.iloc[neighbor_idx][column].median()
+            neighbour_mean_temps.append(mean_temp)
+
+            self.progress.emit(progress, False, "Computing corrected {}...".format(" ".join(column.split("_"))))
+        self.progress_last_step = progress
+        return neighbour_mean_temps
+
+
+    def run(self):
+        file = os.path.join(self.dataset_dir, "mapping", "module_geolocations_refined.geojson")
+        gdf_corners, gdf_centers = load_modules_gdf(file)
+
+        temps = {}
+        track_ids = sorted(get_immediate_subdirectories(os.path.join(self.dataset_dir, "patches_final", "radiometric")))
+        for i, track_id in enumerate(track_ids):
+            progress = (i / len(track_ids)) / 3
+            if self.is_cancelled:
+                self.progress.emit(progress, True, "Cancelled")
+                self.finished.emit()
+                return
+
+            patch_files = sorted(glob.glob(os.path.join(self.dataset_dir, "patches_final", "radiometric", track_id, "*")))
             temps[track_id] = get_patch_temps(patch_files, self.border_margin)
 
-            #print(progress)
-            self.progress.emit(progress, False)
+            self.progress.emit(progress, False, "Computing temperature distribution...")
+        self.progress_last_step = progress
                 
         insert_temps(gdf_corners, temps)
         insert_temps(gdf_centers, temps)
 
-        # try:
-        #     gdf_corners = gdf_corners.set_index("track_id")
-        # except KeyError:
-        #     pass
-        # try:
-        #     gdf_centers = gdf_centers.set_index("track_id")
-        # except KeyError:
-        #     pass
+        for patch_area_agg in ["min"]:#, "max", "mean", "median"]:
+            for patches_agg in ["max", "min"]:#, "mean", "median", "first"]:
+                column = "{}_of_{}_temps".format(patches_agg, patch_area_agg)
+                neighbour_mean_temps = self.get_neighbours_median_temp(gdf_centers, neighbour_radius=self.neighbour_radius, column=column)
 
-        # TODO: run for all columns
-        column = "mean_of_max_temps"
-        neighbour_mean_temps = get_neighbours_median_temp(gdf_centers, neighbour_radius=self.neighbour_radius, column=column)
+                gdf_corners["{}_corrected".format(column)] = gdf_corners.loc[:, column] - neighbour_mean_temps
+                gdf_centers["{}_corrected".format(column)] = gdf_centers.loc[:, column] - neighbour_mean_temps
 
-        # correct the temperatures by the neighbours' mean temperatures
-        gdf_corners_corrected = gdf_corners.copy()
-        gdf_corners_corrected.loc[:, column] = gdf_corners.loc[:, column] - neighbour_mean_temps
+        # merge back into single geodataframe
+        gdf_merged = gdf_corners.append(gdf_centers)
 
-        # write to geojson for later visualization
-        os.makedirs(os.path.join(self.work_dir, "temperatures"), exist_ok=True)
-        gdf_corners_corrected.to_file(os.path.join(self.work_dir, "temperatures", "module_temperatures.geojson"), driver='GeoJSON')
+        # write results to disk
+        os.makedirs(os.path.join(self.dataset_dir, "analyses"), exist_ok=True)
+        gdf_merged = gdf_merged.to_crs(epsg=4326)
+        gdf_merged.to_file(os.path.join(self.dataset_dir, "analyses", "results.geojson"), driver='GeoJSON')
 
+        meta = {
+            "type": "module_temperatures",
+            "timestamp": self.timestamp,
+            "dataset_dir": self.dataset_dir,
+            "hyperparameters": {
+                "border_margin": self.border_margin,
+                "neighbour_radius": self.neighbour_radius
+            }
+        }
+        json.dump(meta, open(os.path.join(self.dataset_dir, "analyses", "meta.json"), "w"))
+
+        self.progress.emit(1, False, "Done")
         self.finished.emit()
 
 

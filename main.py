@@ -17,6 +17,7 @@ from PySide6.QtWebChannel import QWebChannel
 
 from ui_mainwindow import Ui_MainWindow
 from ui_annotation_editor import Ui_AnnotationEditor
+from ui_analysis_results import Ui_AnalysisResults
 from ui_toolbar_temp_range import Ui_TempRange
 from ui_toolbar_colormap_selection import Ui_ColormapSelection
 from ui_analysis_module_temperatures import Ui_ModuleTemperatures
@@ -43,10 +44,20 @@ class Backend(QObject):
         if self.parent.dataset_dir is None:
             return json.dumps([])
         else:
-            module_file = os.path.join(
-                self.parent.dataset_dir, "mapping", "module_geolocations_refined.geojson")
-            modules = json.load(open(module_file, "r"))
-            return json.dumps(modules)
+            # module_file = os.path.join(
+            #     self.parent.dataset_dir, "mapping", "module_geolocations_refined.geojson")
+            #module_file = os.path.join(
+            #    self.parent.dataset_dir, "temperatures", "module_temperatures.geojson")
+            #modules = json.load(open(module_file, "r"))
+            return json.dumps(self.parent.analysis_data.modules)
+
+    # @Slot(result=str)
+    # def loadAnalysisData(self):
+    #     if self.parent.dataset_dir is None:
+    #         return json.dumps([])
+    #     else:
+            
+    #         return json.dumps(modules)
 
     @Slot(str)
     def updateImages(self, track_id):
@@ -98,6 +109,22 @@ class SourceFrame(QWidget):
         w = self.label.width()
         h = self.label.height()
         self.label.setPixmap(self.pixmap.scaled(w, h, Qt.KeepAspectRatio))
+
+
+class AnalysisResults(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.ui = Ui_AnalysisResults()
+        self.ui.setupUi(self)
+        self.connectSignalsSlots()
+        self.update()
+
+    def connectSignalsSlots(self):
+        pass
+
+    def update(self):
+        """Call after updating analysis results data"""
+        pass
 
 
 class TempRangeWidget(QWidget):
@@ -154,23 +181,17 @@ class ModuleTemperatures(QWidget):
         self.ui.progressLabel.setText("")
 
     @Slot()
-    def reportProgress(self, progress, cancelled):
+    def reportProgress(self, progress, cancelled, description=None):
         progress = round(progress*100)
         self.ui.progressBar.setValue(progress)
         if cancelled:
-            self.ui.progressLabel.setText("Cancelĺed")
+            self.ui.progressLabel.setText(description)
             self.ui.pushButtonCompute.hide()
             self.ui.pushButtonOk.show()
             self.ui.pushButtonCancel.setEnabled(False)
         else:
-            if progress < 100:
-                self.ui.progressLabel.setText("Computing...")
-            else:
-                self.ui.progressLabel.setText("Done")                
-                self.ui.pushButtonCompute.hide()
-                self.ui.pushButtonOk.show()
-                self.ui.pushButtonCancel.setEnabled(False)
-
+            self.ui.progressLabel.setText(description)
+                
     @Slot()
     def compute(self):
         if self.parent.dataset_dir is None:
@@ -190,9 +211,17 @@ class ModuleTemperatures(QWidget):
         self.thread.started.connect(self.worker.run)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
+        self.worker.finished.connect(self.finished)
         self.thread.finished.connect(self.thread.deleteLater)
         self.worker.progress.connect(self.reportProgress)
         self.thread.start()
+
+    @Slot()
+    def finished(self):
+        self.ui.progressLabel.setText("Done")
+        self.ui.pushButtonCompute.hide()
+        self.ui.pushButtonOk.show()
+        self.ui.pushButtonCancel.setEnabled(False)
 
     @Slot()
     def cancel(self):
@@ -206,7 +235,7 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.dataset_dir = None
-        self.patch_meta = None
+        self.analysis_data = None
 
         # setup toolbars
         self.toolBarTempRange = QToolBar(self)
@@ -221,7 +250,12 @@ class MainWindow(QMainWindow):
         self.dataSelectionWidget = ColormapSelectionWidget(self)
         self.toolBarColormapSelection.addWidget(self.dataSelectionWidget)
 
-        # setup widgets for annotation
+        # setup widgets
+        self.analysisResultsWidget = QDockWidget(u"Analysis Results", self)
+        self.analysis_results = AnalysisResults(self)
+        self.analysisResultsWidget.setWidget(self.analysis_results)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.analysisResultsWidget)
+
         self.annotationEditorWidget = QDockWidget(u"Annotation Editor", self)
         self.annotation_editor = AnnotationEditor(self)
         self.annotationEditorWidget.setWidget(self.annotation_editor)
@@ -255,6 +289,7 @@ class MainWindow(QMainWindow):
         self.ui.actionLoad_Annotation.triggered.connect(self.load_annotation)
         self.ui.actionSave_Annotation.triggered.connect(self.save_annotation)
         self.ui.actionModule_Temperatures.triggered.connect(self.show_analysis_module_temperatures)
+        self.ui.menuView.addAction(self.analysisResultsWidget.toggleViewAction())
         self.ui.menuView.addAction(self.annotationEditorWidget.toggleViewAction())
         self.ui.menuView.addAction(self.sourceFrameWidget.toggleViewAction())
 
@@ -288,11 +323,11 @@ class MainWindow(QMainWindow):
         if self.valid_dataset(dir):
             self.dataset_dir = dir
             # load dataset
-            self.patch_meta = pickle.load(open(os.path.join(
-                self.dataset_dir, "patches", "meta.pkl"), "rb"))
+            self.analysis_data = AnalysisData(self.dataset_dir)
             self.backend.openDatasetSignal.emit()
             # activate close dialog and toolbar
             self.ui.actionClose_Dataset.setEnabled(True)
+            self.ui.actionOpen_Dataset.setEnabled(False)
             self.toolBarTempRange.setEnabled(True)
             self.toolBarColormapSelection.setEnabled(True)
             self.ui.actionModule_Temperatures.setEnabled(True)
@@ -306,12 +341,13 @@ class MainWindow(QMainWindow):
     @Slot()
     def close_dataset(self):
         self.dataset_dir = None
-        self.patch_meta = None
+        self.analysis_data = None
         self.backend.closeDatasetSignal.emit()
         # remove source frame and patches
         self.source_frame.reset()
         # deactivate close dialog and toolbar
         self.ui.actionClose_Dataset.setEnabled(False)
+        self.ui.actionOpen_Dataset.setEnabled(True)
         self.toolBarTempRange.setEnabled(False)
         self.toolBarColormapSelection.setEnabled(False)
         self.ui.actionModule_Temperatures.setEnabled(False)
@@ -396,7 +432,7 @@ class MainWindow(QMainWindow):
         image_file = str.split(os.path.basename(image_file), ".")[0]
         frame_name = image_file[:12]
         mask_name = image_file[13:]
-        quadrilateral = np.array(self.patch_meta[(self.track_id, frame_name, mask_name)]["quadrilateral"])
+        quadrilateral = np.array(self.analysis_data.patch_meta[(self.track_id, frame_name, mask_name)]["quadrilateral"])
         source_frame = cv2.polylines(source_frame, [quadrilateral], isClosed=True, color=(0, 255, 0), thickness=3)
 
         # update source frame
@@ -415,6 +451,34 @@ class MainWindow(QMainWindow):
     # def updatePatches(self, track_id):
     #
     #     return max_temp_patch_idx
+
+
+class AnalysisData:
+    def __init__(self, dataset_dir):
+        self.dataset_dir = dataset_dir
+
+        # load data
+        if self.dataset_dir is not None:
+            self.patch_meta = pickle.load(open(os.path.join(
+                self.dataset_dir, "patches", "meta.pkl"), "rb"))
+
+            # module coordinates
+            self.modules = json.load(open(os.path.join(
+                self.dataset_dir, "mapping", "module_geolocations_refined.geojson"), "r"))
+
+            # load other available analysis data
+            os.makedirs(os.path.join(self.dataset_dir, "analyses"), exist_ok=True)
+            self.analyses = sorted(get_immediate_subdirectories(os.path.join(self.dataset_dir, "analyses")))
+            print(self.analyses)
+
+    # def load(self):
+    #     pass
+
+    # def save(self):
+    #     pass
+
+    # def compute_column_ranges(self):
+    #     pass
 
 
 

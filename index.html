@@ -37,6 +37,16 @@
         map.setView(new L.LatLng(48.1, 11.5), 8);
       }
 
+      // function getColor(value) { //, min_val, max_val) {
+      //   // map to range [0, 1]
+      //   //value = (value - min_val) / (max_val - min_val);
+
+        
+      //   // TODO: normalize value to range [0, 1]
+      //   // map colors accoridngly
+      //   return "#ff7800";
+      // }
+
       function loadModules(js_modules) {
         var active_module;
 
@@ -78,13 +88,15 @@
           filter: function(feature, layer) {
             return (feature.geometry.type == "Polygon");
           },
-          style: {
-            "color": "#ff7800",
-            "fillColor": "#ff7800",
-            "weight": 1,
-            "opacity": 1,
-            "fill": true,
-            "fillOpacity": 0.5
+          style: function(feature) {
+            return {
+              "color": "#ff7800",
+              "fillColor": "#ff7800", //getData(feature.properties.track_id, "max_of_min_temps")
+              "weight": 1,
+              "opacity": 1,
+              "fill": true,
+              "fillOpacity": 0.5
+            };
           }
         }).addTo(map);
 

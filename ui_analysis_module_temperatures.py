@@ -42,7 +42,7 @@ class Ui_ModuleTemperatures(object):
         self.progressBar.setValue(0)
         self.progressLabel = QLabel(ModuleTemperatures)
         self.progressLabel.setObjectName(u"progressLabel")
-        self.progressLabel.setGeometry(QRect(9, 83, 87, 17))
+        self.progressLabel.setGeometry(QRect(9, 83, 411, 17))
         self.label_3 = QLabel(ModuleTemperatures)
         self.label_3.setObjectName(u"label_3")
         self.label_3.setGeometry(QRect(9, 41, 248, 17))
@@ -82,9 +82,9 @@ class Ui_ModuleTemperatures(object):
 
     def retranslateUi(self, ModuleTemperatures):
         ModuleTemperatures.setWindowTitle(QCoreApplication.translate("ModuleTemperatures", u"Module Temperatures", None))
-        self.label.setText(QCoreApplication.translate("ModuleTemperatures", u"Truncate Image Borders (percent of image width)", None))
+        self.label.setText(QCoreApplication.translate("ModuleTemperatures", u"Truncate image borders (percent of image width)", None))
         self.progressLabel.setText("")
-        self.label_3.setText(QCoreApplication.translate("ModuleTemperatures", u"Local Neighborhood Radius (meters)", None))
+        self.label_3.setText(QCoreApplication.translate("ModuleTemperatures", u"Local neighborhood radius (meters)", None))
         self.pushButtonCancel.setText(QCoreApplication.translate("ModuleTemperatures", u"Cancel", None))
         self.pushButtonCompute.setText(QCoreApplication.translate("ModuleTemperatures", u"Compute", None))
         self.pushButtonOk.setText(QCoreApplication.translate("ModuleTemperatures", u"Ok", None))
