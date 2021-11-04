@@ -11,8 +11,8 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QToolBar, QWidget, \
     QDockWidget, QMessageBox, QCheckBox, QSpacerItem, QSizePolicy, QLabel, \
     QGridLayout, QFileDialog
 from PySide6.QtCore import QThread, Qt, Slot, Signal, QUrl, QDir, QObject, \
-    QSize
-from PySide6.QtGui import QPixmap, QImage
+    QSize, QAbstractTableModel, QModelIndex
+from PySide6.QtGui import QPixmap, QImage, QColor
 from PySide6.QtWebChannel import QWebChannel
 
 from ui_mainwindow import Ui_MainWindow
@@ -114,17 +114,71 @@ class SourceFrame(QWidget):
 class AnalysisResults(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.parent = parent
         self.ui = Ui_AnalysisResults()
         self.ui.setupUi(self)
-        self.connectSignalsSlots()
         self.update()
+        self.connectSignalsSlots()        
 
     def connectSignalsSlots(self):
         pass
 
     def update(self):
-        """Call after updating analysis results data"""
-        pass
+        self.analysis_results_model = AnalysisResultsTableModel(self.parent)
+        self.ui.analysisResultsTableView.setModel(self.analysis_results_model)
+
+
+class AnalysisResultsTableModel(QAbstractTableModel):
+    def __init__(self, parent=None):
+        QAbstractTableModel.__init__(self)
+        self.parent = parent
+        self.load_data()
+
+    def load_data(self):
+        self.analysis_files = []
+        self.analysis_types = []
+        if self.parent.dataset_dir is not None:
+            self.analysis_files = sorted(get_immediate_subdirectories(
+                os.path.join(self.parent.dataset_dir, "analyses")))
+            for analysis_file in self.analysis_files:
+                meta = json.load(open(os.path.join(self.parent.dataset_dir, "analyses", analysis_file, "meta.json"), "r"))
+                analysis_type = meta["type"]
+                self.analysis_types.append(analysis_type)
+
+        self.column_count = 2
+        self.row_count = len(self.analysis_files)
+
+    def rowCount(self, parent=QModelIndex()):
+        return self.row_count
+
+    def columnCount(self, parent=QModelIndex()):
+        return self.column_count
+
+    def headerData(self, section, orientation, role):
+        if role != Qt.DisplayRole:
+            return None
+        if orientation == Qt.Horizontal:
+            return ("Name", "Type")[section]
+        else:
+            return f"{section}"
+
+    def data(self, index, role=Qt.DisplayRole):
+        column = index.column()
+        row = index.row()
+        if role == Qt.DisplayRole:
+            if column == 0:
+                #date = self.input_dates[row].toPython()
+                #return str(date)[:-3]
+                return str(self.analysis_files[row])
+            elif column == 1:
+                #magnitude = self.input_magnitudes[row]
+                #return f"{magnitude:.2f}"
+                return str(self.analysis_types[row])
+        elif role == Qt.BackgroundRole:
+            return QColor(Qt.white)
+        elif role == Qt.TextAlignmentRole:
+            return Qt.AlignLeft
+        return None
 
 
 class TempRangeWidget(QWidget):
@@ -222,6 +276,8 @@ class ModuleTemperatures(QWidget):
         self.ui.pushButtonCompute.hide()
         self.ui.pushButtonOk.show()
         self.ui.pushButtonCancel.setEnabled(False)
+        # update analysis result files list
+        self.parent.analysis_results.update()
 
     @Slot()
     def cancel(self):
@@ -325,6 +381,8 @@ class MainWindow(QMainWindow):
             # load dataset
             self.analysis_data = AnalysisData(self.dataset_dir)
             self.backend.openDatasetSignal.emit()
+            # update analysis result files list
+            self.analysis_results.update()
             # activate close dialog and toolbar
             self.ui.actionClose_Dataset.setEnabled(True)
             self.ui.actionOpen_Dataset.setEnabled(False)
@@ -345,6 +403,8 @@ class MainWindow(QMainWindow):
         self.backend.closeDatasetSignal.emit()
         # remove source frame and patches
         self.source_frame.reset()
+        # update analysis result files list
+        self.analysis_results.update()
         # deactivate close dialog and toolbar
         self.ui.actionClose_Dataset.setEnabled(False)
         self.ui.actionOpen_Dataset.setEnabled(True)
