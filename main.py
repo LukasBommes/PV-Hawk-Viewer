@@ -1,6 +1,7 @@
 import sys
 import os
 import re
+import shutil
 import glob
 import json
 import pickle
@@ -9,10 +10,10 @@ import numpy as np
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QToolBar, QWidget, \
     QDockWidget, QMessageBox, QCheckBox, QSpacerItem, QSizePolicy, QLabel, \
-    QGridLayout, QFileDialog
+    QGridLayout, QFileDialog, QDialog
 from PySide6.QtCore import QThread, Qt, Slot, Signal, QUrl, QDir, QObject, \
-    QSize, QAbstractTableModel, QModelIndex
-from PySide6.QtGui import QPixmap, QImage, QColor
+    QSize
+from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtWebChannel import QWebChannel
 
 from ui_mainwindow import Ui_MainWindow
@@ -44,20 +45,7 @@ class Backend(QObject):
         if self.parent.dataset_dir is None:
             return json.dumps([])
         else:
-            # module_file = os.path.join(
-            #     self.parent.dataset_dir, "mapping", "module_geolocations_refined.geojson")
-            #module_file = os.path.join(
-            #    self.parent.dataset_dir, "temperatures", "module_temperatures.geojson")
-            #modules = json.load(open(module_file, "r"))
             return json.dumps(self.parent.analysis_data.modules)
-
-    # @Slot(result=str)
-    # def loadAnalysisData(self):
-    #     if self.parent.dataset_dir is None:
-    #         return json.dumps([])
-    #     else:
-            
-    #         return json.dumps(modules)
 
     @Slot(str)
     def updateImages(self, track_id):
@@ -118,21 +106,10 @@ class AnalysisResults(QWidget):
         self.ui = Ui_AnalysisResults()
         self.ui.setupUi(self)
         self.update()
-        self.connectSignalsSlots()        
+        self.connectSignalsSlots()
 
     def connectSignalsSlots(self):
-        pass
-
-    def update(self):
-        self.analysis_results_model = AnalysisResultsTableModel(self.parent)
-        self.ui.analysisResultsTableView.setModel(self.analysis_results_model)
-
-
-class AnalysisResultsTableModel(QAbstractTableModel):
-    def __init__(self, parent=None):
-        QAbstractTableModel.__init__(self)
-        self.parent = parent
-        self.load_data()
+        self.ui.pushButtonDelete.clicked.connect(self.delete_analysis_result)
 
     def load_data(self):
         self.analysis_files = []
@@ -145,40 +122,28 @@ class AnalysisResultsTableModel(QAbstractTableModel):
                 analysis_type = meta["type"]
                 self.analysis_types.append(analysis_type)
 
-        self.column_count = 2
-        self.row_count = len(self.analysis_files)
+    def update(self):
+        self.load_data()
+        self.ui.analysisResultsListWidget.clear()
+        self.ui.analysisResultsListWidget.addItems(self.analysis_files)
 
-    def rowCount(self, parent=QModelIndex()):
-        return self.row_count
+    def delete_analysis_result(self):
+        analysis_file = self.ui.analysisResultsListWidget.currentItem().text()
+        delete_dialog_title = "Delete Analysis Result"
+        delete_dialog_text = ("Are you sure you want to permanetely delete \"{}\"? "
+                              "All associated files will be permanentely removed.").format(analysis_file)
+        delete_dialog = QMessageBox(
+            QMessageBox.Question, 
+            delete_dialog_title, 
+            delete_dialog_text, 
+            QMessageBox.Yes|QMessageBox.No)
+        
+        if delete_dialog.exec() == QMessageBox.Yes:        
+            rmdir = os.path.join(self.parent.dataset_dir, "analyses", analysis_file)
+            print("Deleting {}".format(rmdir))
+            shutil.rmtree(rmdir)
+            self.update()
 
-    def columnCount(self, parent=QModelIndex()):
-        return self.column_count
-
-    def headerData(self, section, orientation, role):
-        if role != Qt.DisplayRole:
-            return None
-        if orientation == Qt.Horizontal:
-            return ("Name", "Type")[section]
-        else:
-            return f"{section}"
-
-    def data(self, index, role=Qt.DisplayRole):
-        column = index.column()
-        row = index.row()
-        if role == Qt.DisplayRole:
-            if column == 0:
-                #date = self.input_dates[row].toPython()
-                #return str(date)[:-3]
-                return str(self.analysis_files[row])
-            elif column == 1:
-                #magnitude = self.input_magnitudes[row]
-                #return f"{magnitude:.2f}"
-                return str(self.analysis_types[row])
-        elif role == Qt.BackgroundRole:
-            return QColor(Qt.white)
-        elif role == Qt.TextAlignmentRole:
-            return Qt.AlignLeft
-        return None
 
 
 class TempRangeWidget(QWidget):

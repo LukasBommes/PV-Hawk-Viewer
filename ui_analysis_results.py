@@ -15,8 +15,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QHBoxLayout, QHeaderView,
-    QPushButton, QSizePolicy, QSpacerItem, QTableView,
+from PySide6.QtWidgets import (QApplication, QGridLayout, QHBoxLayout, QListWidget,
+    QListWidgetItem, QPushButton, QSizePolicy, QSpacerItem,
     QWidget)
 
 class Ui_AnalysisResults(object):
@@ -28,15 +28,15 @@ class Ui_AnalysisResults(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.pushButton = QPushButton(AnalysisResults)
-        self.pushButton.setObjectName(u"pushButton")
+        self.pushButtonNewAnalysis = QPushButton(AnalysisResults)
+        self.pushButtonNewAnalysis.setObjectName(u"pushButtonNewAnalysis")
 
-        self.horizontalLayout.addWidget(self.pushButton)
+        self.horizontalLayout.addWidget(self.pushButtonNewAnalysis)
 
-        self.pushButton_3 = QPushButton(AnalysisResults)
-        self.pushButton_3.setObjectName(u"pushButton_3")
+        self.pushButtonDelete = QPushButton(AnalysisResults)
+        self.pushButtonDelete.setObjectName(u"pushButtonDelete")
 
-        self.horizontalLayout.addWidget(self.pushButton_3)
+        self.horizontalLayout.addWidget(self.pushButtonDelete)
 
         self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
@@ -45,10 +45,10 @@ class Ui_AnalysisResults(object):
 
         self.gridLayout.addLayout(self.horizontalLayout, 1, 0, 1, 1)
 
-        self.analysisResultsTableView = QTableView(AnalysisResults)
-        self.analysisResultsTableView.setObjectName(u"analysisResultsTableView")
+        self.analysisResultsListWidget = QListWidget(AnalysisResults)
+        self.analysisResultsListWidget.setObjectName(u"analysisResultsListWidget")
 
-        self.gridLayout.addWidget(self.analysisResultsTableView, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.analysisResultsListWidget, 0, 0, 1, 1)
 
 
         self.retranslateUi(AnalysisResults)
@@ -58,7 +58,7 @@ class Ui_AnalysisResults(object):
 
     def retranslateUi(self, AnalysisResults):
         AnalysisResults.setWindowTitle(QCoreApplication.translate("AnalysisResults", u"Analysis Results", None))
-        self.pushButton.setText(QCoreApplication.translate("AnalysisResults", u"New Analysis...", None))
-        self.pushButton_3.setText(QCoreApplication.translate("AnalysisResults", u"Delete", None))
+        self.pushButtonNewAnalysis.setText(QCoreApplication.translate("AnalysisResults", u"New Analysis...", None))
+        self.pushButtonDelete.setText(QCoreApplication.translate("AnalysisResults", u"Delete", None))
     # retranslateUi
 

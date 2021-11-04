@@ -17,14 +17,14 @@
    <item row="1" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QPushButton" name="pushButton">
+      <widget class="QPushButton" name="pushButtonNewAnalysis">
        <property name="text">
         <string>New Analysis...</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButton_3">
+      <widget class="QPushButton" name="pushButtonDelete">
        <property name="text">
         <string>Delete</string>
        </property>
@@ -46,7 +46,7 @@
     </layout>
    </item>
    <item row="0" column="0">
-    <widget class="QTableView" name="analysisResultsTableView"/>
+    <widget class="QListWidget" name="analysisResultsListWidget"/>
    </item>
   </layout>
  </widget>
