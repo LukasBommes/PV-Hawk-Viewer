@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>AnalysisResults</class>
- <widget class="QWidget" name="AnalysisResults">
+ <class>DataSources</class>
+ <widget class="QWidget" name="DataSources">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Analysis Results</string>
+   <string>Data Sources</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="1" column="0">
@@ -52,7 +52,7 @@
     </layout>
    </item>
    <item row="0" column="0">
-    <widget class="QListWidget" name="analysisResultsListWidget"/>
+    <widget class="QListWidget" name="dataSourcesListWidget"/>
    </item>
   </layout>
  </widget>

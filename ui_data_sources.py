@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'analysis_results.ui'
+## Form generated from reading UI file 'data_sources.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.2.1
 ##
@@ -19,22 +19,22 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QHBoxLayout, QListWidg
     QListWidgetItem, QPushButton, QSizePolicy, QSpacerItem,
     QWidget)
 
-class Ui_AnalysisResults(object):
-    def setupUi(self, AnalysisResults):
-        if not AnalysisResults.objectName():
-            AnalysisResults.setObjectName(u"AnalysisResults")
-        AnalysisResults.resize(723, 599)
-        self.gridLayout = QGridLayout(AnalysisResults)
+class Ui_DataSources(object):
+    def setupUi(self, DataSources):
+        if not DataSources.objectName():
+            DataSources.setObjectName(u"DataSources")
+        DataSources.resize(723, 599)
+        self.gridLayout = QGridLayout(DataSources)
         self.gridLayout.setObjectName(u"gridLayout")
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.pushButtonNewAnalysis = QPushButton(AnalysisResults)
+        self.pushButtonNewAnalysis = QPushButton(DataSources)
         self.pushButtonNewAnalysis.setObjectName(u"pushButtonNewAnalysis")
         self.pushButtonNewAnalysis.setEnabled(False)
 
         self.horizontalLayout.addWidget(self.pushButtonNewAnalysis)
 
-        self.pushButtonDelete = QPushButton(AnalysisResults)
+        self.pushButtonDelete = QPushButton(DataSources)
         self.pushButtonDelete.setObjectName(u"pushButtonDelete")
         self.pushButtonDelete.setEnabled(False)
 
@@ -47,20 +47,20 @@ class Ui_AnalysisResults(object):
 
         self.gridLayout.addLayout(self.horizontalLayout, 1, 0, 1, 1)
 
-        self.analysisResultsListWidget = QListWidget(AnalysisResults)
-        self.analysisResultsListWidget.setObjectName(u"analysisResultsListWidget")
+        self.dataSourcesListWidget = QListWidget(DataSources)
+        self.dataSourcesListWidget.setObjectName(u"dataSourcesListWidget")
 
-        self.gridLayout.addWidget(self.analysisResultsListWidget, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.dataSourcesListWidget, 0, 0, 1, 1)
 
 
-        self.retranslateUi(AnalysisResults)
+        self.retranslateUi(DataSources)
 
-        QMetaObject.connectSlotsByName(AnalysisResults)
+        QMetaObject.connectSlotsByName(DataSources)
     # setupUi
 
-    def retranslateUi(self, AnalysisResults):
-        AnalysisResults.setWindowTitle(QCoreApplication.translate("AnalysisResults", u"Analysis Results", None))
-        self.pushButtonNewAnalysis.setText(QCoreApplication.translate("AnalysisResults", u"New Analysis...", None))
-        self.pushButtonDelete.setText(QCoreApplication.translate("AnalysisResults", u"Delete", None))
+    def retranslateUi(self, DataSources):
+        DataSources.setWindowTitle(QCoreApplication.translate("DataSources", u"Data Sources", None))
+        self.pushButtonNewAnalysis.setText(QCoreApplication.translate("DataSources", u"New Analysis...", None))
+        self.pushButtonDelete.setText(QCoreApplication.translate("DataSources", u"Delete", None))
     # retranslateUi
 

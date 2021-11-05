@@ -18,7 +18,7 @@
   //var backend = null;
   new QWebChannel(qt.webChannelTransport, function (channel) {
       var backend = channel.objects.backend;
-      var modules_geojson;
+      var modules_geojson = null;
       var map = L.map('map');
       L.tileLayer(
           'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -104,9 +104,15 @@
       }
 
       // wait for modules to be updated
-      backend.openDatasetSignal.connect(function() {
+      backend.changeDatasetSignal.connect(function() {
+          // clear previous data
+          backend.printObj(JSON.stringify("Loading dataset in JS."));
+          if (modules_geojson !== null) {
+            map.removeLayer(modules_geojson);
+          }
+
           // visualize modules
-          backend.loadModules(function(modules) {
+          backend.loadData(function(modules) {
             js_modules = JSON.parse(modules);
             loadModules(js_modules);
           });
@@ -115,6 +121,7 @@
       backend.closeDatasetSignal.connect(function() {
           backend.printObj(JSON.stringify("Closing dataset, clearing data in JS"));
           map.removeLayer(modules_geojson);
+          modules_geojson = null;
           resetMap();
       });
   });
