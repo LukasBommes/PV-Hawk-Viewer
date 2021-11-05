@@ -1,0 +1,5 @@
+- move current temp range and colormap to source frame widget
+- create new temp range and colormap in toolbar for leaflet map
+- create data source selection for columns of currently selected dataset
+
+- plot colorbar

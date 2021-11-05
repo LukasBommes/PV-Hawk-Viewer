@@ -49,7 +49,7 @@ class Backend(QObject):
         colors = {}
         if self.parent.dataset.is_open:
             data = self.parent.dataset.data
-            column = "mean_of_max_temps"
+            column = "mean_of_max_temps_corrected"
             data_column = self.parent.dataset.get_column(column)
             if len(data_column) > 0:
                 colors = get_colors(data_column, cmap="plasma", vmin=-5, vmax=5)
@@ -522,32 +522,13 @@ class Dataset(QObject):
         for feature in self.data["features"]:
             track_id = feature["properties"]["track_id"]
             try:
-                column_values[track_id] = feature["properties"][column]
+                val = feature["properties"][column]
+                if val is None:
+                    val = np.nan
+                column_values[track_id] = val
             except KeyError:
                 continue
         return column_values
-
-    # def get_column_ranges(self):
-    #     self.column_ranges = defaultdict(dict)
-    #     for feature in self.data["features"]:
-    #         for prop in feature["properties"].keys():
-    #             if prop == "track_id":
-    #                 continue
-
-    #             if prop not in self.column_ranges.keys():
-    #                 self.column_ranges[prop] = {
-    #                     "min": np.inf,
-    #                     "max": -np.inf
-    #                 }
-
-    #             val = feature["properties"][prop]
-    #             if val is None:
-    #                 continue
-
-    #             if val < self.column_ranges[prop]["min"]:
-    #                 self.column_ranges[prop]["min"] = val
-    #             if val > self.column_ranges[prop]["max"]:
-    #                 self.column_ranges[prop]["max"] = val
 
     @Slot()
     def update_source_names(self):
