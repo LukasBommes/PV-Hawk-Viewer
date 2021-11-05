@@ -6,12 +6,13 @@ import glob
 import json
 import pickle
 import datetime
+from collections import defaultdict
 import cv2
 import numpy as np
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QToolBar, QWidget, \
     QDockWidget, QMessageBox, QCheckBox, QSpacerItem, QSizePolicy, QLabel, \
-    QGridLayout, QFileDialog, QDialog
+    QGridLayout, QFileDialog
 from PySide6.QtCore import QThread, Qt, Slot, Signal, QUrl, QDir, QObject, \
     QSize
 from PySide6.QtGui import QPixmap, QImage
@@ -46,7 +47,7 @@ class Backend(QObject):
         if self.parent.dataset_dir is None:
             return json.dumps([])
         else:
-            return json.dumps(self.parent.analysis_data.modules)
+            return json.dumps(self.parent.dataset.modules)
 
     @Slot(str)
     def updateImages(self, track_id):
@@ -106,21 +107,17 @@ class AnalysisResults(QWidget):
         self.update()
         # connect signals and slots
         self.ui.pushButtonDelete.clicked.connect(self.delete_analysis_result)
-        self.ui.pushButtonNewAnalysis.clicked.connect(self.parent.show_analysis_module_temperatures)      
+        self.ui.pushButtonNewAnalysis.clicked.connect(self.parent.show_analysis_module_temperatures)
+        self.ui.analysisResultsListWidget.itemSelectionChanged.connect(self.analysis_selection_changed)
 
-    def load_data(self):
+    def load_analyses(self):
         self.analysis_names = []
-        self.analysis_types = []
         if self.parent.dataset_dir is not None:
             self.analysis_names = sorted(get_immediate_subdirectories(
                 os.path.join(self.parent.dataset_dir, "analyses")))
-            for analysis_name in self.analysis_names:
-                meta = json.load(open(os.path.join(self.parent.dataset_dir, "analyses", analysis_name, "meta.json"), "r"))
-                analysis_type = meta["type"]
-                self.analysis_types.append(analysis_type)
 
     def update(self):
-        self.load_data()
+        self.load_analyses()
         self.ui.analysisResultsListWidget.clear()
         self.ui.analysisResultsListWidget.addItems(self.analysis_names)
 
@@ -143,6 +140,14 @@ class AnalysisResults(QWidget):
             print("Deleting {}".format(rmdir))
             shutil.rmtree(rmdir, ignore_errors=True)
             self.update()
+
+    @Slot()
+    def analysis_selection_changed(self):
+        selected_analysis_name = self.ui.analysisResultsListWidget.currentItem()
+        if selected_analysis_name is None:
+            return
+        self.parent.dataset.analysis_data.update(selected_analysis_name.text())
+
 
 
 class TempRangeWidget(QWidget):
@@ -270,7 +275,7 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.dataset_dir = None
-        self.analysis_data = None
+        self.dataset = None
 
         # setup toolbars
         self.toolBarTempRange = QToolBar(self)
@@ -357,7 +362,7 @@ class MainWindow(QMainWindow):
         if self.valid_dataset(dir):
             self.dataset_dir = dir
             # load dataset
-            self.analysis_data = AnalysisData(self.dataset_dir)
+            self.dataset = Dataset(self.dataset_dir)
             self.backend.openDatasetSignal.emit()
             # update analysis result files list
             self.analysis_results.update()
@@ -379,7 +384,7 @@ class MainWindow(QMainWindow):
     @Slot()
     def close_dataset(self):
         self.dataset_dir = None
-        self.analysis_data = None
+        self.dataset = None
         self.backend.closeDatasetSignal.emit()
         # remove source frame and patches
         self.source_frame.reset()
@@ -475,7 +480,7 @@ class MainWindow(QMainWindow):
         image_file = str.split(os.path.basename(image_file), ".")[0]
         frame_name = image_file[:12]
         mask_name = image_file[13:]
-        quadrilateral = np.array(self.analysis_data.patch_meta[(self.track_id, frame_name, mask_name)]["quadrilateral"])
+        quadrilateral = np.array(self.dataset.patch_meta[(self.track_id, frame_name, mask_name)]["quadrilateral"])
         source_frame = cv2.polylines(source_frame, [quadrilateral], isClosed=True, color=(0, 255, 0), thickness=3)
 
         # update source frame
@@ -496,11 +501,54 @@ class MainWindow(QMainWindow):
     #     return max_temp_patch_idx
 
 
-class AnalysisData: # update data depending on selected analysis result in list view, notify JS about data update and redraw in JS
+class AnalysisData:
+    def __init__(self, parent=None):
+        self.parent = parent
+        self.analysis_name = None
+        self.data = None
+        self.meta = None
+
+    def update(self, analysis_name):
+        if self.parent.dataset_dir is None:
+            return
+        if analysis_name is None:
+            return
+        self.analysis_name = analysis_name
+        self.data = json.load(open(os.path.join(
+            self.parent.dataset_dir, "analyses", analysis_name, "results.geojson"), "r"))
+        self.meta = json.load(open(os.path.join(
+            self.parent.dataset_dir, "analyses", analysis_name, "meta.json"), "r"))
+        self.get_column_ranges()
+
+    def get_column_ranges(self):
+        self.column_ranges = defaultdict(dict)
+        for feature in self.data["features"]:
+            for prop in feature["properties"].keys():
+                if prop == "track_id":
+                    continue
+
+                if prop not in self.column_ranges.keys():
+                    self.column_ranges[prop] = {
+                        "min": np.inf,
+                        "max": -np.inf
+                    }
+
+                val = feature["properties"][prop]
+                if val is None:
+                    continue
+
+                if val < self.column_ranges[prop]["min"]:
+                    self.column_ranges[prop]["min"] = val
+                if val > self.column_ranges[prop]["max"]:
+                    self.column_ranges[prop]["max"] = val
+
+
+class Dataset: # update data depending on selected analysis result in list view, notify JS about data update and redraw in JS
     def __init__(self, dataset_dir):
         self.dataset_dir = dataset_dir
+        self.analysis_data = AnalysisData(self)
 
-        # load data
+        # load dataset
         if self.dataset_dir is not None:
             self.patch_meta = pickle.load(open(os.path.join(
                 self.dataset_dir, "patches", "meta.pkl"), "rb"))
@@ -508,20 +556,6 @@ class AnalysisData: # update data depending on selected analysis result in list 
             # module coordinates
             self.modules = json.load(open(os.path.join(
                 self.dataset_dir, "mapping", "module_geolocations_refined.geojson"), "r"))
-
-            # load other available analysis data
-            os.makedirs(os.path.join(self.dataset_dir, "analyses"), exist_ok=True)
-            self.analyses = sorted(get_immediate_subdirectories(os.path.join(self.dataset_dir, "analyses")))
-            print(self.analyses)
-
-    # def load(self):
-    #     pass
-
-    # def save(self):
-    #     pass
-
-    # def compute_column_ranges(self):
-    #     pass
 
 
 
