@@ -61,12 +61,12 @@ class ModuleTemperaturesWorker(QObject):
     progress = Signal(float, bool, str)
 
 
-    def __init__(self, dataset_dir, analysis_name, border_margin, neighbour_radius):
+    def __init__(self, dataset_dir, name, border_margin, neighbour_radius):
         super().__init__()
         self.is_cancelled = False
         self.timestamp = datetime.datetime.utcnow().isoformat()
         self.dataset_dir = dataset_dir
-        self.analysis_name = analysis_name
+        self.name = name
         self.border_margin = 0.01 * border_margin
         self.neighbour_radius = neighbour_radius
         self.progress_last_step = 0.0
@@ -133,7 +133,7 @@ class ModuleTemperaturesWorker(QObject):
 
         # write results to disk
         self.progress.emit(1, False, "Saving analysis results...")
-        save_path = os.path.join(self.dataset_dir, "analyses", self.analysis_name)
+        save_path = os.path.join(self.dataset_dir, "analyses", self.name)
         print("Saving geojson in {}".format(os.path.join(save_path, "results.geojson")))
         os.makedirs(save_path, exist_ok=True)
         gdf_merged = gdf_merged.to_crs(epsg=4326)

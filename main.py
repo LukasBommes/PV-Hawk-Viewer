@@ -9,10 +9,11 @@ import datetime
 from collections import defaultdict
 import cv2
 import numpy as np
+from numpy.lib.function_base import select
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QToolBar, QWidget, \
     QDockWidget, QMessageBox, QCheckBox, QSpacerItem, QSizePolicy, QLabel, \
-    QGridLayout, QFileDialog, QListWidgetItem
+    QGridLayout, QFileDialog
 from PySide6.QtCore import QThread, Qt, Slot, Signal, QUrl, QDir, QObject, \
     QSize
 from PySide6.QtGui import QPixmap, QImage
@@ -47,8 +48,7 @@ class Backend(QObject):
         if not self.parent.dataset.is_open:
             return json.dumps([])
         else:
-            #return json.dumps(self.parent.dataset.data)
-            return json.dumps(self.parent.dataset.modules)
+            return json.dumps(self.parent.dataset.data)
 
     @Slot(str)
     def updateImages(self, track_id):
@@ -100,6 +100,8 @@ class SourceFrame(QWidget):
 
 
 class DataSources(QWidget):
+    dataSourcesChangedSignal = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
@@ -107,41 +109,35 @@ class DataSources(QWidget):
         self.ui.setupUi(self)
         self.update()
         # connect signals and slots
-        self.ui.pushButtonDelete.clicked.connect(self.delete_analysis_result)
+        self.ui.pushButtonDelete.clicked.connect(self.delete_source)
         self.ui.pushButtonNewAnalysis.clicked.connect(self.parent.show_analysis_module_temperatures)
-        self.ui.dataSourcesListWidget.itemClicked.connect(self.parent.dataset.update)
+        self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.parent.dataset.loadSource(name.text()))
+        #self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.ui.pushButtonDelete.setEnabled(name != "Module Layout"))
+        self.dataSourcesChangedSignal.connect(self.update)
 
-    def load_analyses(self):
-        self.analysis_names = []
-        if self.parent.dataset.is_open:
-            self.analysis_names = sorted(get_immediate_subdirectories(
-                os.path.join(self.parent.dataset.dataset_dir, "analyses")))
-
-    def delete_analysis_result(self):
-        selected_analysis_name = self.ui.dataSourcesListWidget.currentItem()
-        if selected_analysis_name is None:
+    def delete_source(self):
+        selected_name = self.ui.dataSourcesListWidget.currentItem()
+        if selected_name is None:
             return
+        selected_name = selected_name.text()
 
-        delete_dialog_title = "Delete Analysis Result"
+        delete_dialog_title = "Delete Data Source"
         delete_dialog_text = ("Are you sure you want to permanetely delete \"{}\"? "
-                              "All associated files will be permanentely removed.").format(selected_analysis_name.text())
+                              "All associated files will be permanentely removed.").format(selected_name)
         delete_dialog = QMessageBox(
             QMessageBox.Question, 
             delete_dialog_title, 
             delete_dialog_text, 
             QMessageBox.Yes|QMessageBox.No)
         
-        if delete_dialog.exec() == QMessageBox.Yes:        
-            rmdir = os.path.join(self.parent.dataset.dataset_dir, "analyses", selected_analysis_name.text())
-            print("Deleting {}".format(rmdir))
-            shutil.rmtree(rmdir, ignore_errors=True)
-            self.update()
+        if delete_dialog.exec() == QMessageBox.Yes:
+            self.parent.dataset.delete_source(selected_name)
     
     @Slot()
     def update(self):
-        self.load_analyses()
         self.ui.dataSourcesListWidget.clear()
-        self.ui.dataSourcesListWidget.addItems(self.analysis_names)
+        if self.parent.dataset.is_open:
+            self.ui.dataSourcesListWidget.addItems(self.parent.dataset.source_names)
 
 
 class TempRangeWidget(QWidget):
@@ -212,8 +208,8 @@ class ModuleTemperatures(QWidget):
             return
         
         # check if analysis name is not already used
-        analysis_name = self.ui.nameLineEdit.text()
-        if analysis_name in self.parent.data_sources.analysis_names:
+        name = self.ui.nameLineEdit.text()
+        if name in self.parent.dataset.source_names:
             msg = QMessageBox()
             msg.setWindowTitle("Error")
             msg.setText("An analysis with this name already exists. Please specify a different name.")
@@ -232,7 +228,7 @@ class ModuleTemperatures(QWidget):
         self.thread = QThread()
         self.worker = ModuleTemperaturesWorker(
             self.parent.dataset.dataset_dir, 
-            analysis_name, 
+            name,
             border_margin, 
             neighbour_radius)
         self.worker.moveToThread(self.thread)
@@ -240,7 +236,7 @@ class ModuleTemperatures(QWidget):
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.worker.finished.connect(self.finished)
-        self.worker.finished.connect(self.parent.data_sources.update)
+        self.worker.finished.connect(self.parent.dataset.update_source_names)
         self.thread.finished.connect(self.thread.deleteLater)
         self.worker.progress.connect(self.reportProgress)
         self.thread.start()
@@ -312,9 +308,9 @@ class MainWindow(QMainWindow):
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionAbout.triggered.connect(self.about)
         self.ui.actionOpen_Dataset.triggered.connect(self.open_dataset)
-        self.ui.actionOpen_Dataset.triggered.connect(self.data_sources.update)
+        #self.ui.actionOpen_Dataset.triggered.connect(self.data_sources.update)
         self.ui.actionClose_Dataset.triggered.connect(self.close_dataset)
-        self.ui.actionClose_Dataset.triggered.connect(self.data_sources.update)
+        #self.ui.actionClose_Dataset.triggered.connect(self.data_sources.update)
         self.ui.actionNew_Annotation.triggered.connect(self.new_annotation)
         self.ui.actionLoad_Annotation.triggered.connect(self.load_annotation)
         self.ui.actionSave_Annotation.triggered.connect(self.save_annotation)
@@ -495,7 +491,8 @@ class Dataset(QObject):
 
     def reset(self):
         self.dataset_dir = None
-        self.analysis_name = None
+        self.selected_source = None
+        self.source_names = None
         self.data = None
         self.meta = None
         self.patch_meta = None
@@ -530,36 +527,65 @@ class Dataset(QObject):
         # patch meta data
         self.patch_meta = pickle.load(open(os.path.join(
             self.dataset_dir, "patches", "meta.pkl"), "rb"))
-        # module coordinates
-        self.modules = json.load(open(os.path.join(
-            self.dataset_dir, "mapping", "module_geolocations_refined.geojson"), "r"))
+
+    @Slot()
+    def update_source_names(self):
+        self.source_names = []
+        if self.dataset_dir is not None:
+            self.source_names = sorted(get_immediate_subdirectories(
+                os.path.join(self.dataset_dir, "analyses")))
+        self.source_names.insert(0, "Module Layout")
+        self.parent.data_sources.dataSourcesChangedSignal.emit()
+
+    def delete_source(self, selected_source):
+        if self.dataset_dir is None:
+            return
+        if selected_source is None:
+            return
+        #if selected_source is "Module Layout":
+        #    return
+        if selected_source == self.selected_source:
+            self.parent.backend.closeDatasetSignal.emit()
+        rmdir = os.path.join(self.dataset_dir, "analyses", selected_source)
+        print("Deleting {}".format(rmdir))
+        shutil.rmtree(rmdir, ignore_errors=True)
+        self.update_source_names()
 
     @Slot(str)
     def open(self, dataset_dir):
         self.dataset_dir = dataset_dir
         self.load_basic_data()
+        self.update_source_names()
+        self.loadSource("Module Layout")
         self.is_open = True
         self.parent.backend.changeDatasetSignal.emit()
+        self.parent.data_sources.dataSourcesChangedSignal.emit()
 
     @Slot()
     def close(self):
         self.reset()
         self.is_open = False
         self.parent.backend.closeDatasetSignal.emit()
+        self.parent.data_sources.dataSourcesChangedSignal.emit()
 
-    @Slot(QListWidgetItem)
-    def update(self, analysis_name):
-        print("Updating", analysis_name.text())
-        analysis_name = analysis_name.text()
+    @Slot(str)
+    def loadSource(self, selected_source):
+        print("Updating", selected_source)
         if self.dataset_dir is None:
             return
-        if analysis_name is None:
+        if selected_source is None:
             return
-        self.analysis_name = analysis_name
-        self.data = json.load(open(os.path.join(
-            self.dataset_dir, "analyses", analysis_name, "results.geojson"), "r"))
-        self.meta = json.load(open(os.path.join(
-            self.dataset_dir, "analyses", analysis_name, "meta.json"), "r"))
+        self.selected_source = selected_source
+
+        if selected_source == "Module Layout":
+            self.data = json.load(open(os.path.join(
+                self.dataset_dir, "mapping", "module_geolocations_refined.geojson"), "r"))
+            self.meta = None            
+        else:
+            self.data = json.load(open(os.path.join(
+                self.dataset_dir, "analyses", selected_source, "results.geojson"), "r"))
+            self.meta = json.load(open(os.path.join(
+                self.dataset_dir, "analyses", selected_source, "meta.json"), "r"))
         self.get_column_ranges()
         self.parent.backend.changeDatasetSignal.emit()
 
