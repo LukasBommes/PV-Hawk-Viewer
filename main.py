@@ -558,7 +558,6 @@ class Dataset(QObject):
         self.update_source_names()
         self.loadSource("Module Layout")
         self.is_open = True
-        self.parent.backend.changeDatasetSignal.emit()
         self.parent.data_sources.dataSourcesChangedSignal.emit()
 
     @Slot()
