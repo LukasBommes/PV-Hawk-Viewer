@@ -12,7 +12,7 @@ import numpy as np
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QToolBar, QWidget, \
     QDockWidget, QMessageBox, QCheckBox, QSpacerItem, QSizePolicy, QLabel, \
-    QGridLayout, QFileDialog
+    QGridLayout, QFileDialog, QListWidgetItem
 from PySide6.QtCore import QThread, Qt, Slot, Signal, QUrl, QDir, QObject, \
     QSize
 from PySide6.QtGui import QPixmap, QImage
@@ -108,7 +108,7 @@ class AnalysisResults(QWidget):
         # connect signals and slots
         self.ui.pushButtonDelete.clicked.connect(self.delete_analysis_result)
         self.ui.pushButtonNewAnalysis.clicked.connect(self.parent.show_analysis_module_temperatures)
-        self.ui.analysisResultsListWidget.itemSelectionChanged.connect(self.analysis_selection_changed)
+        self.ui.analysisResultsListWidget.itemClicked.connect(self.parent.analysis_data.update)
 
     def load_analyses(self):
         self.analysis_names = []
@@ -140,13 +140,6 @@ class AnalysisResults(QWidget):
             print("Deleting {}".format(rmdir))
             shutil.rmtree(rmdir, ignore_errors=True)
             self.update()
-
-    @Slot()
-    def analysis_selection_changed(self):
-        selected_analysis_name = self.ui.analysisResultsListWidget.currentItem()
-        if selected_analysis_name is None:
-            return
-        self.parent.dataset.analysis_data.update(selected_analysis_name.text())
 
 
 
@@ -276,6 +269,7 @@ class MainWindow(QMainWindow):
         self.ui.setupUi(self)
         self.dataset_dir = None
         self.dataset = None
+        self.analysis_data = AnalysisData(self)
 
         # setup toolbars
         self.toolBarTempRange = QToolBar(self)
@@ -501,24 +495,16 @@ class MainWindow(QMainWindow):
     #     return max_temp_patch_idx
 
 
-class AnalysisData:
+# TODO: handle dataset opening and closing for analysis data
+class AnalysisData(QObject):
+    dataChanged = Signal()
+
     def __init__(self, parent=None):
+        super().__init__()
         self.parent = parent
         self.analysis_name = None
         self.data = None
-        self.meta = None
-
-    def update(self, analysis_name):
-        if self.parent.dataset_dir is None:
-            return
-        if analysis_name is None:
-            return
-        self.analysis_name = analysis_name
-        self.data = json.load(open(os.path.join(
-            self.parent.dataset_dir, "analyses", analysis_name, "results.geojson"), "r"))
-        self.meta = json.load(open(os.path.join(
-            self.parent.dataset_dir, "analyses", analysis_name, "meta.json"), "r"))
-        self.get_column_ranges()
+        self.meta = None   
 
     def get_column_ranges(self):
         self.column_ranges = defaultdict(dict)
@@ -542,11 +528,26 @@ class AnalysisData:
                 if val > self.column_ranges[prop]["max"]:
                     self.column_ranges[prop]["max"] = val
 
+    @Slot(QListWidgetItem)
+    def update(self, analysis_name):
+        print("Updating", analysis_name.text())
+        analysis_name = analysis_name.text()
+        if self.parent.dataset_dir is None:
+            return
+        if analysis_name is None:
+            return
+        self.analysis_name = analysis_name
+        self.data = json.load(open(os.path.join(
+            self.parent.dataset_dir, "analyses", analysis_name, "results.geojson"), "r"))
+        self.meta = json.load(open(os.path.join(
+            self.parent.dataset_dir, "analyses", analysis_name, "meta.json"), "r"))
+        self.get_column_ranges()
+        self.dataChanged.emit()
+
 
 class Dataset: # update data depending on selected analysis result in list view, notify JS about data update and redraw in JS
     def __init__(self, dataset_dir):
         self.dataset_dir = dataset_dir
-        self.analysis_data = AnalysisData(self)
 
         # load dataset
         if self.dataset_dir is not None:
