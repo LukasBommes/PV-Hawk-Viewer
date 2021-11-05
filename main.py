@@ -87,6 +87,7 @@ class SourceFrame(QWidget):
         self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
         self.reset()
 
+    @Slot()
     def reset(self):
         self.pixmap = QPixmap(u"resources/no_image.png")
         w = self.label.width()
@@ -113,6 +114,7 @@ class DataSources(QWidget):
         self.ui.pushButtonNewAnalysis.clicked.connect(self.parent.show_analysis_module_temperatures)
         self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.parent.dataset.loadSource(name.text()))
         self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.ui.pushButtonDelete.setEnabled(name.text() != "Module Layout"))
+        self.ui.dataSourcesListWidget.itemSelectionChanged.connect(self.parent.source_frame.reset)
         self.dataSourcesChangedSignal.connect(self.update)
 
     def delete_source(self):
@@ -138,6 +140,8 @@ class DataSources(QWidget):
         self.ui.dataSourcesListWidget.clear()
         if self.parent.dataset.is_open:
             self.ui.dataSourcesListWidget.addItems(self.parent.dataset.source_names)
+            if self.parent.dataset.selected_source == "Module Layout":
+                self.ui.dataSourcesListWidget.setCurrentRow(0)
 
 
 class TempRangeWidget(QWidget):
@@ -279,19 +283,20 @@ class MainWindow(QMainWindow):
         self.toolBarColormapSelection.addWidget(self.dataSelectionWidget)
 
         # setup widgets
-        self.dataSourcesWidget = QDockWidget(u"Data Sources", self)
-        self.data_sources = DataSources(self)
-        self.dataSourcesWidget.setWidget(self.data_sources)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.dataSourcesWidget)
-
         self.annotationEditorWidget = QDockWidget(u"Annotation Editor", self)
         self.annotation_editor = AnnotationEditor(self)
         self.annotationEditorWidget.setWidget(self.annotation_editor)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.annotationEditorWidget)
-
+        
         self.sourceFrameWidget = QDockWidget(u"Source Frame", self)
         self.source_frame = SourceFrame(self)
         self.sourceFrameWidget.setWidget(self.source_frame)
+        
+        self.dataSourcesWidget = QDockWidget(u"Data Sources", self)
+        self.data_sources = DataSources(self)
+        self.dataSourcesWidget.setWidget(self.data_sources)
+
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.dataSourcesWidget)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.annotationEditorWidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.sourceFrameWidget)
 
         # child windows
@@ -308,9 +313,7 @@ class MainWindow(QMainWindow):
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionAbout.triggered.connect(self.about)
         self.ui.actionOpen_Dataset.triggered.connect(self.open_dataset)
-        #self.ui.actionOpen_Dataset.triggered.connect(self.data_sources.update)
         self.ui.actionClose_Dataset.triggered.connect(self.close_dataset)
-        #self.ui.actionClose_Dataset.triggered.connect(self.data_sources.update)
         self.ui.actionNew_Annotation.triggered.connect(self.new_annotation)
         self.ui.actionLoad_Annotation.triggered.connect(self.load_annotation)
         self.ui.actionSave_Annotation.triggered.connect(self.save_annotation)
@@ -359,7 +362,6 @@ class MainWindow(QMainWindow):
             self.toolBarColormapSelection.setEnabled(True)
             self.ui.actionModule_Temperatures.setEnabled(True)
             self.data_sources.ui.pushButtonNewAnalysis.setEnabled(True)
-            self.data_sources.ui.pushButtonDelete.setEnabled(True)
         else:
             msg = QMessageBox()
             msg.setWindowTitle("Error")
@@ -521,13 +523,6 @@ class Dataset(QObject):
                 if val > self.column_ranges[prop]["max"]:
                     self.column_ranges[prop]["max"] = val
 
-    def load_basic_data(self):
-        if self.dataset_dir is None:
-            return       
-        # patch meta data
-        self.patch_meta = pickle.load(open(os.path.join(
-            self.dataset_dir, "patches", "meta.pkl"), "rb"))
-
     @Slot()
     def update_source_names(self):
         self.source_names = []
@@ -542,8 +537,8 @@ class Dataset(QObject):
             return
         if selected_source is None:
             return
-        #if selected_source is "Module Layout":
-        #    return
+        if selected_source == "Module Layout":
+            return
         if selected_source == self.selected_source:
             self.parent.backend.closeDatasetSignal.emit()
         rmdir = os.path.join(self.dataset_dir, "analyses", selected_source)
@@ -554,7 +549,8 @@ class Dataset(QObject):
     @Slot(str)
     def open(self, dataset_dir):
         self.dataset_dir = dataset_dir
-        self.load_basic_data()
+        self.patch_meta = pickle.load(open(os.path.join(
+            self.dataset_dir, "patches", "meta.pkl"), "rb"))
         self.update_source_names()
         self.loadSource("Module Layout")
         self.is_open = True

@@ -37,6 +37,15 @@
         map.setView(new L.LatLng(48.1, 11.5), 8);
       }
 
+      function getColor(d) {
+        backend.printObj(JSON.stringify(d));
+        return d > 20 ? '#800026' :
+              d > 15  ? '#BD0026' :
+              d > 10  ? '#E31A1C' :
+              d > 5  ? '#FC4E2A' :
+                        '#FFEDA0';
+      }
+
       // function getColor(value) { //, min_val, max_val) {
       //   // map to range [0, 1]
       //   //value = (value - min_val) / (max_val - min_val);
@@ -91,7 +100,7 @@
           style: function(feature) {
             return {
               "color": "#ff7800",
-              "fillColor": "#ff7800", //getData(feature.properties.track_id, "max_of_min_temps")
+              "fillColor": getColor(feature.properties.mean_of_max_temps), //"#ff7800", //getData(feature.properties.track_id, "max_of_min_temps")
               "weight": 1,
               "opacity": 1,
               "fill": true,
