@@ -15,6 +15,7 @@
  <div id="map"></div>
 
  <script>
+
   //var backend = null;
   new QWebChannel(qt.webChannelTransport, function (channel) {
       var backend = channel.objects.backend;
@@ -37,26 +38,7 @@
         map.setView(new L.LatLng(48.1, 11.5), 8);
       }
 
-      function getColor(d) {
-        backend.printObj(JSON.stringify(d));
-        return d > 20 ? '#800026' :
-              d > 15  ? '#BD0026' :
-              d > 10  ? '#E31A1C' :
-              d > 5  ? '#FC4E2A' :
-                        '#FFEDA0';
-      }
-
-      // function getColor(value) { //, min_val, max_val) {
-      //   // map to range [0, 1]
-      //   //value = (value - min_val) / (max_val - min_val);
-
-        
-      //   // TODO: normalize value to range [0, 1]
-      //   // map colors accoridngly
-      //   return "#ff7800";
-      // }
-
-      function loadModules(js_modules) {
+      function loadData(js_data) {
         var active_module;
 
         // callback when module is clicked
@@ -92,15 +74,14 @@
         }
 
         // draw PV modules on map
-        modules_geojson = L.geoJSON(js_modules, {
+        modules_geojson = L.geoJSON(js_data.data, {
           onEachFeature: onEachFeature,
           filter: function(feature, layer) {
             return (feature.geometry.type == "Polygon");
           },
           style: function(feature) {
             return {
-              "color": "#ff7800",
-              "fillColor": getColor(feature.properties.mean_of_max_temps), //"#ff7800", //getData(feature.properties.track_id, "max_of_min_temps")
+              "color": js_data.colors[feature.properties.track_id],
               "weight": 1,
               "opacity": 1,
               "fill": true,
@@ -121,9 +102,9 @@
           }
 
           // visualize modules
-          backend.loadData(function(modules) {
-            js_modules = JSON.parse(modules);
-            loadModules(js_modules);
+          backend.loadData(function(data) {
+            js_data = JSON.parse(data);
+            loadData(js_data);
           });
       });
 

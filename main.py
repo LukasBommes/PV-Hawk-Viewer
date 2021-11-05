@@ -9,7 +9,6 @@ import datetime
 from collections import defaultdict
 import cv2
 import numpy as np
-from numpy.lib.function_base import select
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QToolBar, QWidget, \
     QDockWidget, QMessageBox, QCheckBox, QSpacerItem, QSizePolicy, QLabel, \
@@ -28,6 +27,7 @@ from ui_analysis_module_temperatures import Ui_ModuleTemperatures
 
 from common import get_immediate_subdirectories, to_celsius, normalize
 from analysis.temperatures import ModuleTemperaturesWorker
+from colormap import get_colors
 
 
 class Backend(QObject):
@@ -45,10 +45,25 @@ class Backend(QObject):
 
     @Slot(result=str)
     def loadData(self):
-        if not self.parent.dataset.is_open:
-            return json.dumps([])
-        else:
-            return json.dumps(self.parent.dataset.data)
+        data = []
+        colors = {}
+        if self.parent.dataset.is_open:
+            data = self.parent.dataset.data
+            column = "mean_of_max_temps"
+            data_column = self.parent.dataset.get_column(column)
+            if len(data_column) > 0:
+                colors = get_colors(data_column, cmap="plasma", vmin=-5, vmax=5)
+            else:
+                default_color = "#ff7800"
+                track_ids = list(self.parent.dataset.get_column("track_id").values())
+                colors = {track_id: default_color for track_id in track_ids}
+
+        print(data, colors)
+
+        return json.dumps({
+            "data": data,
+            "colors": colors
+        })
 
     @Slot(str)
     def updateImages(self, track_id):
@@ -498,30 +513,41 @@ class Dataset(QObject):
         self.data = None
         self.meta = None
         self.patch_meta = None
-        self.modules = None
         self.is_open = False
 
-    def get_column_ranges(self):
-        self.column_ranges = defaultdict(dict)
+    def get_column(self, column):
+        if self.dataset_dir is None:
+            return {}
+        column_values = {}
         for feature in self.data["features"]:
-            for prop in feature["properties"].keys():
-                if prop == "track_id":
-                    continue
+            track_id = feature["properties"]["track_id"]
+            try:
+                column_values[track_id] = feature["properties"][column]
+            except KeyError:
+                continue
+        return column_values
 
-                if prop not in self.column_ranges.keys():
-                    self.column_ranges[prop] = {
-                        "min": np.inf,
-                        "max": -np.inf
-                    }
+    # def get_column_ranges(self):
+    #     self.column_ranges = defaultdict(dict)
+    #     for feature in self.data["features"]:
+    #         for prop in feature["properties"].keys():
+    #             if prop == "track_id":
+    #                 continue
 
-                val = feature["properties"][prop]
-                if val is None:
-                    continue
+    #             if prop not in self.column_ranges.keys():
+    #                 self.column_ranges[prop] = {
+    #                     "min": np.inf,
+    #                     "max": -np.inf
+    #                 }
 
-                if val < self.column_ranges[prop]["min"]:
-                    self.column_ranges[prop]["min"] = val
-                if val > self.column_ranges[prop]["max"]:
-                    self.column_ranges[prop]["max"] = val
+    #             val = feature["properties"][prop]
+    #             if val is None:
+    #                 continue
+
+    #             if val < self.column_ranges[prop]["min"]:
+    #                 self.column_ranges[prop]["min"] = val
+    #             if val > self.column_ranges[prop]["max"]:
+    #                 self.column_ranges[prop]["max"] = val
 
     @Slot()
     def update_source_names(self):
@@ -581,7 +607,6 @@ class Dataset(QObject):
                 self.dataset_dir, "analyses", selected_source, "results.geojson"), "r"))
             self.meta = json.load(open(os.path.join(
                 self.dataset_dir, "analyses", selected_source, "meta.json"), "r"))
-        self.get_column_ranges()
         self.parent.backend.changeDatasetSignal.emit()
 
 
