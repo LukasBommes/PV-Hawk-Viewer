@@ -112,7 +112,7 @@ class DataSources(QWidget):
         self.ui.pushButtonDelete.clicked.connect(self.delete_source)
         self.ui.pushButtonNewAnalysis.clicked.connect(self.parent.show_analysis_module_temperatures)
         self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.parent.dataset.loadSource(name.text()))
-        #self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.ui.pushButtonDelete.setEnabled(name != "Module Layout"))
+        self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.ui.pushButtonDelete.setEnabled(name.text() != "Module Layout"))
         self.dataSourcesChangedSignal.connect(self.update)
 
     def delete_source(self):
