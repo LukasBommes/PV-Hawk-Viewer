@@ -73,6 +73,12 @@
           });
         }
 
+        // clear map
+        if (modules_geojson !== null) {
+          backend.printObj(JSON.stringify("Deleting modules_geojson"));
+          map.removeLayer(modules_geojson);
+        }
+
         // draw PV modules on map
         modules_geojson = L.geoJSON(js_data.data, {
           onEachFeature: onEachFeature,
@@ -97,9 +103,10 @@
       backend.dataset_changed.connect(function() {
           // clear previous data
           backend.printObj(JSON.stringify("Loading dataset in JS."));
-          if (modules_geojson !== null) {
-            map.removeLayer(modules_geojson);
-          }
+          // if (modules_geojson !== null) {
+          //   backend.printObj(JSON.stringify("Deleting modules_geojson"));
+          //   map.removeLayer(modules_geojson);
+          // }
 
           // visualize modules
           backend.loadData(function(data) {
