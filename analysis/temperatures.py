@@ -124,6 +124,8 @@ class ModuleTemperaturesWorker(QObject):
             for patches_agg in ["max", "min"]:#, "mean", "median", "first"]:
                 column = "{}_of_{}_temps".format(patches_agg, patch_area_agg)
                 neighbour_mean_temps = self.get_neighbours_median_temp(gdf_centers, neighbour_radius=self.neighbour_radius, column=column)
+                if neighbour_mean_temps is None: # cancelled
+                    return
 
                 gdf_corners["{}_corrected".format(column)] = gdf_corners.loc[:, column] - neighbour_mean_temps
                 gdf_centers["{}_corrected".format(column)] = gdf_centers.loc[:, column] - neighbour_mean_temps

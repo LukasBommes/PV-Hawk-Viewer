@@ -94,7 +94,7 @@
       }
 
       // wait for modules to be updated
-      backend.changeDatasetSignal.connect(function() {
+      backend.dataset_changed.connect(function() {
           // clear previous data
           backend.printObj(JSON.stringify("Loading dataset in JS."));
           if (modules_geojson !== null) {
@@ -108,7 +108,7 @@
           });
       });
 
-      backend.closeDatasetSignal.connect(function() {
+      backend.dataset_closed.connect(function() {
           backend.printObj(JSON.stringify("Closing dataset, clearing data in JS"));
           map.removeLayer(modules_geojson);
           modules_geojson = null;

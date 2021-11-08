@@ -32,12 +32,16 @@ from colormap import get_colors
 
 
 class Backend(QObject):
-    changeDatasetSignal = Signal()
-    closeDatasetSignal = Signal()
+    dataset_changed = Signal()
+    dataset_closed = Signal()
 
     def __init__(self, parent=None):
         super(Backend, self).__init__()
         self.parent = parent
+        # connect signals and slots
+        self.parent.dataset.source_deleted.connect(self.dataset_closed)
+        self.parent.dataset.changed.connect(self.dataset_changed)
+        self.parent.dataset.closed.connect(self.dataset_closed)
 
     @Slot(str)
     def printObj(self, obj):
@@ -95,8 +99,6 @@ class AnnotationEditor(QWidget):
 
 
 class DataSources(QWidget):
-    dataSourcesChangedSignal = Signal()
-
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
@@ -109,7 +111,10 @@ class DataSources(QWidget):
         self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.parent.dataset.loadSource(name.text()))
         self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.ui.pushButtonDelete.setEnabled(name.text() != "Module Layout"))
         self.ui.dataSourcesListWidget.itemSelectionChanged.connect(self.parent.source_frame.reset)
-        self.dataSourcesChangedSignal.connect(self.update)
+        self.parent.dataset.source_names_updated.connect(self.update)
+        self.parent.dataset.opened.connect(self.update)
+        self.parent.dataset.closed.connect(self.update)
+        
 
     def delete_source(self):
         selected_name = self.ui.dataSourcesListWidget.currentItem()
@@ -169,6 +174,10 @@ class SourceFrame(QWidget):
         self.parent = parent
         self.ui.colormapComboBox.addItems(["Gray", "Plasma", "Jet"])
         self.ui.colormapComboBox.setCurrentIndex(0)
+
+        self.ui.minTempSpinBox.setEnabled(False)
+        self.ui.maxTempSpinBox.setEnabled(False)
+        self.ui.colormapComboBox.setEnabled(False)
 
         # state
         self.min_temp = self.ui.minTempSpinBox.value()
@@ -341,7 +350,6 @@ class ModuleTemperatures(QWidget):
 
     @Slot()
     def finished(self):
-        self.ui.progressLabel.setText("Done")
         self.ui.pushButtonCompute.hide()
         self.ui.pushButtonOk.show()
         self.ui.pushButtonCancel.setEnabled(False)
@@ -362,6 +370,8 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.dataset = Dataset(self)
+
+        self.registerBackend()
 
         # setup toolbars
         # self.toolBarTempRange = QToolBar(self)
@@ -404,7 +414,7 @@ class MainWindow(QMainWindow):
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionAbout.triggered.connect(self.about)
         self.ui.actionOpen_Dataset.triggered.connect(self.open_dataset)
-        self.ui.actionClose_Dataset.triggered.connect(self.close_dataset)
+        self.ui.actionClose_Dataset.triggered.connect(self.dataset.close)
         self.ui.actionNew_Annotation.triggered.connect(self.new_annotation)
         self.ui.actionLoad_Annotation.triggered.connect(self.load_annotation)
         self.ui.actionSave_Annotation.triggered.connect(self.save_annotation)
@@ -412,8 +422,9 @@ class MainWindow(QMainWindow):
         self.ui.menuView.addAction(self.dataSourcesWidget.toggleViewAction())
         self.ui.menuView.addAction(self.annotationEditorWidget.toggleViewAction())
         self.ui.menuView.addAction(self.sourceFrameWidget.toggleViewAction())
+        self.dataset.opened.connect(self.dataset_opened)
+        self.dataset.closed.connect(self.dataset_closed)
         
-        self.registerBackend()
         self.loadMainDocument()
 
     def registerBackend(self):
@@ -444,15 +455,7 @@ class MainWindow(QMainWindow):
         dir = QFileDialog.getExistingDirectory(
             self, caption="Open Dataset", options=QFileDialog.ShowDirsOnly)
         if self.valid_dataset(dir):
-            # load dataset
             self.dataset.open(dir)
-            # activate close dialog and toolbar
-            self.ui.actionClose_Dataset.setEnabled(True)
-            self.ui.actionOpen_Dataset.setEnabled(False)
-            self.toolBarTempRange.setEnabled(True)
-            self.toolBarColormapSelection.setEnabled(True)
-            self.ui.actionModule_Temperatures.setEnabled(True)
-            self.data_sources.ui.pushButtonNewAnalysis.setEnabled(True)
         else:
             msg = QMessageBox()
             msg.setWindowTitle("Error")
@@ -461,17 +464,26 @@ class MainWindow(QMainWindow):
             msg.exec()
 
     @Slot()
-    def close_dataset(self):
-        self.dataset.close()
-        # remove source frame and patches
+    def dataset_opened(self):
+        self.ui.actionClose_Dataset.setEnabled(True)
+        self.ui.actionOpen_Dataset.setEnabled(False)
+        self.ui.actionModule_Temperatures.setEnabled(True)
+        self.data_sources.ui.pushButtonNewAnalysis.setEnabled(True)
+        self.source_frame.ui.minTempSpinBox.setEnabled(True)
+        self.source_frame.ui.maxTempSpinBox.setEnabled(True)
+        self.source_frame.ui.colormapComboBox.setEnabled(True)
+
+    @Slot()
+    def dataset_closed(self):
         self.source_frame.reset()
-        # deactivate close dialog and toolbar
         self.ui.actionClose_Dataset.setEnabled(False)
-        self.ui.actionOpen_Dataset.setEnabled(True)
-        self.toolBarTempRange.setEnabled(False)
-        self.toolBarColormapSelection.setEnabled(False)
+        self.ui.actionOpen_Dataset.setEnabled(True)        
         self.ui.actionModule_Temperatures.setEnabled(False)
         self.data_sources.ui.pushButtonDelete.setEnabled(False)
+        self.source_frame.ui.minTempSpinBox.setEnabled(False)
+        self.source_frame.ui.maxTempSpinBox.setEnabled(False)
+        self.source_frame.ui.colormapComboBox.setEnabled(False)
+
 
     def setTrackId(self, track_id):
         self.track_id = track_id
@@ -511,6 +523,12 @@ class MainWindow(QMainWindow):
 
 
 class Dataset(QObject):
+    opened = Signal()
+    closed = Signal()
+    changed = Signal()
+    source_deleted = Signal()
+    source_names_updated = Signal()
+
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
@@ -547,7 +565,7 @@ class Dataset(QObject):
             self.source_names = sorted(get_immediate_subdirectories(
                 os.path.join(self.dataset_dir, "analyses")))
         self.source_names.insert(0, "Module Layout")
-        self.parent.data_sources.dataSourcesChangedSignal.emit()
+        self.source_names_updated.emit()
 
     def delete_source(self, selected_source):
         if self.dataset_dir is None:
@@ -557,7 +575,7 @@ class Dataset(QObject):
         if selected_source == "Module Layout":
             return
         if selected_source == self.selected_source:
-            self.parent.backend.closeDatasetSignal.emit()
+            self.source_deleted.emit()
         rmdir = os.path.join(self.dataset_dir, "analyses", selected_source)
         print("Deleting {}".format(rmdir))
         shutil.rmtree(rmdir, ignore_errors=True)
@@ -571,14 +589,13 @@ class Dataset(QObject):
         self.update_source_names()
         self.loadSource("Module Layout")
         self.is_open = True
-        self.parent.data_sources.dataSourcesChangedSignal.emit()
+        self.opened.emit()
 
     @Slot()
     def close(self):
         self.reset()
         self.is_open = False
-        self.parent.backend.closeDatasetSignal.emit()
-        self.parent.data_sources.dataSourcesChangedSignal.emit()
+        self.closed.emit()
 
     @Slot(str)
     def loadSource(self, selected_source):
@@ -598,7 +615,7 @@ class Dataset(QObject):
                 self.dataset_dir, "analyses", selected_source, "results.geojson"), "r"))
             self.meta = json.load(open(os.path.join(
                 self.dataset_dir, "analyses", selected_source, "meta.json"), "r"))
-        self.parent.backend.changeDatasetSignal.emit()
+        self.changed.emit()
 
 
 
