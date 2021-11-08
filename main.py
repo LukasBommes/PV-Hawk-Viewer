@@ -12,13 +12,14 @@ import numpy as np
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QToolBar, QWidget, \
     QDockWidget, QMessageBox, QCheckBox, QSpacerItem, QSizePolicy, QLabel, \
-    QGridLayout, QFileDialog
+    QGridLayout, QFileDialog, QBoxLayout
 from PySide6.QtCore import QThread, Qt, Slot, Signal, QUrl, QDir, QObject, \
     QSize
 from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtWebChannel import QWebChannel
 
 from ui_mainwindow import Ui_MainWindow
+from ui_source_frame import Ui_SourceFrame
 from ui_annotation_editor import Ui_AnnotationEditor
 from ui_data_sources import Ui_DataSources
 from ui_toolbar_temp_range import Ui_TempRange
@@ -93,28 +94,6 @@ class AnnotationEditor(QWidget):
             self.ui.scrollAreaWidgetContents.layout().addItem(self.verticalSpacer)
 
 
-class SourceFrame(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.gridLayout = QGridLayout(self)
-        self.label = QLabel(self)
-        self.label.setMinimumSize(QSize(50, 50))
-        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
-        self.reset()
-
-    @Slot()
-    def reset(self):
-        self.pixmap = QPixmap(u"resources/no_image.png")
-        w = self.label.width()
-        h = self.label.height()
-        self.label.setPixmap(self.pixmap.scaled(w, h, Qt.KeepAspectRatio))
-
-    def resizeEvent(self, event):
-        w = self.label.width()
-        h = self.label.height()
-        self.label.setPixmap(self.pixmap.scaled(w, h, Qt.KeepAspectRatio))
-
-
 class DataSources(QWidget):
     dataSourcesChangedSignal = Signal()
 
@@ -159,27 +138,127 @@ class DataSources(QWidget):
                 self.ui.dataSourcesListWidget.setCurrentRow(0)
 
 
-class TempRangeWidget(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.parent = parent
-        self.ui = Ui_TempRange()
-        self.ui.setupUi(self)
-        # connect signals and slots
-        self.ui.minTempSpinBox.valueChanged.connect(lambda: self.parent.setMinTemp(self.ui.minTempSpinBox.value()))
-        self.ui.maxTempSpinBox.valueChanged.connect(lambda: self.parent.setMaxTemp(self.ui.maxTempSpinBox.value()))
+# class TempRangeWidget(QWidget):
+#     def __init__(self, parent=None):
+#         super().__init__(parent)
+#         self.parent = parent
+#         self.ui = Ui_TempRange()
+#         self.ui.setupUi(self)
+#         # connect signals and slots
+#         self.ui.minTempSpinBox.valueChanged.connect(lambda: self.parent.setMinTemp(self.ui.minTempSpinBox.value()))
+#         self.ui.maxTempSpinBox.valueChanged.connect(lambda: self.parent.setMaxTemp(self.ui.maxTempSpinBox.value()))
 
 
-class ColormapSelectionWidget(QWidget):
+# class ColormapSelectionWidget(QWidget):
+#     def __init__(self, parent=None):
+#         super().__init__(parent)
+#         self.parent = parent
+#         self.ui = Ui_ColormapSelection()
+#         self.ui.setupUi(self)
+#         self.ui.comboBox.addItems(["Gray", "Plasma", "Jet"])
+#         self.ui.comboBox.setCurrentIndex(0)
+#         # connect signals and slots
+#         self.ui.comboBox.currentIndexChanged.connect(lambda: self.parent.setColormap(self.ui.comboBox.currentIndex()))
+
+
+class SourceFrame(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.parent = parent
-        self.ui = Ui_ColormapSelection()
+        self.ui = Ui_SourceFrame()
         self.ui.setupUi(self)
-        self.ui.comboBox.addItems(["Gray", "Plasma", "Jet"])
-        self.ui.comboBox.setCurrentIndex(0)
+        self.parent = parent
+        self.ui.colormapComboBox.addItems(["Gray", "Plasma", "Jet"])
+        self.ui.colormapComboBox.setCurrentIndex(0)
+
+        # state
+        self.min_temp = self.ui.minTempSpinBox.value()
+        self.max_temp = self.ui.maxTempSpinBox.value()
+        self.colormap = self.setColormap(self.ui.colormapComboBox.currentIndex())
+
         # connect signals and slots
-        self.ui.comboBox.currentIndexChanged.connect(lambda: self.parent.setColormap(self.ui.comboBox.currentIndex()))
+        self.ui.minTempSpinBox.valueChanged.connect(self.setMinTemp)
+        self.ui.maxTempSpinBox.valueChanged.connect(self.setMaxTemp)
+        self.ui.colormapComboBox.currentIndexChanged.connect(self.setColormap)
+
+        self.reset()
+
+    @Slot()
+    def reset(self):
+        self.pixmap = QPixmap(u"resources/no_image.png")
+        w = self.ui.sourceFrameLabel.width()
+        h = self.ui.sourceFrameLabel.height()
+        self.ui.sourceFrameLabel.setPixmap(self.pixmap.scaled(w, h, Qt.KeepAspectRatio))
+
+    def resizeEvent(self, event):
+        w = self.ui.sourceFrameLabel.width()
+        h = self.ui.sourceFrameLabel.height()
+        self.ui.sourceFrameLabel.setPixmap(self.pixmap.scaled(w, h, Qt.KeepAspectRatio))
+
+    def setMinTemp(self, min_temp):
+        self.min_temp = min_temp
+        self.updateSourceFrame()
+    
+    def setMaxTemp(self, max_temp):
+        self.max_temp = max_temp
+        self.updateSourceFrame()
+
+    def setColormap(self, idx):
+        if idx > 0:
+            colormaps = {
+                0: None,
+                1: cv2.COLORMAP_PLASMA,
+                2: cv2.COLORMAP_JET
+            }
+            self.colormap = colormaps[idx]
+        else:
+            self.colormap = None
+        self.updateSourceFrame()
+
+    def updateSourceFrame(self):
+        if not self.parent.dataset.is_open:
+            return None
+
+        if self.parent.track_id is None:
+            return None
+
+        image_files = sorted(glob.glob(os.path.join(
+            self.parent.dataset.dataset_dir, "patches_final", "radiometric", self.parent.track_id, "*")))
+        image_file = image_files[self.parent.patch_idx]
+        source_frame_idx = int(re.findall(r'\d+', os.path.basename(image_file))[0])
+        source_frame_file = os.path.join(
+            self.parent.dataset.dataset_dir, "splitted", "radiometric", "frame_{:06d}.tiff".format(source_frame_idx))
+
+        # load frame
+        source_frame = cv2.imread(source_frame_file, cv2.IMREAD_ANYDEPTH)
+        source_frame = to_celsius(source_frame)
+        source_frame = normalize(source_frame, vmin=self.min_temp, vmax=self.max_temp)
+        source_frame = cv2.cvtColor(source_frame, cv2.COLOR_GRAY2BGR)
+        if self.colormap is not None:
+            source_frame = cv2.applyColorMap(source_frame, self.colormap)
+
+        # load quadrilateral of module and draw onto frame using opencv
+        image_file = str.split(os.path.basename(image_file), ".")[0]
+        frame_name = image_file[:12]
+        mask_name = image_file[13:]
+        quadrilateral = np.array(self.parent.dataset.patch_meta[(self.parent.track_id, frame_name, mask_name)]["quadrilateral"])
+        source_frame = cv2.polylines(source_frame, [quadrilateral], isClosed=True, color=(0, 255, 0), thickness=3)
+
+        # update source frame
+        source_frame = cv2.cvtColor(source_frame, cv2.COLOR_BGR2RGB)
+        height, width, _ = source_frame.shape
+        bytesPerLine = 3 * width
+        qt_source_frame = QImage(
+            source_frame.data, width, height, bytesPerLine, QImage.Format_RGB888)
+
+        self.pixmap = QPixmap(qt_source_frame)
+        w = self.ui.sourceFrameLabel.width()
+        h = self.ui.sourceFrameLabel.height()
+        self.ui.sourceFrameLabel.setPixmap(
+            self.pixmap.scaled(w, h, Qt.KeepAspectRatio))
+
+    # def updatePatches(self, track_id):
+    #
+    #     return max_temp_patch_idx
 
 
 class ModuleTemperatures(QWidget):
@@ -285,17 +364,17 @@ class MainWindow(QMainWindow):
         self.dataset = Dataset(self)
 
         # setup toolbars
-        self.toolBarTempRange = QToolBar(self)
-        self.addToolBar(Qt.TopToolBarArea, self.toolBarTempRange)
-        self.toolBarTempRange.setEnabled(False)
-        self.tempRangeWidget = TempRangeWidget(self)
-        self.toolBarTempRange.addWidget(self.tempRangeWidget)
+        # self.toolBarTempRange = QToolBar(self)
+        # self.addToolBar(Qt.TopToolBarArea, self.toolBarTempRange)
+        # self.toolBarTempRange.setEnabled(False)
+        # self.tempRangeWidget = TempRangeWidget(self)
+        # self.toolBarTempRange.addWidget(self.tempRangeWidget)
 
-        self.toolBarColormapSelection = QToolBar(self)
-        self.addToolBar(Qt.TopToolBarArea, self.toolBarColormapSelection)
-        self.toolBarColormapSelection.setEnabled(False)
-        self.dataSelectionWidget = ColormapSelectionWidget(self)
-        self.toolBarColormapSelection.addWidget(self.dataSelectionWidget)
+        # self.toolBarColormapSelection = QToolBar(self)
+        # self.addToolBar(Qt.TopToolBarArea, self.toolBarColormapSelection)
+        # self.toolBarColormapSelection.setEnabled(False)
+        # self.colormapWidget = ColormapSelectionWidget(self)
+        # self.toolBarColormapSelection.addWidget(self.colormapWidget)
 
         # setup widgets
         self.annotationEditorWidget = QDockWidget(u"Annotation Editor", self)
@@ -318,9 +397,6 @@ class MainWindow(QMainWindow):
         self.module_temperatures_window = None
 
         # state
-        self.min_temp = self.tempRangeWidget.ui.minTempSpinBox.value()
-        self.max_temp = self.tempRangeWidget.ui.maxTempSpinBox.value()
-        self.colormap = self.setColormap(self.dataSelectionWidget.ui.comboBox.currentIndex())
         self.track_id = None  # currently selected module
         self.patch_idx = None
 
@@ -397,6 +473,11 @@ class MainWindow(QMainWindow):
         self.ui.actionModule_Temperatures.setEnabled(False)
         self.data_sources.ui.pushButtonDelete.setEnabled(False)
 
+    def setTrackId(self, track_id):
+        self.track_id = track_id
+        self.patch_idx = 0
+        self.source_frame.updateSourceFrame()
+
     @Slot()
     def new_annotation(self):
         pass
@@ -427,77 +508,6 @@ class MainWindow(QMainWindow):
             "<p>- Qt Designer</p>"
             "<p>- Python</p>",
         )
-
-    def setMinTemp(self, min_temp):
-        self.min_temp = min_temp
-        self.updateSourceFrame()
-    
-    def setMaxTemp(self, max_temp):
-        self.max_temp = max_temp
-        self.updateSourceFrame()
-
-    def setColormap(self, idx):
-        if idx > 0:
-            colormaps = {
-                0: None,
-                1: cv2.COLORMAP_PLASMA,
-                2: cv2.COLORMAP_JET
-            }
-            self.colormap = colormaps[idx]
-        else:
-            self.colormap = None
-        self.updateSourceFrame()
-
-    def setTrackId(self, track_id):
-        self.track_id = track_id
-        self.patch_idx = 0
-        self.updateSourceFrame()
-
-    def updateSourceFrame(self):
-        if not self.dataset.is_open:
-            return None
-
-        if self.track_id is None:
-            return None
-
-        image_files = sorted(glob.glob(os.path.join(
-            self.dataset.dataset_dir, "patches_final", "radiometric", self.track_id, "*")))
-        image_file = image_files[self.patch_idx]
-        source_frame_idx = int(re.findall(r'\d+', os.path.basename(image_file))[0])
-        source_frame_file = os.path.join(
-            self.dataset.dataset_dir, "splitted", "radiometric", "frame_{:06d}.tiff".format(source_frame_idx))
-
-        # load frame
-        source_frame = cv2.imread(source_frame_file, cv2.IMREAD_ANYDEPTH)
-        source_frame = to_celsius(source_frame)
-        source_frame = normalize(source_frame, vmin=self.min_temp, vmax=self.max_temp)
-        source_frame = cv2.cvtColor(source_frame, cv2.COLOR_GRAY2BGR)
-        if self.colormap is not None:
-            source_frame = cv2.applyColorMap(source_frame, self.colormap)
-
-        # load quadrilateral of module and draw onto frame using opencv
-        image_file = str.split(os.path.basename(image_file), ".")[0]
-        frame_name = image_file[:12]
-        mask_name = image_file[13:]
-        quadrilateral = np.array(self.dataset.patch_meta[(self.track_id, frame_name, mask_name)]["quadrilateral"])
-        source_frame = cv2.polylines(source_frame, [quadrilateral], isClosed=True, color=(0, 255, 0), thickness=3)
-
-        # update source frame
-        source_frame = cv2.cvtColor(source_frame, cv2.COLOR_BGR2RGB)
-        height, width, _ = source_frame.shape
-        bytesPerLine = 3 * width
-        qt_source_frame = QImage(
-            source_frame.data, width, height, bytesPerLine, QImage.Format_RGB888)
-
-        self.source_frame.pixmap = QPixmap(qt_source_frame)
-        w = self.source_frame.label.width()
-        h = self.source_frame.label.height()
-        self.source_frame.label.setPixmap(
-            self.source_frame.pixmap.scaled(w, h, Qt.KeepAspectRatio))
-
-    # def updatePatches(self, track_id):
-    #
-    #     return max_temp_patch_idx
 
 
 class Dataset(QObject):
