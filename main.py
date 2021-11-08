@@ -140,29 +140,36 @@ class DataSources(QWidget):
                 self.ui.dataSourcesListWidget.setCurrentRow(0)
 
 
-class SourceFrame(QWidget):
+class SourceFrameView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.ui = Ui_SourceFrame()
         self.ui.setupUi(self)
+        self.model = SourceFrameModel()
         self.parent = parent
         self.ui.colormapComboBox.addItems(["Gray", "Plasma", "Jet"])
         self.ui.colormapComboBox.setCurrentIndex(0)
         self.disable()
 
-        # state
-        self.min_temp = self.ui.minTempSpinBox.value()
-        self.max_temp = self.ui.maxTempSpinBox.value()
-        self.colormap = self.setColormap(self.ui.colormapComboBox.currentIndex())
-
         # connect signals and slots
-        self.ui.minTempSpinBox.valueChanged.connect(self.setMinTemp)
-        self.ui.maxTempSpinBox.valueChanged.connect(self.setMaxTemp)
-        self.ui.colormapComboBox.currentIndexChanged.connect(self.setColormap)
         self.parent.dataset.opened.connect(self.enable)
         self.parent.dataset.closed.connect(self.disable)
         self.parent.dataset.closed.connect(self.reset)
-        self.parent.dataset.track_id_changed.connect(lambda value: self.updateSourceFrame())
+        self.parent.dataset.track_id_changed.connect(lambda _: self.update_source_frame())
+        self.ui.minTempSpinBox.valueChanged.connect(lambda value: setattr(self.model, 'min_temp', value))
+        self.model.min_temp_changed.connect(self.ui.minTempSpinBox.setValue)
+        self.ui.maxTempSpinBox.valueChanged.connect(lambda value: setattr(self.model, 'max_temp', value))
+        self.model.max_temp_changed.connect(self.ui.maxTempSpinBox.setValue)
+        self.ui.colormapComboBox.currentIndexChanged.connect(lambda value: setattr(self.model, 'colormap', value))
+        self.model.colormap_changed.connect(self.ui.colormapComboBox.setCurrentIndex)
+        self.model.min_temp_changed.connect(lambda _: self.update_source_frame())
+        self.model.max_temp_changed.connect(lambda _: self.update_source_frame())
+        self.model.colormap_changed.connect(lambda _: self.update_source_frame())
+
+        # set default values
+        self.model.min_temp = 30
+        self.model.max_temp = 50
+        self.model.colormap = 0
 
         self.reset()
 
@@ -188,27 +195,7 @@ class SourceFrame(QWidget):
         self.ui.maxTempSpinBox.setEnabled(True)
         self.ui.colormapComboBox.setEnabled(True)
 
-    def setMinTemp(self, min_temp):
-        self.min_temp = min_temp
-        self.updateSourceFrame()
-    
-    def setMaxTemp(self, max_temp):
-        self.max_temp = max_temp
-        self.updateSourceFrame()
-
-    def setColormap(self, idx):
-        if idx > 0:
-            colormaps = {
-                0: None,
-                1: cv2.COLORMAP_PLASMA,
-                2: cv2.COLORMAP_JET
-            }
-            self.colormap = colormaps[idx]
-        else:
-            self.colormap = None
-        self.updateSourceFrame()
-
-    def updateSourceFrame(self):
+    def update_source_frame(self):
         if not self.parent.dataset.is_open:
             return None
 
@@ -225,10 +212,15 @@ class SourceFrame(QWidget):
         # load frame
         source_frame = cv2.imread(source_frame_file, cv2.IMREAD_ANYDEPTH)
         source_frame = to_celsius(source_frame)
-        source_frame = normalize(source_frame, vmin=self.min_temp, vmax=self.max_temp)
+        source_frame = normalize(source_frame, vmin=self.model.min_temp, vmax=self.model.max_temp)
         source_frame = cv2.cvtColor(source_frame, cv2.COLOR_GRAY2BGR)
-        if self.colormap is not None:
-            source_frame = cv2.applyColorMap(source_frame, self.colormap)
+        if self.model.colormap > 0:
+            colormaps = {
+                1: cv2.COLORMAP_PLASMA,
+                2: cv2.COLORMAP_JET
+            }
+            colormap = colormaps[self.model.colormap]
+            source_frame = cv2.applyColorMap(source_frame, colormap)
 
         # load quadrilateral of module and draw onto frame using opencv
         image_file = str.split(os.path.basename(image_file), ".")[0]
@@ -253,6 +245,45 @@ class SourceFrame(QWidget):
     # def updatePatches(self, track_id):
     #
     #     return max_temp_patch_idx
+
+
+class SourceFrameModel(QObject):
+    min_temp_changed = Signal(int)
+    max_temp_changed = Signal(int)
+    colormap_changed = Signal(int)
+
+    def __init__(self):
+        super().__init__()
+        self._min_temp = None
+        self._max_temp = None
+        self._colormap = None
+    
+    @property
+    def min_temp(self):
+        return self._min_temp
+
+    @min_temp.setter
+    def min_temp(self, value):
+        self._min_temp = value
+        self.min_temp_changed.emit(value)
+
+    @property
+    def max_temp(self):
+        return self._max_temp
+
+    @max_temp.setter
+    def max_temp(self, value):
+        self._max_temp = value
+        self.max_temp_changed.emit(value)
+
+    @property
+    def colormap(self):
+        return self._colormap
+
+    @colormap.setter
+    def colormap(self, value):
+        self._colormap = value
+        self.colormap_changed.emit(value)
 
 
 class ModuleTemperatures(QWidget):
@@ -450,7 +481,7 @@ class MainWindow(QMainWindow):
         self.annotationEditorWidget.setWidget(self.annotation_editor)
         
         self.sourceFrameWidget = QDockWidget(u"Source Frame", self)
-        self.source_frame = SourceFrame(self)
+        self.source_frame = SourceFrameView(self)
         self.sourceFrameWidget.setWidget(self.source_frame)
         
         self.dataSourcesWidget = QDockWidget(u"Data Sources", self)
