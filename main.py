@@ -133,6 +133,11 @@ class DataSourcesView(QWidget):
         self.model.dataset_closed.connect(self.update)
         self.model.dataset_closed.connect(lambda: self.ui.pushButtonNewAnalysis.setEnabled(False))
 
+        #self.ui.colormapComboBox.currentIndexChanged.connect(lambda value: setattr(self.model.source_frame_model, 'colormap', value))
+        #self.model.source_frame_model.colormap_changed.connect(self.ui.colormapComboBox.setCurrentIndex)
+        #self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.controller.loadSource(name.text()))
+        #self.ui.dataSourcesListWidget.itemSelectionChanged.connect(self.parent.source_frame.reset)
+
     def delete_source(self):
         selected_name = self.ui.dataSourcesListWidget.currentItem()
         if selected_name is None:
@@ -766,8 +771,7 @@ class MainModel(QObject):
     dataset_opened = Signal()
     dataset_closed = Signal()
     source_names_changed = Signal(object)
-
-    selected_source_changed = Signal(int)
+    selected_source_changed = Signal(str)
     selected_column_changed = Signal(int)
     track_id_changed = Signal(str)
     patch_idx_changed = Signal(int)
