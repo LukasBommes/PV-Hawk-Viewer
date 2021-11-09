@@ -18,13 +18,13 @@ from PySide6.QtCore import QThread, Qt, Slot, Signal, QUrl, QDir, QObject, \
 from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtWebChannel import QWebChannel
 
-from ui_mainwindow import Ui_MainWindow
-from ui_source_frame import Ui_SourceFrame
-from ui_annotation_editor import Ui_AnnotationEditor
-from ui_data_sources import Ui_DataSources
-from ui_toolbar_temp_range import Ui_TempRange
-from ui_toolbar_colormap_selection import Ui_ColormapSelection
-from ui_analysis_module_temperatures import Ui_ModuleTemperatures
+from ui.ui_mainwindow import Ui_MainWindow
+from ui.ui_source_frame import Ui_SourceFrame
+from ui.ui_annotation_editor import Ui_AnnotationEditor
+from ui.ui_data_sources import Ui_DataSources
+from ui.ui_toolbar_temp_range import Ui_TempRange
+from ui.ui_toolbar_colormap_selection import Ui_ColormapSelection
+from ui.ui_analysis_module_temperatures import Ui_ModuleTemperatures
 
 from common import get_immediate_subdirectories, to_celsius, normalize
 from analysis.temperatures import AnalysisModuleTemperaturesWorker
@@ -588,12 +588,20 @@ class MainView(QMainWindow):
 ########################################################################
 
 
+class SourceFrameController(QObject):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+
 class MainController(QObject):
     source_deleted = Signal()
 
     def __init__(self, model):
         super().__init__()
         self.model = model
+        # init subordinate controllers
+        self.source_frame_controller = SourceFrameController(self.model)
 
     @Slot(str)
     def open_dataset(self, dataset_dir):
@@ -778,7 +786,7 @@ class MainModel(QObject):
 
     def __init__(self):
         super().__init__()
-        # init submodels
+        # init subordinate models
         self.source_frame_model = SourceFrameModel()
         self.reset()
 
