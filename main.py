@@ -167,10 +167,8 @@ class SourceFrameView(QWidget):
         self.controller = controller
         self.ui = Ui_SourceFrame()
         self.ui.setupUi(self)
-        #self.model = SourceFrameModel()
         self.parent = parent
         self.ui.colormapComboBox.addItems(["Gray", "Plasma", "Jet"])
-        #self.ui.colormapComboBox.setCurrentIndex(0)
         self.disable()
 
         # connect signals and slots
@@ -407,7 +405,7 @@ class DataColumnSelectionView(QWidget):
         self.model.dataset_closed.connect(lambda: self.comboBox.setEnabled(False))
         self.model.dataset_closed.connect(self.update_options)
         self.model.selected_source_changed.connect(self.update_options)
-        self.comboBox.currentIndexChanged.connect(self.set_selected_column)
+        self.comboBox.currentIndexChanged.connect(lambda value: setattr(self.model, 'selected_column', value))
         self.model.selected_column_changed.connect(self.comboBox.setCurrentIndex)
 
         self.update_options()
@@ -425,9 +423,6 @@ class DataColumnSelectionView(QWidget):
         self.comboBox.setFixedWidth(150)
         self.comboBox.setEnabled(False)
         self.horizontalLayout.addWidget(self.comboBox)
-
-    def set_selected_column(self):
-        self.model.selected_column = self.comboBox.currentIndex()
 
     @Slot()
     def update_options(self):
