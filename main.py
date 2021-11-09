@@ -27,16 +27,16 @@ from ui_toolbar_colormap_selection import Ui_ColormapSelection
 from ui_analysis_module_temperatures import Ui_ModuleTemperatures
 
 from common import get_immediate_subdirectories, to_celsius, normalize
-from analysis.temperatures import ModuleTemperaturesWorker
+from analysis.temperatures import AnalysisModuleTemperaturesWorker
 from colormap import get_colors
 
 
-class Backend(QObject):
-    dataset_changed = Signal()
+class MapView(QObject):
+    dataset_changed = Signal()  # signals for notification of Javascript
     dataset_closed = Signal()
 
     def __init__(self, parent=None):
-        super(Backend, self).__init__()
+        super(MapView, self).__init__()
         self.parent = parent
         # connect signals and slots
         self.parent.dataset.source_deleted.connect(self.dataset_closed)
@@ -57,6 +57,13 @@ class Backend(QObject):
             data = self.parent.dataset.data
             data_column = self.parent.dataset.get_selected_column()
             if len(data_column) > 0:
+                # colormaps = {
+                #     0: "plasma",
+                #     1: "Reds",
+                #     2: "viridis"
+                # }
+                # colormap = colormaps[self.parent.map_model.colormap]
+                # colors = get_colors(data_column, cmap=colormap, vmin=self.parent.map_model.min_temp, vmax=self.parent.map_model.max_temp)
                 colors = get_colors(data_column, cmap="plasma", vmin=-5, vmax=5)
             else:
                 default_color = "#ff7800"
@@ -72,7 +79,46 @@ class Backend(QObject):
         self.parent.dataset.track_id = json.loads(track_id)
 
 
-class AnnotationEditor(QWidget):
+# class MapModel(QObject):
+#     min_temp_changed = Signal(int)
+#     max_temp_changed = Signal(int)
+#     colormap_changed = Signal(int)
+
+#     def __init__(self):
+#         super().__init__()
+#         self._min_temp = None
+#         self._max_temp = None
+#         self._colormap = None
+    
+#     @property
+#     def min_temp(self):
+#         return self._min_temp
+
+#     @min_temp.setter
+#     def min_temp(self, value):
+#         self._min_temp = value
+#         self.min_temp_changed.emit(value)
+
+#     @property
+#     def max_temp(self):
+#         return self._max_temp
+
+#     @max_temp.setter
+#     def max_temp(self, value):
+#         self._max_temp = value
+#         self.max_temp_changed.emit(value)
+
+#     @property
+#     def colormap(self):
+#         return self._colormap
+
+#     @colormap.setter
+#     def colormap(self, value):
+#         self._colormap = value
+#         self.colormap_changed.emit(value)
+
+
+class AnnotationEditorView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.ui = Ui_AnnotationEditor()
@@ -94,7 +140,7 @@ class AnnotationEditor(QWidget):
             self.ui.scrollAreaWidgetContents.layout().addItem(self.verticalSpacer)
 
 
-class DataSources(QWidget):
+class DataSourcesView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
@@ -286,7 +332,7 @@ class SourceFrameModel(QObject):
         self.colormap_changed.emit(value)
 
 
-class ModuleTemperatures(QWidget):
+class AnalysisModuleTemperatures(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowFlags(Qt.Window)  # open in new window
@@ -349,7 +395,7 @@ class ModuleTemperatures(QWidget):
         
         # start processing
         self.thread = QThread()
-        self.worker = ModuleTemperaturesWorker(
+        self.worker = AnalysisModuleTemperaturesWorker(
             self.parent.dataset.dataset_dir, 
             name,
             border_margin, 
@@ -380,7 +426,7 @@ class ModuleTemperatures(QWidget):
             self.worker.is_cancelled = True
 
 
-# class TempRangeWidget(QWidget):
+# class TempRangeView(QWidget):
 #     def __init__(self, parent=None):
 #         super().__init__(parent)
 #         self.parent = parent
@@ -391,7 +437,7 @@ class ModuleTemperatures(QWidget):
 #         self.ui.maxTempSpinBox.valueChanged.connect(lambda: self.parent.setMaxTemp(self.ui.maxTempSpinBox.value()))
 
 
-# class ColormapSelectionWidget(QWidget):
+# class ColormapSelectionView(QWidget):
 #     def __init__(self, parent=None):
 #         super().__init__(parent)
 #         self.parent = parent
@@ -430,6 +476,7 @@ class DataColumnSelectionView(QWidget):
         self.horizontalLayout.addWidget(self.label)
         self.comboBox = QComboBox(self)
         self.comboBox.setObjectName(u"comboBox")
+        self.comboBox.setFixedWidth(150)
         self.comboBox.setEnabled(False)
         self.horizontalLayout.addWidget(self.comboBox)
 
@@ -454,7 +501,7 @@ class MainWindow(QMainWindow):
         self.ui.setupUi(self)
         self.dataset = Dataset()
 
-        self.registerBackend()
+        self.registerMapView()
 
         # setup toolbars
         # self.toolBarTempRange = QToolBar(self)
@@ -477,7 +524,7 @@ class MainWindow(QMainWindow):
 
         # setup widgets
         self.annotationEditorWidget = QDockWidget(u"Annotation Editor", self)
-        self.annotation_editor = AnnotationEditor(self)
+        self.annotation_editor = AnnotationEditorView(self)
         self.annotationEditorWidget.setWidget(self.annotation_editor)
         
         self.sourceFrameWidget = QDockWidget(u"Source Frame", self)
@@ -485,7 +532,7 @@ class MainWindow(QMainWindow):
         self.sourceFrameWidget.setWidget(self.source_frame)
         
         self.dataSourcesWidget = QDockWidget(u"Data Sources", self)
-        self.data_sources = DataSources(self)
+        self.data_sources = DataSourcesView(self)
         self.dataSourcesWidget.setWidget(self.data_sources)
 
         self.addDockWidget(Qt.LeftDockWidgetArea, self.dataSourcesWidget)
@@ -512,11 +559,11 @@ class MainWindow(QMainWindow):
         
         self.loadMainDocument()
 
-    def registerBackend(self):
-        self.backend = Backend(self)
+    def registerMapView(self):
+        self.map_view = MapView(self)
         channel = QWebChannel(self.ui.widget.page())
         self.ui.widget.page().setWebChannel(channel)
-        channel.registerObject("backend", self.backend)
+        channel.registerObject("map_view", self.map_view)
 
     def loadMainDocument(self):
         index_file = QDir.current().filePath("index.html")
@@ -575,7 +622,7 @@ class MainWindow(QMainWindow):
         if not self.dataset.is_open:
             return
         if self.module_temperatures_window is None:
-            self.module_temperatures_window = ModuleTemperatures(self)
+            self.module_temperatures_window = AnalysisModuleTemperatures(self)
         self.module_temperatures_window.reset()
         self.module_temperatures_window.show()
 

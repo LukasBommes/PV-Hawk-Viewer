@@ -16,9 +16,8 @@
 
  <script>
 
-  //var backend = null;
   new QWebChannel(qt.webChannelTransport, function (channel) {
-      var backend = channel.objects.backend;
+      var map_view = channel.objects.map_view;
       var modules_geojson = null;
       var map = L.map('map');
       L.tileLayer(
@@ -45,7 +44,7 @@
         function moduleClicked(e) {
           var layer = e.target;
           const track_id = layer.feature.properties.track_id;
-          backend.printObj(JSON.stringify("Clicked on module " + track_id));
+          map_view.printObj(JSON.stringify("Clicked on module " + track_id));
 
           // highlight active module
           if (active_module) {
@@ -64,7 +63,7 @@
           //loadPatches(track_id);
 
           // update source frame and patches
-          backend.updateImages(JSON.stringify(track_id));
+          map_view.updateImages(JSON.stringify(track_id));
         }
 
         function onEachFeature(feature, layer) {
@@ -75,7 +74,7 @@
 
         // clear map
         if (modules_geojson !== null) {
-          backend.printObj(JSON.stringify("Deleting modules_geojson"));
+          map_view.printObj(JSON.stringify("Deleting modules_geojson"));
           map.removeLayer(modules_geojson);
         }
 
@@ -100,23 +99,18 @@
       }
 
       // wait for modules to be updated
-      backend.dataset_changed.connect(function() {
-          // clear previous data
-          backend.printObj(JSON.stringify("Loading dataset in JS."));
-          // if (modules_geojson !== null) {
-          //   backend.printObj(JSON.stringify("Deleting modules_geojson"));
-          //   map.removeLayer(modules_geojson);
-          // }
+      map_view.dataset_changed.connect(function() {
+          map_view.printObj(JSON.stringify("Loading dataset in JS."));
 
           // visualize modules
-          backend.loadData(function(data) {
+          map_view.loadData(function(data) {
             js_data = JSON.parse(data);
             loadData(js_data);
           });
       });
 
-      backend.dataset_closed.connect(function() {
-          backend.printObj(JSON.stringify("Closing dataset, clearing data in JS"));
+      map_view.dataset_closed.connect(function() {
+        map_view.printObj(JSON.stringify("Closing dataset, clearing data in JS"));
           map.removeLayer(modules_geojson);
           modules_geojson = null;
           resetMap();
