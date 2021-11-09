@@ -123,7 +123,7 @@ class AnalysisModuleTemperaturesWorker(QObject):
         mean_over_patches(gdf_corners, temps)
         mean_over_patches(gdf_centers, temps)
 
-        for patch_area_agg in ["min", "max", "mean", "median"]:
+        for patch_area_agg in ["min"]:#, "max", "mean", "median"]:
             column = "{}_temp".format(patch_area_agg)
             neighbour_mean_temps = self.get_neighbours_median_temp(gdf_centers, neighbour_radius=self.neighbour_radius, column=column)
             if neighbour_mean_temps is None: # cancelled
