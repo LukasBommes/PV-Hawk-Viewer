@@ -12,7 +12,7 @@ import numpy as np
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QToolBar, QWidget, \
     QDockWidget, QMessageBox, QCheckBox, QSpacerItem, QSizePolicy, QLabel, \
-    QGridLayout, QFileDialog, QBoxLayout
+    QGridLayout, QFileDialog, QBoxLayout, QHBoxLayout, QComboBox
 from PySide6.QtCore import QThread, Qt, Slot, Signal, QUrl, QDir, QObject, \
     QSize
 from PySide6.QtGui import QPixmap, QImage
@@ -27,21 +27,22 @@ from ui_toolbar_colormap_selection import Ui_ColormapSelection
 from ui_analysis_module_temperatures import Ui_ModuleTemperatures
 
 from common import get_immediate_subdirectories, to_celsius, normalize
-from analysis.temperatures import ModuleTemperaturesWorker
+from analysis.temperatures import AnalysisModuleTemperaturesWorker
 from colormap import get_colors
 
 
-class Backend(QObject):
-    dataset_changed = Signal()
+class MapView(QObject):
+    dataset_changed = Signal()  # signals for notification of Javascript
     dataset_closed = Signal()
 
     def __init__(self, parent=None):
-        super(Backend, self).__init__()
+        super(MapView, self).__init__()
         self.parent = parent
         # connect signals and slots
         self.parent.dataset.source_deleted.connect(self.dataset_closed)
         self.parent.dataset.changed.connect(self.dataset_changed)
         self.parent.dataset.closed.connect(self.dataset_closed)
+        self.parent.dataset.selected_column_changed.connect(self.dataset_changed)
 
     @Slot(str)
     def printObj(self, obj):
@@ -54,17 +55,20 @@ class Backend(QObject):
         colors = {}
         if self.parent.dataset.is_open:
             data = self.parent.dataset.data
-            column = "mean_of_max_temps_corrected"
-            data_column = self.parent.dataset.get_column(column)
+            data_column = self.parent.dataset.get_selected_column()
             if len(data_column) > 0:
+                # colormaps = {
+                #     0: "plasma",
+                #     1: "Reds",
+                #     2: "viridis"
+                # }
+                # colormap = colormaps[self.parent.map_model.colormap]
+                # colors = get_colors(data_column, cmap=colormap, vmin=self.parent.map_model.min_temp, vmax=self.parent.map_model.max_temp)
                 colors = get_colors(data_column, cmap="plasma", vmin=-5, vmax=5)
             else:
                 default_color = "#ff7800"
                 track_ids = list(self.parent.dataset.get_column("track_id").values())
                 colors = {track_id: default_color for track_id in track_ids}
-
-        print(data, colors)
-
         return json.dumps({
             "data": data,
             "colors": colors
@@ -72,10 +76,49 @@ class Backend(QObject):
 
     @Slot(str)
     def updateImages(self, track_id):
-        self.parent.setTrackId(json.loads(track_id))
+        self.parent.dataset.track_id = json.loads(track_id)
 
 
-class AnnotationEditor(QWidget):
+# class MapModel(QObject):
+#     min_temp_changed = Signal(int)
+#     max_temp_changed = Signal(int)
+#     colormap_changed = Signal(int)
+
+#     def __init__(self):
+#         super().__init__()
+#         self._min_temp = None
+#         self._max_temp = None
+#         self._colormap = None
+    
+#     @property
+#     def min_temp(self):
+#         return self._min_temp
+
+#     @min_temp.setter
+#     def min_temp(self, value):
+#         self._min_temp = value
+#         self.min_temp_changed.emit(value)
+
+#     @property
+#     def max_temp(self):
+#         return self._max_temp
+
+#     @max_temp.setter
+#     def max_temp(self, value):
+#         self._max_temp = value
+#         self.max_temp_changed.emit(value)
+
+#     @property
+#     def colormap(self):
+#         return self._colormap
+
+#     @colormap.setter
+#     def colormap(self, value):
+#         self._colormap = value
+#         self.colormap_changed.emit(value)
+
+
+class AnnotationEditorView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.ui = Ui_AnnotationEditor()
@@ -90,7 +133,6 @@ class AnnotationEditor(QWidget):
             pass
         else:
             for defect in defects_scheme:
-                print(defect["name"], defect["description"])
                 checkbox = QCheckBox("{} - {}".format(defect["name"], defect["description"]))
                 checkbox.setToolTip(", ".join(defect["examples"]))
                 self.ui.scrollAreaWidgetContents.layout().addWidget(checkbox)
@@ -98,7 +140,7 @@ class AnnotationEditor(QWidget):
             self.ui.scrollAreaWidgetContents.layout().addItem(self.verticalSpacer)
 
 
-class DataSources(QWidget):
+class DataSourcesView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
@@ -113,8 +155,9 @@ class DataSources(QWidget):
         self.ui.dataSourcesListWidget.itemSelectionChanged.connect(self.parent.source_frame.reset)
         self.parent.dataset.source_names_updated.connect(self.update)
         self.parent.dataset.opened.connect(self.update)
+        self.parent.dataset.opened.connect(lambda: self.ui.pushButtonNewAnalysis.setEnabled(True))
         self.parent.dataset.closed.connect(self.update)
-        
+        self.parent.dataset.closed.connect(lambda: self.ui.pushButtonNewAnalysis.setEnabled(False))
 
     def delete_source(self):
         selected_name = self.ui.dataSourcesListWidget.currentItem()
@@ -143,51 +186,36 @@ class DataSources(QWidget):
                 self.ui.dataSourcesListWidget.setCurrentRow(0)
 
 
-# class TempRangeWidget(QWidget):
-#     def __init__(self, parent=None):
-#         super().__init__(parent)
-#         self.parent = parent
-#         self.ui = Ui_TempRange()
-#         self.ui.setupUi(self)
-#         # connect signals and slots
-#         self.ui.minTempSpinBox.valueChanged.connect(lambda: self.parent.setMinTemp(self.ui.minTempSpinBox.value()))
-#         self.ui.maxTempSpinBox.valueChanged.connect(lambda: self.parent.setMaxTemp(self.ui.maxTempSpinBox.value()))
-
-
-# class ColormapSelectionWidget(QWidget):
-#     def __init__(self, parent=None):
-#         super().__init__(parent)
-#         self.parent = parent
-#         self.ui = Ui_ColormapSelection()
-#         self.ui.setupUi(self)
-#         self.ui.comboBox.addItems(["Gray", "Plasma", "Jet"])
-#         self.ui.comboBox.setCurrentIndex(0)
-#         # connect signals and slots
-#         self.ui.comboBox.currentIndexChanged.connect(lambda: self.parent.setColormap(self.ui.comboBox.currentIndex()))
-
-
-class SourceFrame(QWidget):
+class SourceFrameView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.ui = Ui_SourceFrame()
         self.ui.setupUi(self)
+        self.model = SourceFrameModel()
         self.parent = parent
         self.ui.colormapComboBox.addItems(["Gray", "Plasma", "Jet"])
         self.ui.colormapComboBox.setCurrentIndex(0)
-
-        self.ui.minTempSpinBox.setEnabled(False)
-        self.ui.maxTempSpinBox.setEnabled(False)
-        self.ui.colormapComboBox.setEnabled(False)
-
-        # state
-        self.min_temp = self.ui.minTempSpinBox.value()
-        self.max_temp = self.ui.maxTempSpinBox.value()
-        self.colormap = self.setColormap(self.ui.colormapComboBox.currentIndex())
+        self.disable()
 
         # connect signals and slots
-        self.ui.minTempSpinBox.valueChanged.connect(self.setMinTemp)
-        self.ui.maxTempSpinBox.valueChanged.connect(self.setMaxTemp)
-        self.ui.colormapComboBox.currentIndexChanged.connect(self.setColormap)
+        self.parent.dataset.opened.connect(self.enable)
+        self.parent.dataset.closed.connect(self.disable)
+        self.parent.dataset.closed.connect(self.reset)
+        self.parent.dataset.track_id_changed.connect(lambda _: self.update_source_frame())
+        self.ui.minTempSpinBox.valueChanged.connect(lambda value: setattr(self.model, 'min_temp', value))
+        self.model.min_temp_changed.connect(self.ui.minTempSpinBox.setValue)
+        self.ui.maxTempSpinBox.valueChanged.connect(lambda value: setattr(self.model, 'max_temp', value))
+        self.model.max_temp_changed.connect(self.ui.maxTempSpinBox.setValue)
+        self.ui.colormapComboBox.currentIndexChanged.connect(lambda value: setattr(self.model, 'colormap', value))
+        self.model.colormap_changed.connect(self.ui.colormapComboBox.setCurrentIndex)
+        self.model.min_temp_changed.connect(lambda _: self.update_source_frame())
+        self.model.max_temp_changed.connect(lambda _: self.update_source_frame())
+        self.model.colormap_changed.connect(lambda _: self.update_source_frame())
+
+        # set default values
+        self.model.min_temp = 30
+        self.model.max_temp = 50
+        self.model.colormap = 0
 
         self.reset()
 
@@ -203,36 +231,26 @@ class SourceFrame(QWidget):
         h = self.ui.sourceFrameLabel.height()
         self.ui.sourceFrameLabel.setPixmap(self.pixmap.scaled(w, h, Qt.KeepAspectRatio))
 
-    def setMinTemp(self, min_temp):
-        self.min_temp = min_temp
-        self.updateSourceFrame()
-    
-    def setMaxTemp(self, max_temp):
-        self.max_temp = max_temp
-        self.updateSourceFrame()
+    def disable(self):
+        self.ui.minTempSpinBox.setEnabled(False)
+        self.ui.maxTempSpinBox.setEnabled(False)
+        self.ui.colormapComboBox.setEnabled(False)
 
-    def setColormap(self, idx):
-        if idx > 0:
-            colormaps = {
-                0: None,
-                1: cv2.COLORMAP_PLASMA,
-                2: cv2.COLORMAP_JET
-            }
-            self.colormap = colormaps[idx]
-        else:
-            self.colormap = None
-        self.updateSourceFrame()
+    def enable(self):
+        self.ui.minTempSpinBox.setEnabled(True)
+        self.ui.maxTempSpinBox.setEnabled(True)
+        self.ui.colormapComboBox.setEnabled(True)
 
-    def updateSourceFrame(self):
+    def update_source_frame(self):
         if not self.parent.dataset.is_open:
             return None
 
-        if self.parent.track_id is None:
+        if self.parent.dataset.track_id is None:
             return None
 
         image_files = sorted(glob.glob(os.path.join(
-            self.parent.dataset.dataset_dir, "patches_final", "radiometric", self.parent.track_id, "*")))
-        image_file = image_files[self.parent.patch_idx]
+            self.parent.dataset.dataset_dir, "patches_final", "radiometric", self.parent.dataset.track_id, "*")))
+        image_file = image_files[self.parent.dataset.patch_idx]
         source_frame_idx = int(re.findall(r'\d+', os.path.basename(image_file))[0])
         source_frame_file = os.path.join(
             self.parent.dataset.dataset_dir, "splitted", "radiometric", "frame_{:06d}.tiff".format(source_frame_idx))
@@ -240,16 +258,21 @@ class SourceFrame(QWidget):
         # load frame
         source_frame = cv2.imread(source_frame_file, cv2.IMREAD_ANYDEPTH)
         source_frame = to_celsius(source_frame)
-        source_frame = normalize(source_frame, vmin=self.min_temp, vmax=self.max_temp)
+        source_frame = normalize(source_frame, vmin=self.model.min_temp, vmax=self.model.max_temp)
         source_frame = cv2.cvtColor(source_frame, cv2.COLOR_GRAY2BGR)
-        if self.colormap is not None:
-            source_frame = cv2.applyColorMap(source_frame, self.colormap)
+        if self.model.colormap > 0:
+            colormaps = {
+                1: cv2.COLORMAP_PLASMA,
+                2: cv2.COLORMAP_JET
+            }
+            colormap = colormaps[self.model.colormap]
+            source_frame = cv2.applyColorMap(source_frame, colormap)
 
         # load quadrilateral of module and draw onto frame using opencv
         image_file = str.split(os.path.basename(image_file), ".")[0]
         frame_name = image_file[:12]
         mask_name = image_file[13:]
-        quadrilateral = np.array(self.parent.dataset.patch_meta[(self.parent.track_id, frame_name, mask_name)]["quadrilateral"])
+        quadrilateral = np.array(self.parent.dataset.patch_meta[(self.parent.dataset.track_id, frame_name, mask_name)]["quadrilateral"])
         source_frame = cv2.polylines(source_frame, [quadrilateral], isClosed=True, color=(0, 255, 0), thickness=3)
 
         # update source frame
@@ -270,7 +293,46 @@ class SourceFrame(QWidget):
     #     return max_temp_patch_idx
 
 
-class ModuleTemperatures(QWidget):
+class SourceFrameModel(QObject):
+    min_temp_changed = Signal(int)
+    max_temp_changed = Signal(int)
+    colormap_changed = Signal(int)
+
+    def __init__(self):
+        super().__init__()
+        self._min_temp = None
+        self._max_temp = None
+        self._colormap = None
+    
+    @property
+    def min_temp(self):
+        return self._min_temp
+
+    @min_temp.setter
+    def min_temp(self, value):
+        self._min_temp = value
+        self.min_temp_changed.emit(value)
+
+    @property
+    def max_temp(self):
+        return self._max_temp
+
+    @max_temp.setter
+    def max_temp(self, value):
+        self._max_temp = value
+        self.max_temp_changed.emit(value)
+
+    @property
+    def colormap(self):
+        return self._colormap
+
+    @colormap.setter
+    def colormap(self, value):
+        self._colormap = value
+        self.colormap_changed.emit(value)
+
+
+class AnalysisModuleTemperatures(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowFlags(Qt.Window)  # open in new window
@@ -333,7 +395,7 @@ class ModuleTemperatures(QWidget):
         
         # start processing
         self.thread = QThread()
-        self.worker = ModuleTemperaturesWorker(
+        self.worker = AnalysisModuleTemperaturesWorker(
             self.parent.dataset.dataset_dir, 
             name,
             border_margin, 
@@ -364,14 +426,82 @@ class ModuleTemperatures(QWidget):
             self.worker.is_cancelled = True
 
 
+# class TempRangeView(QWidget):
+#     def __init__(self, parent=None):
+#         super().__init__(parent)
+#         self.parent = parent
+#         self.ui = Ui_TempRange()
+#         self.ui.setupUi(self)
+#         # connect signals and slots
+#         self.ui.minTempSpinBox.valueChanged.connect(lambda: self.parent.setMinTemp(self.ui.minTempSpinBox.value()))
+#         self.ui.maxTempSpinBox.valueChanged.connect(lambda: self.parent.setMaxTemp(self.ui.maxTempSpinBox.value()))
+
+
+# class ColormapSelectionView(QWidget):
+#     def __init__(self, parent=None):
+#         super().__init__(parent)
+#         self.parent = parent
+#         self.ui = Ui_ColormapSelection()
+#         self.ui.setupUi(self)
+#         self.ui.comboBox.addItems(["Gray", "Plasma", "Jet"])
+#         self.ui.comboBox.setCurrentIndex(0)
+#         # connect signals and slots
+#         self.ui.comboBox.currentIndexChanged.connect(lambda: self.parent.setColormap(self.ui.comboBox.currentIndex()))
+
+
+class DataColumnSelectionView(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.build_ui()
+        
+        # connect signals and slots
+        self.parent.dataset.opened.connect(lambda: self.comboBox.setEnabled(True))
+        self.parent.dataset.opened.connect(self.update_options)
+        self.parent.dataset.closed.connect(lambda: self.comboBox.setEnabled(False))
+        self.parent.dataset.closed.connect(self.update_options)
+        self.parent.dataset.changed.connect(self.update_options)
+        self.comboBox.currentIndexChanged.connect(self.set_selected_column)
+        self.parent.dataset.selected_column_changed.connect(self.comboBox.setCurrentIndex)
+
+        self.update_options()
+
+    def build_ui(self):
+        self.horizontalLayout = QHBoxLayout(self)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.label = QLabel(self)
+        self.label.setObjectName(u"label")
+        self.label.setText("Data Column")
+        self.horizontalLayout.addWidget(self.label)
+        self.comboBox = QComboBox(self)
+        self.comboBox.setObjectName(u"comboBox")
+        self.comboBox.setFixedWidth(150)
+        self.comboBox.setEnabled(False)
+        self.horizontalLayout.addWidget(self.comboBox)
+
+    def set_selected_column(self):
+        self.parent.dataset.selected_column = self.comboBox.currentIndex()
+
+    @Slot()
+    def update_options(self):
+        self.comboBox.clear()
+        data_columns = self.parent.dataset.get_column_names()
+        self.comboBox.addItems(data_columns)
+        if len(data_columns) > 0:
+            self.parent.dataset.selected_column = 0
+        else:
+            self.parent.dataset.selected_column = None
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.dataset = Dataset(self)
+        self.dataset = Dataset()
 
-        self.registerBackend()
+        self.registerMapView()
 
         # setup toolbars
         # self.toolBarTempRange = QToolBar(self)
@@ -386,17 +516,23 @@ class MainWindow(QMainWindow):
         # self.colormapWidget = ColormapSelectionWidget(self)
         # self.toolBarColormapSelection.addWidget(self.colormapWidget)
 
+        # setup toolbars
+        self.toolBarDataColumnSelection = QToolBar(self)
+        self.addToolBar(Qt.TopToolBarArea, self.toolBarDataColumnSelection)
+        self.dataColumnSelectionView = DataColumnSelectionView(self)
+        self.toolBarDataColumnSelection.addWidget(self.dataColumnSelectionView)
+
         # setup widgets
         self.annotationEditorWidget = QDockWidget(u"Annotation Editor", self)
-        self.annotation_editor = AnnotationEditor(self)
+        self.annotation_editor = AnnotationEditorView(self)
         self.annotationEditorWidget.setWidget(self.annotation_editor)
         
         self.sourceFrameWidget = QDockWidget(u"Source Frame", self)
-        self.source_frame = SourceFrame(self)
+        self.source_frame = SourceFrameView(self)
         self.sourceFrameWidget.setWidget(self.source_frame)
         
         self.dataSourcesWidget = QDockWidget(u"Data Sources", self)
-        self.data_sources = DataSources(self)
+        self.data_sources = DataSourcesView(self)
         self.dataSourcesWidget.setWidget(self.data_sources)
 
         self.addDockWidget(Qt.LeftDockWidgetArea, self.dataSourcesWidget)
@@ -405,10 +541,6 @@ class MainWindow(QMainWindow):
 
         # child windows
         self.module_temperatures_window = None
-
-        # state
-        self.track_id = None  # currently selected module
-        self.patch_idx = None
 
         # connect signals and slots
         self.ui.actionQuit.triggered.connect(self.close)
@@ -427,11 +559,11 @@ class MainWindow(QMainWindow):
         
         self.loadMainDocument()
 
-    def registerBackend(self):
-        self.backend = Backend(self)
+    def registerMapView(self):
+        self.map_view = MapView(self)
         channel = QWebChannel(self.ui.widget.page())
         self.ui.widget.page().setWebChannel(channel)
-        channel.registerObject("backend", self.backend)
+        channel.registerObject("map_view", self.map_view)
 
     def loadMainDocument(self):
         index_file = QDir.current().filePath("index.html")
@@ -463,32 +595,15 @@ class MainWindow(QMainWindow):
             msg.setIcon(QMessageBox.Critical)
             msg.exec()
 
-    @Slot()
     def dataset_opened(self):
         self.ui.actionClose_Dataset.setEnabled(True)
         self.ui.actionOpen_Dataset.setEnabled(False)
         self.ui.actionModule_Temperatures.setEnabled(True)
-        self.data_sources.ui.pushButtonNewAnalysis.setEnabled(True)
-        self.source_frame.ui.minTempSpinBox.setEnabled(True)
-        self.source_frame.ui.maxTempSpinBox.setEnabled(True)
-        self.source_frame.ui.colormapComboBox.setEnabled(True)
 
-    @Slot()
     def dataset_closed(self):
-        self.source_frame.reset()
         self.ui.actionClose_Dataset.setEnabled(False)
         self.ui.actionOpen_Dataset.setEnabled(True)        
         self.ui.actionModule_Temperatures.setEnabled(False)
-        self.data_sources.ui.pushButtonDelete.setEnabled(False)
-        self.source_frame.ui.minTempSpinBox.setEnabled(False)
-        self.source_frame.ui.maxTempSpinBox.setEnabled(False)
-        self.source_frame.ui.colormapComboBox.setEnabled(False)
-
-
-    def setTrackId(self, track_id):
-        self.track_id = track_id
-        self.patch_idx = 0
-        self.source_frame.updateSourceFrame()
 
     @Slot()
     def new_annotation(self):
@@ -507,7 +622,7 @@ class MainWindow(QMainWindow):
         if not self.dataset.is_open:
             return
         if self.module_temperatures_window is None:
-            self.module_temperatures_window = ModuleTemperatures(self)
+            self.module_temperatures_window = AnalysisModuleTemperatures(self)
         self.module_temperatures_window.reset()
         self.module_temperatures_window.show()
 
@@ -529,9 +644,12 @@ class Dataset(QObject):
     source_deleted = Signal()
     source_names_updated = Signal()
 
-    def __init__(self, parent=None):
+    selected_column_changed = Signal(int)
+    track_id_changed = Signal(str)
+    patch_idx_changed = Signal(int)
+
+    def __init__(self):
         super().__init__()
-        self.parent = parent
         self.reset()
 
     def reset(self):
@@ -542,10 +660,58 @@ class Dataset(QObject):
         self.meta = None
         self.patch_meta = None
         self.is_open = False
+        self._selected_column = None
+        self._track_id = None
+        self._patch_idx = None
+
+    @property
+    def selected_column(self):
+        return self._selected_column
+
+    @selected_column.setter
+    def selected_column(self, value):
+        self._selected_column = value
+        self.selected_column_changed.emit(value)
+
+    @property
+    def track_id(self):
+        return self._track_id
+
+    @track_id.setter
+    def track_id(self, value):
+        self._track_id = value
+        self._patch_idx = 0
+        self.track_id_changed.emit(value)
+        self.patch_idx_changed.emit(value)
+
+    @property
+    def patch_idx(self):
+        return self._patch_idx
+
+    @patch_idx.setter
+    def patch_idx(self, value):
+        self._patch_idx = value
+        self.patch_idx_changed.emit(value)
+
+    def get_column_names(self):
+        if self.dataset_dir is None:
+            return []
+        columns_names = set()
+        for feature in self.data["features"]:
+            columns_names = columns_names | set(feature["properties"].keys())
+        columns_names -= set(["track_id"])
+        return sorted(list(columns_names))
+
+    def get_selected_column(self):
+        if self.selected_column is None:
+            return {}
+        columns_names = self.get_column_names()
+        column = columns_names[self.selected_column]
+        return self.get_column(column)
 
     def get_column(self, column):
         if self.dataset_dir is None:
-            return {}
+            return {}        
         column_values = {}
         for feature in self.data["features"]:
             track_id = feature["properties"]["track_id"]

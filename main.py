@@ -35,14 +35,16 @@ class MapView(QObject):
     dataset_changed = Signal()  # signals for notification of Javascript
     dataset_closed = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, model, controller, parent=None):
         super(MapView, self).__init__()
+        self.model = model
+        self.controller = controller
         self.parent = parent
         # connect signals and slots
-        self.parent.dataset.source_deleted.connect(self.dataset_closed)
-        self.parent.dataset.changed.connect(self.dataset_changed)
-        self.parent.dataset.closed.connect(self.dataset_closed)
-        self.parent.dataset.selected_column_changed.connect(self.dataset_changed)
+        self.model.source_deleted.connect(self.dataset_closed)
+        self.model.dataset_changed.connect(self.dataset_changed)
+        self.model.dataset_closed.connect(self.dataset_closed)
+        self.model.selected_column_changed.connect(self.dataset_changed)
 
     @Slot(str)
     def printObj(self, obj):
@@ -53,9 +55,9 @@ class MapView(QObject):
     def loadData(self):
         data = []
         colors = {}
-        if self.parent.dataset.is_open:
-            data = self.parent.dataset.data
-            data_column = self.parent.dataset.get_selected_column()
+        if self.model.dataset_is_open:
+            data = self.model.data
+            data_column = self.model.get_selected_column()
             if len(data_column) > 0:
                 # colormaps = {
                 #     0: "plasma",
@@ -67,7 +69,7 @@ class MapView(QObject):
                 colors = get_colors(data_column, cmap="plasma", vmin=-5, vmax=5)
             else:
                 default_color = "#ff7800"
-                track_ids = list(self.parent.dataset.get_column("track_id").values())
+                track_ids = list(self.model.get_column("track_id").values())
                 colors = {track_id: default_color for track_id in track_ids}
         return json.dumps({
             "data": data,
@@ -76,7 +78,7 @@ class MapView(QObject):
 
     @Slot(str)
     def updateImages(self, track_id):
-        self.parent.dataset.track_id = json.loads(track_id)
+        self.model.track_id = json.loads(track_id)
 
 
 # class MapModel(QObject):
@@ -119,8 +121,10 @@ class MapView(QObject):
 
 
 class AnnotationEditorView(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, model, controller, parent=None):
         super().__init__(parent)
+        self.model = model
+        self.controller = controller
         self.ui = Ui_AnnotationEditor()
         self.ui.setupUi(self)
         self.loadDefectsScheme()
@@ -141,8 +145,10 @@ class AnnotationEditorView(QWidget):
 
 
 class DataSourcesView(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, model, controller, parent=None):
         super().__init__(parent)
+        self.model = model
+        self.controller = controller
         self.parent = parent
         self.ui = Ui_DataSources()
         self.ui.setupUi(self)
@@ -150,14 +156,14 @@ class DataSourcesView(QWidget):
         # connect signals and slots
         self.ui.pushButtonDelete.clicked.connect(self.delete_source)
         self.ui.pushButtonNewAnalysis.clicked.connect(self.parent.show_analysis_module_temperatures)
-        self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.parent.dataset.loadSource(name.text()))
+        self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.model.loadSource(name.text()))
         self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.ui.pushButtonDelete.setEnabled(name.text() != "Module Layout"))
         self.ui.dataSourcesListWidget.itemSelectionChanged.connect(self.parent.source_frame.reset)
-        self.parent.dataset.source_names_updated.connect(self.update)
-        self.parent.dataset.opened.connect(self.update)
-        self.parent.dataset.opened.connect(lambda: self.ui.pushButtonNewAnalysis.setEnabled(True))
-        self.parent.dataset.closed.connect(self.update)
-        self.parent.dataset.closed.connect(lambda: self.ui.pushButtonNewAnalysis.setEnabled(False))
+        self.model.source_names_updated.connect(self.update)
+        self.model.dataset_opened.connect(self.update)
+        self.model.dataset_opened.connect(lambda: self.ui.pushButtonNewAnalysis.setEnabled(True))
+        self.model.dataset_closed.connect(self.update)
+        self.model.dataset_closed.connect(lambda: self.ui.pushButtonNewAnalysis.setEnabled(False))
 
     def delete_source(self):
         selected_name = self.ui.dataSourcesListWidget.currentItem()
@@ -175,47 +181,50 @@ class DataSourcesView(QWidget):
             QMessageBox.Yes|QMessageBox.No)
         
         if delete_dialog.exec() == QMessageBox.Yes:
-            self.parent.dataset.delete_source(selected_name)
+            self.model.delete_source(selected_name)
     
     @Slot()
     def update(self):
         self.ui.dataSourcesListWidget.clear()
-        if self.parent.dataset.is_open:
-            self.ui.dataSourcesListWidget.addItems(self.parent.dataset.source_names)
-            if self.parent.dataset.selected_source == "Module Layout":
+        if self.model.dataset_is_open:
+            self.ui.dataSourcesListWidget.addItems(self.model.source_names)
+            if self.model.selected_source == "Module Layout":
                 self.ui.dataSourcesListWidget.setCurrentRow(0)
 
 
 class SourceFrameView(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, model, controller, parent=None):
         super().__init__(parent)
+        self.model = model
+        self.controller = controller
         self.ui = Ui_SourceFrame()
         self.ui.setupUi(self)
-        self.model = SourceFrameModel()
+        #self.model = SourceFrameModel()
         self.parent = parent
         self.ui.colormapComboBox.addItems(["Gray", "Plasma", "Jet"])
-        self.ui.colormapComboBox.setCurrentIndex(0)
+        #self.ui.colormapComboBox.setCurrentIndex(0)
         self.disable()
 
         # connect signals and slots
-        self.parent.dataset.opened.connect(self.enable)
-        self.parent.dataset.closed.connect(self.disable)
-        self.parent.dataset.closed.connect(self.reset)
-        self.parent.dataset.track_id_changed.connect(lambda _: self.update_source_frame())
-        self.ui.minTempSpinBox.valueChanged.connect(lambda value: setattr(self.model, 'min_temp', value))
-        self.model.min_temp_changed.connect(self.ui.minTempSpinBox.setValue)
-        self.ui.maxTempSpinBox.valueChanged.connect(lambda value: setattr(self.model, 'max_temp', value))
-        self.model.max_temp_changed.connect(self.ui.maxTempSpinBox.setValue)
-        self.ui.colormapComboBox.currentIndexChanged.connect(lambda value: setattr(self.model, 'colormap', value))
-        self.model.colormap_changed.connect(self.ui.colormapComboBox.setCurrentIndex)
-        self.model.min_temp_changed.connect(lambda _: self.update_source_frame())
-        self.model.max_temp_changed.connect(lambda _: self.update_source_frame())
-        self.model.colormap_changed.connect(lambda _: self.update_source_frame())
+        self.model.dataset_opened.connect(self.enable)
+        self.model.dataset_closed.connect(self.disable)
+        self.model.dataset_closed.connect(self.reset)
+        self.model.track_id_changed.connect(lambda _: self.update_source_frame())
+
+        self.ui.minTempSpinBox.valueChanged.connect(lambda value: setattr(self.model.source_frame_model, 'min_temp', value))
+        self.model.source_frame_model.min_temp_changed.connect(self.ui.minTempSpinBox.setValue)
+        self.ui.maxTempSpinBox.valueChanged.connect(lambda value: setattr(self.model.source_frame_model, 'max_temp', value))
+        self.model.source_frame_model.max_temp_changed.connect(self.ui.maxTempSpinBox.setValue)
+        self.ui.colormapComboBox.currentIndexChanged.connect(lambda value: setattr(self.model.source_frame_model, 'colormap', value))
+        self.model.source_frame_model.colormap_changed.connect(self.ui.colormapComboBox.setCurrentIndex)
+        self.model.source_frame_model.min_temp_changed.connect(lambda _: self.update_source_frame())
+        self.model.source_frame_model.max_temp_changed.connect(lambda _: self.update_source_frame())
+        self.model.source_frame_model.colormap_changed.connect(lambda _: self.update_source_frame())
 
         # set default values
-        self.model.min_temp = 30
-        self.model.max_temp = 50
-        self.model.colormap = 0
+        self.model.source_frame_model.min_temp = 30
+        self.model.source_frame_model.max_temp = 50
+        self.model.source_frame_model.colormap = 0
 
         self.reset()
 
@@ -242,37 +251,37 @@ class SourceFrameView(QWidget):
         self.ui.colormapComboBox.setEnabled(True)
 
     def update_source_frame(self):
-        if not self.parent.dataset.is_open:
+        if not self.model.dataset_is_open:
             return None
 
-        if self.parent.dataset.track_id is None:
+        if self.model.track_id is None:
             return None
 
         image_files = sorted(glob.glob(os.path.join(
-            self.parent.dataset.dataset_dir, "patches_final", "radiometric", self.parent.dataset.track_id, "*")))
-        image_file = image_files[self.parent.dataset.patch_idx]
+            self.model.dataset_dir, "patches_final", "radiometric", self.model.track_id, "*")))
+        image_file = image_files[self.model.patch_idx]
         source_frame_idx = int(re.findall(r'\d+', os.path.basename(image_file))[0])
         source_frame_file = os.path.join(
-            self.parent.dataset.dataset_dir, "splitted", "radiometric", "frame_{:06d}.tiff".format(source_frame_idx))
+            self.model.dataset_dir, "splitted", "radiometric", "frame_{:06d}.tiff".format(source_frame_idx))
 
         # load frame
         source_frame = cv2.imread(source_frame_file, cv2.IMREAD_ANYDEPTH)
         source_frame = to_celsius(source_frame)
-        source_frame = normalize(source_frame, vmin=self.model.min_temp, vmax=self.model.max_temp)
+        source_frame = normalize(source_frame, vmin=self.model.source_frame_model.min_temp, vmax=self.model.source_frame_model.max_temp)
         source_frame = cv2.cvtColor(source_frame, cv2.COLOR_GRAY2BGR)
-        if self.model.colormap > 0:
+        if self.model.source_frame_model.colormap > 0:
             colormaps = {
                 1: cv2.COLORMAP_PLASMA,
                 2: cv2.COLORMAP_JET
             }
-            colormap = colormaps[self.model.colormap]
+            colormap = colormaps[self.model.source_frame_model.colormap]
             source_frame = cv2.applyColorMap(source_frame, colormap)
 
         # load quadrilateral of module and draw onto frame using opencv
         image_file = str.split(os.path.basename(image_file), ".")[0]
         frame_name = image_file[:12]
         mask_name = image_file[13:]
-        quadrilateral = np.array(self.parent.dataset.patch_meta[(self.parent.dataset.track_id, frame_name, mask_name)]["quadrilateral"])
+        quadrilateral = np.array(self.model.patch_meta[(self.model.track_id, frame_name, mask_name)]["quadrilateral"])
         source_frame = cv2.polylines(source_frame, [quadrilateral], isClosed=True, color=(0, 255, 0), thickness=3)
 
         # update source frame
@@ -291,6 +300,323 @@ class SourceFrameView(QWidget):
     # def updatePatches(self, track_id):
     #
     #     return max_temp_patch_idx
+
+
+class AnalysisModuleTemperatures(QWidget):
+    def __init__(self, model, controller, parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.Window)  # open in new window
+        self.model = model
+        self.controller = controller
+        self.parent = parent
+        self.ui = Ui_ModuleTemperatures()
+        self.ui.setupUi(self)
+        self.reset()
+        # connect signals and slots
+        self.ui.pushButtonCompute.clicked.connect(self.compute)
+        self.ui.pushButtonCancel.clicked.connect(self.cancel)
+        self.ui.pushButtonOk.clicked.connect(self.close)
+
+    def reset(self):
+        self.thread = None
+        self.ui.pushButtonOk.hide()
+        self.ui.pushButtonCompute.show()
+        self.ui.pushButtonCancel.setEnabled(False)
+        self.ui.pushButtonCompute.setEnabled(True)
+        self.ui.truncateWidthSpinBox.setEnabled(True)
+        self.ui.neighborRadiusSpinBox.setEnabled(True)
+        self.ui.progressBar.setValue(0)
+        self.ui.progressLabel.setText("")
+        time = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%S")
+        self.ui.nameLineEdit.setText("Analysis {}".format(time))
+
+    @Slot()
+    def reportProgress(self, progress, cancelled, description=None):
+        progress = round(progress*100)
+        self.ui.progressBar.setValue(progress)
+        if cancelled:
+            print("Cancelled module temperature analysis")
+            self.ui.progressLabel.setText(description)
+            self.ui.pushButtonCompute.hide()
+            self.ui.pushButtonOk.show()
+            self.ui.pushButtonCancel.setEnabled(False)
+        else:
+            self.ui.progressLabel.setText(description)
+                
+    @Slot()
+    def compute(self):
+        if not self.model.dataset_is_open:
+            return
+        
+        # check if analysis name is not already used
+        name = self.ui.nameLineEdit.text()
+        if name in self.model.source_names:
+            msg = QMessageBox()
+            msg.setWindowTitle("Error")
+            msg.setText("An analysis with this name already exists. Please specify a different name.")
+            msg.setIcon(QMessageBox.Critical)
+            msg.exec()
+            return
+
+        self.ui.pushButtonCancel.setEnabled(True)
+        self.ui.pushButtonCompute.setEnabled(False)
+        self.ui.truncateWidthSpinBox.setEnabled(False)
+        self.ui.neighborRadiusSpinBox.setEnabled(False)
+        border_margin = self.ui.truncateWidthSpinBox.value()
+        neighbour_radius = self.ui.neighborRadiusSpinBox.value()
+        
+        # start processing
+        self.thread = QThread()
+        self.worker = AnalysisModuleTemperaturesWorker(
+            self.model.dataset_dir, 
+            name,
+            border_margin, 
+            neighbour_radius)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.worker.finished.connect(self.finished)
+        self.worker.finished.connect(self.model.update_source_names)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.worker.progress.connect(self.reportProgress)
+        self.thread.start()
+
+    @Slot()
+    def finished(self):
+        self.ui.pushButtonCompute.hide()
+        self.ui.pushButtonOk.show()
+        self.ui.pushButtonCancel.setEnabled(False)
+
+    def closeEvent(self, event):
+        self.cancel()
+        event.accept()
+
+    @Slot()
+    def cancel(self):
+        if self.thread is not None:
+            self.worker.is_cancelled = True
+
+
+# class TempRangeView(QWidget):
+#     def __init__(self, model, controller, parent=None):
+#         super().__init__(parent)
+#         self.model = model
+#         self.controller = controller
+#         self.parent = parent
+#         self.ui = Ui_TempRange()
+#         self.ui.setupUi(self)
+#         # connect signals and slots
+#         self.ui.minTempSpinBox.valueChanged.connect(lambda: self.parent.setMinTemp(self.ui.minTempSpinBox.value()))
+#         self.ui.maxTempSpinBox.valueChanged.connect(lambda: self.parent.setMaxTemp(self.ui.maxTempSpinBox.value()))
+
+
+# class ColormapSelectionView(QWidget):
+#     def __init__(self, model, controller, parent=None):
+#         super().__init__(parent)
+#         self.model = model
+#         self.controller = controller
+#         self.parent = parent
+#         self.ui = Ui_ColormapSelection()
+#         self.ui.setupUi(self)
+#         self.ui.comboBox.addItems(["Gray", "Plasma", "Jet"])
+#         self.ui.comboBox.setCurrentIndex(0)
+#         # connect signals and slots
+#         self.ui.comboBox.currentIndexChanged.connect(lambda: self.parent.setColormap(self.ui.comboBox.currentIndex()))
+
+
+class DataColumnSelectionView(QWidget):
+    def __init__(self, model, controller, parent=None):
+        super().__init__(parent)
+        self.model = model
+        self.controller = controller
+        self.parent = parent
+        self.build_ui()
+        
+        # connect signals and slots
+        self.model.dataset_opened.connect(lambda: self.comboBox.setEnabled(True))
+        self.model.dataset_opened.connect(self.update_options)
+        self.model.dataset_closed.connect(lambda: self.comboBox.setEnabled(False))
+        self.model.dataset_closed.connect(self.update_options)
+        self.model.dataset_changed.connect(self.update_options)
+        self.comboBox.currentIndexChanged.connect(self.set_selected_column)
+        self.model.selected_column_changed.connect(self.comboBox.setCurrentIndex)
+
+        self.update_options()
+
+    def build_ui(self):
+        self.horizontalLayout = QHBoxLayout(self)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.label = QLabel(self)
+        self.label.setObjectName(u"label")
+        self.label.setText("Data Column")
+        self.horizontalLayout.addWidget(self.label)
+        self.comboBox = QComboBox(self)
+        self.comboBox.setObjectName(u"comboBox")
+        self.comboBox.setFixedWidth(150)
+        self.comboBox.setEnabled(False)
+        self.horizontalLayout.addWidget(self.comboBox)
+
+    def set_selected_column(self):
+        self.model.selected_column = self.comboBox.currentIndex()
+
+    @Slot()
+    def update_options(self):
+        self.comboBox.clear()
+        data_columns = self.model.get_column_names()
+        self.comboBox.addItems(data_columns)
+        if len(data_columns) > 0:
+            self.model.selected_column = 0
+        else:
+            self.model.selected_column = None
+
+
+class MainView(QMainWindow):
+    def __init__(self, model, controller):
+        #super(MainView, self).__init__()
+        super().__init__()
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
+        self.model = model
+        self.controller = controller
+
+        # register map view
+        self.map_view = MapView(model, controller, parent=self)
+        channel = QWebChannel(self.ui.widget.page())
+        self.ui.widget.page().setWebChannel(channel)
+        channel.registerObject("map_view", self.map_view)
+
+        # setup toolbars
+        # self.toolBarTempRange = QToolBar(self)
+        # self.addToolBar(Qt.TopToolBarArea, self.toolBarTempRange)
+        # self.toolBarTempRange.setEnabled(False)
+        # self.tempRangeWidget = TempRangeWidget(model, controller, parent=self)
+        # self.toolBarTempRange.addWidget(self.tempRangeWidget)
+
+        # self.toolBarColormapSelection = QToolBar(self)
+        # self.addToolBar(Qt.TopToolBarArea, self.toolBarColormapSelection)
+        # self.toolBarColormapSelection.setEnabled(False)
+        # self.colormapWidget = ColormapSelectionWidget(model, controller, parent=self)
+        # self.toolBarColormapSelection.addWidget(self.colormapWidget)
+
+        # setup toolbars
+        self.toolBarDataColumnSelection = QToolBar(self)
+        self.addToolBar(Qt.TopToolBarArea, self.toolBarDataColumnSelection)
+        self.dataColumnSelectionView = DataColumnSelectionView(self.model, self.controller, parent=self)
+        self.toolBarDataColumnSelection.addWidget(self.dataColumnSelectionView)
+
+        # setup widgets
+        self.annotationEditorWidget = QDockWidget(u"Annotation Editor", self)
+        self.annotation_editor = AnnotationEditorView(self.model, self.controller, parent=self)
+        self.annotationEditorWidget.setWidget(self.annotation_editor)
+        
+        self.sourceFrameWidget = QDockWidget(u"Source Frame", self)
+        self.source_frame = SourceFrameView(self.model, self.controller, parent=self)
+        self.sourceFrameWidget.setWidget(self.source_frame)
+        
+        self.dataSourcesWidget = QDockWidget(u"Data Sources", self)
+        self.data_sources = DataSourcesView(self.model, self.controller, parent=self)
+        self.dataSourcesWidget.setWidget(self.data_sources)
+
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.dataSourcesWidget)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.annotationEditorWidget)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.sourceFrameWidget)
+
+        # child windows
+        self.module_temperatures_window = None
+
+        # connect signals and slots
+        self.ui.actionQuit.triggered.connect(self.close)
+        self.ui.actionAbout.triggered.connect(self.about)
+        self.ui.actionOpen_Dataset.triggered.connect(self.open_dataset)
+        self.ui.actionClose_Dataset.triggered.connect(self.model.close_dataset)
+        self.ui.actionNew_Annotation.triggered.connect(self.new_annotation)
+        self.ui.actionLoad_Annotation.triggered.connect(self.load_annotation)
+        self.ui.actionSave_Annotation.triggered.connect(self.save_annotation)
+        self.ui.actionModule_Temperatures.triggered.connect(self.show_analysis_module_temperatures)
+        self.ui.menuView.addAction(self.dataSourcesWidget.toggleViewAction())
+        self.ui.menuView.addAction(self.annotationEditorWidget.toggleViewAction())
+        self.ui.menuView.addAction(self.sourceFrameWidget.toggleViewAction())
+        self.model.dataset_opened.connect(self.dataset_opened)
+        self.model.dataset_closed.connect(self.dataset_closed)
+        
+        # load HTML document for map view
+        index_file = QDir.current().filePath("index.html")
+        index_url = QUrl.fromLocalFile(index_file)
+        self.ui.widget.load(index_url)
+
+    def valid_dataset(self, dir):
+        probe_dirs = get_immediate_subdirectories(dir)
+        if not "mapping" in probe_dirs:
+            return False
+        if not "patches" in probe_dirs:
+            return False
+        if not "patches_final" in probe_dirs:
+            return False
+        if not "splitted" in probe_dirs:
+            return False
+        return True
+
+    @Slot()
+    def open_dataset(self):
+        dir = QFileDialog.getExistingDirectory(
+            self, caption="Open Dataset", options=QFileDialog.ShowDirsOnly)
+        if self.valid_dataset(dir):
+            self.model.open_dataset(dir)
+        else:
+            msg = QMessageBox()
+            msg.setWindowTitle("Error")
+            msg.setText("Not a valid PV Mapper Dataset.")
+            msg.setIcon(QMessageBox.Critical)
+            msg.exec()
+
+    def dataset_opened(self):
+        self.ui.actionClose_Dataset.setEnabled(True)
+        self.ui.actionOpen_Dataset.setEnabled(False)
+        self.ui.actionModule_Temperatures.setEnabled(True)
+
+    def dataset_closed(self):
+        self.ui.actionClose_Dataset.setEnabled(False)
+        self.ui.actionOpen_Dataset.setEnabled(True)        
+        self.ui.actionModule_Temperatures.setEnabled(False)
+
+    @Slot()
+    def new_annotation(self):
+        pass
+
+    @Slot()
+    def load_annotation(self):
+        pass
+
+    @Slot()
+    def save_annotation(self):
+        pass
+
+    @Slot()
+    def show_analysis_module_temperatures(self):
+        if not self.model.dataset_is_open:
+            return
+        if self.module_temperatures_window is None:
+            self.module_temperatures_window = AnalysisModuleTemperatures(self.model, self.controller, self)
+        self.module_temperatures_window.reset()
+        self.module_temperatures_window.show()
+
+    def about(self):
+        QMessageBox.about(
+            self,
+            "About Sample Editor",
+            "<p>A sample text editor app built with:</p>"
+            "<p>- PyQt</p>"
+            "<p>- Qt Designer</p>"
+            "<p>- Python</p>",
+        )
+
+
+class MainController(QObject):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
 
 
 class SourceFrameModel(QObject):
@@ -332,315 +658,10 @@ class SourceFrameModel(QObject):
         self.colormap_changed.emit(value)
 
 
-class AnalysisModuleTemperatures(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowFlags(Qt.Window)  # open in new window
-        self.parent = parent
-        self.ui = Ui_ModuleTemperatures()
-        self.ui.setupUi(self)
-        self.reset()
-        # connect signals and slots
-        self.ui.pushButtonCompute.clicked.connect(self.compute)
-        self.ui.pushButtonCancel.clicked.connect(self.cancel)
-        self.ui.pushButtonOk.clicked.connect(self.close)
-
-    def reset(self):
-        self.thread = None
-        self.ui.pushButtonOk.hide()
-        self.ui.pushButtonCompute.show()
-        self.ui.pushButtonCancel.setEnabled(False)
-        self.ui.pushButtonCompute.setEnabled(True)
-        self.ui.truncateWidthSpinBox.setEnabled(True)
-        self.ui.neighborRadiusSpinBox.setEnabled(True)
-        self.ui.progressBar.setValue(0)
-        self.ui.progressLabel.setText("")
-        time = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%S")
-        self.ui.nameLineEdit.setText("Analysis {}".format(time))
-
-    @Slot()
-    def reportProgress(self, progress, cancelled, description=None):
-        progress = round(progress*100)
-        self.ui.progressBar.setValue(progress)
-        if cancelled:
-            print("Cancelled module temperature analysis")
-            self.ui.progressLabel.setText(description)
-            self.ui.pushButtonCompute.hide()
-            self.ui.pushButtonOk.show()
-            self.ui.pushButtonCancel.setEnabled(False)
-        else:
-            self.ui.progressLabel.setText(description)
-                
-    @Slot()
-    def compute(self):
-        if not self.parent.dataset.is_open:
-            return
-        
-        # check if analysis name is not already used
-        name = self.ui.nameLineEdit.text()
-        if name in self.parent.dataset.source_names:
-            msg = QMessageBox()
-            msg.setWindowTitle("Error")
-            msg.setText("An analysis with this name already exists. Please specify a different name.")
-            msg.setIcon(QMessageBox.Critical)
-            msg.exec()
-            return
-
-        self.ui.pushButtonCancel.setEnabled(True)
-        self.ui.pushButtonCompute.setEnabled(False)
-        self.ui.truncateWidthSpinBox.setEnabled(False)
-        self.ui.neighborRadiusSpinBox.setEnabled(False)
-        border_margin = self.ui.truncateWidthSpinBox.value()
-        neighbour_radius = self.ui.neighborRadiusSpinBox.value()
-        
-        # start processing
-        self.thread = QThread()
-        self.worker = AnalysisModuleTemperaturesWorker(
-            self.parent.dataset.dataset_dir, 
-            name,
-            border_margin, 
-            neighbour_radius)
-        self.worker.moveToThread(self.thread)
-        self.thread.started.connect(self.worker.run)
-        self.worker.finished.connect(self.thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
-        self.worker.finished.connect(self.finished)
-        self.worker.finished.connect(self.parent.dataset.update_source_names)
-        self.thread.finished.connect(self.thread.deleteLater)
-        self.worker.progress.connect(self.reportProgress)
-        self.thread.start()
-
-    @Slot()
-    def finished(self):
-        self.ui.pushButtonCompute.hide()
-        self.ui.pushButtonOk.show()
-        self.ui.pushButtonCancel.setEnabled(False)
-
-    def closeEvent(self, event):
-        self.cancel()
-        event.accept()
-
-    @Slot()
-    def cancel(self):
-        if self.thread is not None:
-            self.worker.is_cancelled = True
-
-
-# class TempRangeView(QWidget):
-#     def __init__(self, parent=None):
-#         super().__init__(parent)
-#         self.parent = parent
-#         self.ui = Ui_TempRange()
-#         self.ui.setupUi(self)
-#         # connect signals and slots
-#         self.ui.minTempSpinBox.valueChanged.connect(lambda: self.parent.setMinTemp(self.ui.minTempSpinBox.value()))
-#         self.ui.maxTempSpinBox.valueChanged.connect(lambda: self.parent.setMaxTemp(self.ui.maxTempSpinBox.value()))
-
-
-# class ColormapSelectionView(QWidget):
-#     def __init__(self, parent=None):
-#         super().__init__(parent)
-#         self.parent = parent
-#         self.ui = Ui_ColormapSelection()
-#         self.ui.setupUi(self)
-#         self.ui.comboBox.addItems(["Gray", "Plasma", "Jet"])
-#         self.ui.comboBox.setCurrentIndex(0)
-#         # connect signals and slots
-#         self.ui.comboBox.currentIndexChanged.connect(lambda: self.parent.setColormap(self.ui.comboBox.currentIndex()))
-
-
-class DataColumnSelectionView(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.parent = parent
-        self.build_ui()
-        
-        # connect signals and slots
-        self.parent.dataset.opened.connect(lambda: self.comboBox.setEnabled(True))
-        self.parent.dataset.opened.connect(self.update_options)
-        self.parent.dataset.closed.connect(lambda: self.comboBox.setEnabled(False))
-        self.parent.dataset.closed.connect(self.update_options)
-        self.parent.dataset.changed.connect(self.update_options)
-        self.comboBox.currentIndexChanged.connect(self.set_selected_column)
-        self.parent.dataset.selected_column_changed.connect(self.comboBox.setCurrentIndex)
-
-        self.update_options()
-
-    def build_ui(self):
-        self.horizontalLayout = QHBoxLayout(self)
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
-        self.label = QLabel(self)
-        self.label.setObjectName(u"label")
-        self.label.setText("Data Column")
-        self.horizontalLayout.addWidget(self.label)
-        self.comboBox = QComboBox(self)
-        self.comboBox.setObjectName(u"comboBox")
-        self.comboBox.setFixedWidth(150)
-        self.comboBox.setEnabled(False)
-        self.horizontalLayout.addWidget(self.comboBox)
-
-    def set_selected_column(self):
-        self.parent.dataset.selected_column = self.comboBox.currentIndex()
-
-    @Slot()
-    def update_options(self):
-        self.comboBox.clear()
-        data_columns = self.parent.dataset.get_column_names()
-        self.comboBox.addItems(data_columns)
-        if len(data_columns) > 0:
-            self.parent.dataset.selected_column = 0
-        else:
-            self.parent.dataset.selected_column = None
-
-
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super(MainWindow, self).__init__()
-        self.ui = Ui_MainWindow()
-        self.ui.setupUi(self)
-        self.dataset = Dataset()
-
-        self.registerMapView()
-
-        # setup toolbars
-        # self.toolBarTempRange = QToolBar(self)
-        # self.addToolBar(Qt.TopToolBarArea, self.toolBarTempRange)
-        # self.toolBarTempRange.setEnabled(False)
-        # self.tempRangeWidget = TempRangeWidget(self)
-        # self.toolBarTempRange.addWidget(self.tempRangeWidget)
-
-        # self.toolBarColormapSelection = QToolBar(self)
-        # self.addToolBar(Qt.TopToolBarArea, self.toolBarColormapSelection)
-        # self.toolBarColormapSelection.setEnabled(False)
-        # self.colormapWidget = ColormapSelectionWidget(self)
-        # self.toolBarColormapSelection.addWidget(self.colormapWidget)
-
-        # setup toolbars
-        self.toolBarDataColumnSelection = QToolBar(self)
-        self.addToolBar(Qt.TopToolBarArea, self.toolBarDataColumnSelection)
-        self.dataColumnSelectionView = DataColumnSelectionView(self)
-        self.toolBarDataColumnSelection.addWidget(self.dataColumnSelectionView)
-
-        # setup widgets
-        self.annotationEditorWidget = QDockWidget(u"Annotation Editor", self)
-        self.annotation_editor = AnnotationEditorView(self)
-        self.annotationEditorWidget.setWidget(self.annotation_editor)
-        
-        self.sourceFrameWidget = QDockWidget(u"Source Frame", self)
-        self.source_frame = SourceFrameView(self)
-        self.sourceFrameWidget.setWidget(self.source_frame)
-        
-        self.dataSourcesWidget = QDockWidget(u"Data Sources", self)
-        self.data_sources = DataSourcesView(self)
-        self.dataSourcesWidget.setWidget(self.data_sources)
-
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.dataSourcesWidget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.annotationEditorWidget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.sourceFrameWidget)
-
-        # child windows
-        self.module_temperatures_window = None
-
-        # connect signals and slots
-        self.ui.actionQuit.triggered.connect(self.close)
-        self.ui.actionAbout.triggered.connect(self.about)
-        self.ui.actionOpen_Dataset.triggered.connect(self.open_dataset)
-        self.ui.actionClose_Dataset.triggered.connect(self.dataset.close)
-        self.ui.actionNew_Annotation.triggered.connect(self.new_annotation)
-        self.ui.actionLoad_Annotation.triggered.connect(self.load_annotation)
-        self.ui.actionSave_Annotation.triggered.connect(self.save_annotation)
-        self.ui.actionModule_Temperatures.triggered.connect(self.show_analysis_module_temperatures)
-        self.ui.menuView.addAction(self.dataSourcesWidget.toggleViewAction())
-        self.ui.menuView.addAction(self.annotationEditorWidget.toggleViewAction())
-        self.ui.menuView.addAction(self.sourceFrameWidget.toggleViewAction())
-        self.dataset.opened.connect(self.dataset_opened)
-        self.dataset.closed.connect(self.dataset_closed)
-        
-        self.loadMainDocument()
-
-    def registerMapView(self):
-        self.map_view = MapView(self)
-        channel = QWebChannel(self.ui.widget.page())
-        self.ui.widget.page().setWebChannel(channel)
-        channel.registerObject("map_view", self.map_view)
-
-    def loadMainDocument(self):
-        index_file = QDir.current().filePath("index.html")
-        index_url = QUrl.fromLocalFile(index_file)
-        self.ui.widget.load(index_url)
-
-    def valid_dataset(self, dir):
-        probe_dirs = get_immediate_subdirectories(dir)
-        if not "mapping" in probe_dirs:
-            return False
-        if not "patches" in probe_dirs:
-            return False
-        if not "patches_final" in probe_dirs:
-            return False
-        if not "splitted" in probe_dirs:
-            return False
-        return True
-
-    @Slot()
-    def open_dataset(self):
-        dir = QFileDialog.getExistingDirectory(
-            self, caption="Open Dataset", options=QFileDialog.ShowDirsOnly)
-        if self.valid_dataset(dir):
-            self.dataset.open(dir)
-        else:
-            msg = QMessageBox()
-            msg.setWindowTitle("Error")
-            msg.setText("Not a valid PV Mapper Dataset.")
-            msg.setIcon(QMessageBox.Critical)
-            msg.exec()
-
-    def dataset_opened(self):
-        self.ui.actionClose_Dataset.setEnabled(True)
-        self.ui.actionOpen_Dataset.setEnabled(False)
-        self.ui.actionModule_Temperatures.setEnabled(True)
-
-    def dataset_closed(self):
-        self.ui.actionClose_Dataset.setEnabled(False)
-        self.ui.actionOpen_Dataset.setEnabled(True)        
-        self.ui.actionModule_Temperatures.setEnabled(False)
-
-    @Slot()
-    def new_annotation(self):
-        pass
-
-    @Slot()
-    def load_annotation(self):
-        pass
-
-    @Slot()
-    def save_annotation(self):
-        pass
-
-    @Slot()
-    def show_analysis_module_temperatures(self):
-        if not self.dataset.is_open:
-            return
-        if self.module_temperatures_window is None:
-            self.module_temperatures_window = AnalysisModuleTemperatures(self)
-        self.module_temperatures_window.reset()
-        self.module_temperatures_window.show()
-
-    def about(self):
-        QMessageBox.about(
-            self,
-            "About Sample Editor",
-            "<p>A sample text editor app built with:</p>"
-            "<p>- PyQt</p>"
-            "<p>- Qt Designer</p>"
-            "<p>- Python</p>",
-        )
-
-
-class Dataset(QObject):
-    opened = Signal()
-    closed = Signal()
-    changed = Signal()
+class MainModel(QObject):
+    dataset_opened = Signal()
+    dataset_closed = Signal()
+    dataset_changed = Signal()
     source_deleted = Signal()
     source_names_updated = Signal()
 
@@ -650,7 +671,10 @@ class Dataset(QObject):
 
     def __init__(self):
         super().__init__()
-        self.reset()
+        # init submodels
+        self.source_frame_model = SourceFrameModel()
+
+        self.reset()        
 
     def reset(self):
         self.dataset_dir = None
@@ -659,7 +683,7 @@ class Dataset(QObject):
         self.data = None
         self.meta = None
         self.patch_meta = None
-        self.is_open = False
+        self.dataset_is_open = False
         self._selected_column = None
         self._track_id = None
         self._patch_idx = None
@@ -748,20 +772,20 @@ class Dataset(QObject):
         self.update_source_names()
 
     @Slot(str)
-    def open(self, dataset_dir):
+    def open_dataset(self, dataset_dir):
         self.dataset_dir = dataset_dir
         self.patch_meta = pickle.load(open(os.path.join(
             self.dataset_dir, "patches", "meta.pkl"), "rb"))
         self.update_source_names()
         self.loadSource("Module Layout")
-        self.is_open = True
-        self.opened.emit()
+        self.dataset_is_open = True
+        self.dataset_opened.emit()
 
     @Slot()
-    def close(self):
+    def close_dataset(self):
         self.reset()
-        self.is_open = False
-        self.closed.emit()
+        self.dataset_is_open = False
+        self.dataset_closed.emit()
 
     @Slot(str)
     def loadSource(self, selected_source):
@@ -781,14 +805,20 @@ class Dataset(QObject):
                 self.dataset_dir, "analyses", selected_source, "results.geojson"), "r"))
             self.meta = json.load(open(os.path.join(
                 self.dataset_dir, "analyses", selected_source, "meta.json"), "r"))
-        self.changed.emit()
+        self.dataset_changed.emit()
+
+
+
+class App(QApplication):
+    def __init__(self, sys_argv):
+        super(App, self).__init__(sys_argv)
+        self.main_model = MainModel()
+        self.main_controller = MainController(self.main_model)
+        self.main_view = MainView(self.main_model, self.main_controller)
+        self.main_view.show()
 
 
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-
-    window = MainWindow()
-    window.show()
-
+    app = App(sys.argv)
     sys.exit(app.exec())
