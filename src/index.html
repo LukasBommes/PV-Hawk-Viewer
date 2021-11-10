@@ -38,7 +38,7 @@
         map.setView(new L.LatLng(48.1, 11.5), 8);
       }
 
-      function drawData(data) {
+      function drawData(data, fit_map_bounds) {
         // do not redraw if data has not changed
         if (data == data_prev) { 
           map_view.printObj(JSON.stringify("Data has not changed, not redrawing"));
@@ -107,16 +107,18 @@
           }
         }).addTo(map);
 
-        map.fitBounds(modules_geojson.getBounds());
+        if (fit_map_bounds) {
+          map.fitBounds(modules_geojson.getBounds());
+        }
       }
 
       // wait for modules to be updated
-      map_view.dataset_changed.connect(function() {
+      map_view.dataset_changed.connect(function(fit_map_bounds) {
           map_view.printObj(JSON.stringify("Loading dataset in JS."));
 
           // visualize modules
           map_view.load_data(function(data) {
-            drawData(data);
+            drawData(data, fit_map_bounds);
           });
       });
 
@@ -124,6 +126,7 @@
         map_view.printObj(JSON.stringify("Closing dataset, clearing data in JS"));
           map.removeLayer(modules_geojson);
           modules_geojson = null;
+          data_prev = null;
           resetMap();
       });
   });

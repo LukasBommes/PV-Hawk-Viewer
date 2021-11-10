@@ -11,7 +11,7 @@ from src.colormap import get_colors
 
 
 class MapView(QObject):
-    dataset_changed = Signal()  # signals for notification of Javascript
+    dataset_changed = Signal(bool)  # signals for notification of Javascript
     dataset_closed = Signal()
 
     def __init__(self, model, controller, parent=None):
@@ -22,12 +22,12 @@ class MapView(QObject):
         # connect signals and slots
         self.controller.source_deleted.connect(self.dataset_closed)
         self.model.dataset_closed.connect(self.dataset_closed)
-        self.model.dataset_opened.connect(self.dataset_changed)
-        self.model.selected_column_changed.connect(self.dataset_changed)
+        self.model.dataset_opened.connect(lambda: self.dataset_changed.emit(True))
+        self.model.selected_column_changed.connect(lambda: self.dataset_changed.emit(False))
 
-        self.model.map_model.min_val_changed.connect(self.dataset_changed)
-        self.model.map_model.max_val_changed.connect(self.dataset_changed)
-        self.model.map_model.colormap_changed.connect(self.dataset_changed)
+        self.model.map_model.min_val_changed.connect(lambda: self.dataset_changed.emit(False))
+        self.model.map_model.max_val_changed.connect(lambda: self.dataset_changed.emit(False))
+        self.model.map_model.colormap_changed.connect(lambda: self.dataset_changed.emit(False))
 
     @Slot(str)
     def printObj(self, obj):
