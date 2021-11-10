@@ -18,7 +18,7 @@ class AnnotationEditorView(QWidget):
 
     def loadDefectsScheme(self):
         try:
-            defects_scheme = json.load(open(os.path.join("resources", "defect_schema.json"), "r"))
+            defects_scheme = json.load(open(os.path.join("src", "resources", "defect_schema.json"), "r"))
         except FileNotFoundError:
             pass
         else:

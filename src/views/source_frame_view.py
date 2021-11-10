@@ -18,7 +18,7 @@ class SourceFrameView(QWidget):
         # connect signals and slots
         self.model.dataset_opened.connect(self.enable)
         self.model.dataset_closed.connect(self.disable)
-        self.model.dataset_closed.connect(lambda _: setattr(self.model.source_frame_model, 'frame', None))
+        self.model.dataset_closed.connect(setattr(self.model.source_frame_model, 'frame', None))
         self.model.track_id_changed.connect(lambda _: self.controller.source_frame_controller.update_source_frame())
 
         self.ui.minTempSpinBox.valueChanged.connect(lambda value: setattr(self.model.source_frame_model, 'min_temp', value))

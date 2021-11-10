@@ -5,7 +5,7 @@ from PySide6.QtWebChannel import QWebChannel
 
 from src.common import get_immediate_subdirectories
 from src.ui.ui_mainwindow import Ui_MainWindow
-from src.views.map_view import MapView
+from src.views.map_view import MapView, ColorbarView
 from src.views.annotation_editor_view import AnnotationEditorView
 from src.views.data_sources_view import DataSourcesView
 from src.views.source_frame_view import SourceFrameView
@@ -13,9 +13,35 @@ from src.views.analysis_module_temperatures_view import AnalysisModuleTemperatur
 from src.views.data_column_selection_view import DataColumnSelectionView
 
 
+# class TempRangeView(QWidget):
+#     def __init__(self, model, controller, parent=None):
+#         super().__init__(parent)
+#         self.model = model
+#         self.controller = controller
+#         self.parent = parent
+#         self.ui = Ui_TempRange()
+#         self.ui.setupUi(self)
+#         # connect signals and slots
+#         self.ui.minTempSpinBox.valueChanged.connect(lambda: self.parent.setMinTemp(self.ui.minTempSpinBox.value()))
+#         self.ui.maxTempSpinBox.valueChanged.connect(lambda: self.parent.setMaxTemp(self.ui.maxTempSpinBox.value()))
+
+
+# class ColormapSelectionView(QWidget):
+#     def __init__(self, model, controller, parent=None):
+#         super().__init__(parent)
+#         self.model = model
+#         self.controller = controller
+#         self.parent = parent
+#         self.ui = Ui_ColormapSelection()
+#         self.ui.setupUi(self)
+#         self.ui.comboBox.addItems(["Gray", "Plasma", "Jet"])
+#         self.ui.comboBox.setCurrentIndex(0)
+#         # connect signals and slots
+#         self.ui.comboBox.currentIndexChanged.connect(lambda: self.parent.setColormap(self.ui.comboBox.currentIndex()))
+
+
 class MainView(QMainWindow):
     def __init__(self, model, controller):
-        #super(MainView, self).__init__()
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -27,6 +53,10 @@ class MainView(QMainWindow):
         channel = QWebChannel(self.ui.widget.page())
         self.ui.widget.page().setWebChannel(channel)
         channel.registerObject("map_view", self.map_view)
+
+        # add colorbar for map view
+        self.colorbarView = ColorbarView(self.model, self.controller)
+        self.ui.gridLayout.addWidget(self.colorbarView.widget, 1, 0, 1, 1)
 
         # setup toolbars
         # self.toolBarTempRange = QToolBar(self)
