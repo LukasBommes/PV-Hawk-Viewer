@@ -97,4 +97,4 @@ class DataColumnSelectionView(QWidget):
         else:
             self.comboBox.setEnabled(True)
             data_columns = self.controller.get_column_names()
-            self.comboBox.addItems(data_columns)
+            self.comboBox.addItems(data_columns)  # probably causes currentIndexChanged to be fired

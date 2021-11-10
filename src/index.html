@@ -19,6 +19,7 @@
   new QWebChannel(qt.webChannelTransport, function (channel) {
       var map_view = channel.objects.map_view;
       var modules_geojson = null;
+      var data_prev = null;
       var map = L.map('map');
       L.tileLayer(
           'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -37,8 +38,16 @@
         map.setView(new L.LatLng(48.1, 11.5), 8);
       }
 
-      function loadData(js_data) {
+      function drawData(data) {
+        // do not redraw if data has not changed
+        if (data == data_prev) { 
+          map_view.printObj(JSON.stringify("Data has not changed, not redrawing"));
+          return; 
+        }
+        map_view.printObj(JSON.stringify("Data changed, redrawing"));
+        data_prev = data;
 
+        js_data = JSON.parse(data);
         if (js_data.data.length === 0) { return; }
 
         var active_module;
@@ -107,8 +116,7 @@
 
           // visualize modules
           map_view.load_data(function(data) {
-            js_data = JSON.parse(data);
-            loadData(js_data);
+            drawData(data);
           });
       });
 
