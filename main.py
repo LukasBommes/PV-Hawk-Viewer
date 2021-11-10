@@ -1,12 +1,4 @@
 import sys
-import os
-import re
-import shutil
-import glob
-import json
-import pickle
-import datetime
-import cv2
 import numpy as np
 
 from PySide6.QtWidgets import QApplication
@@ -32,7 +24,6 @@ class App(QApplication):
         self.main_controller = MainController(self.main_model)
         self.main_controller.source_frame_controller = SourceFrameController(self.main_model)
         self.main_controller.analysis_module_temperatures_controller = AnalysisModuleTemperaturesController(self.main_model)
-        #self.main_controller.map_controller = MapController(self.main_model)
 
         self.main_view = MainView(self.main_model, self.main_controller)
         self.main_view.show()

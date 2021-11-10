@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>TempRange</class>
- <widget class="QWidget" name="TempRange">
+ <class>DataRange</class>
+ <widget class="QWidget" name="DataRange">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>252</width>
+    <width>258</width>
     <height>26</height>
    </rect>
   </property>
@@ -32,12 +32,12 @@
       <bool>true</bool>
      </property>
      <property name="text">
-      <string>Temp Range</string>
+      <string>Value Range</string>
      </property>
     </widget>
    </item>
    <item>
-    <widget class="QSpinBox" name="minTempSpinBox">
+    <widget class="QSpinBox" name="minValSpinBox">
      <property name="minimum">
       <number>-100</number>
      </property>
@@ -57,7 +57,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QSpinBox" name="maxTempSpinBox">
+    <widget class="QSpinBox" name="maxValSpinBox">
      <property name="minimum">
       <number>-100</number>
      </property>
@@ -70,11 +70,24 @@
     </widget>
    </item>
    <item>
-    <widget class="QLabel" name="label_4">
+    <widget class="QLabel" name="dataUnitLabel">
      <property name="text">
       <string>°C</string>
      </property>
     </widget>
+   </item>
+   <item>
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>40</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
    </item>
   </layout>
  </widget>

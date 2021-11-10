@@ -17,7 +17,7 @@ from src.components.annotation_editor import AnnotationEditorView
 from src.components.data_sources import DataSourcesView
 from src.components.source_frame import SourceFrameView
 from src.components.analysis_module_temperatures import AnalysisModuleTemperaturesView
-from src.components.toolbar import DataColumnSelectionView, TempRangeView
+from src.components.toolbar import DataColumnSelectionView, DataRangeView
 
 
 class MainView(QMainWindow):
@@ -50,10 +50,10 @@ class MainView(QMainWindow):
         self.dataColumnSelectionView = DataColumnSelectionView(self.model, self.controller, parent=self)
         self.toolBarDataColumnSelection.addWidget(self.dataColumnSelectionView)
 
-        self.toolBarTempRange = QToolBar(self)
-        self.addToolBar(Qt.TopToolBarArea, self.toolBarTempRange)
-        self.tempRangeWidget = TempRangeView(self.model, self.controller, parent=self)
-        self.toolBarTempRange.addWidget(self.tempRangeWidget)
+        self.toolBarDataRange = QToolBar(self)
+        self.addToolBar(Qt.TopToolBarArea, self.toolBarDataRange)
+        self.dataRangeWidget = DataRangeView(self.model, self.controller, parent=self)
+        self.toolBarDataRange.addWidget(self.dataRangeWidget)
 
         # setup widgets
         self.annotationEditorWidget = QDockWidget(u"Annotation Editor", self)
@@ -176,7 +176,7 @@ class MainController(QObject):
         self.model.patch_meta = pickle.load(open(os.path.join(
             self.model.dataset_dir, "patches", "meta.pkl"), "rb"))
         self.update_source_names()
-        self.loadSource("Module Layout")
+        self.load_source("Module Layout")
         self.model.dataset_is_open = True
 
     @Slot()
@@ -194,7 +194,7 @@ class MainController(QObject):
         self.model.source_names = source_names
 
     @Slot(str)
-    def loadSource(self, selected_source):
+    def load_source(self, selected_source):
         print("Updating", selected_source)
         if self.model.dataset_dir is None:
             return
@@ -241,8 +241,12 @@ class MainController(QObject):
         if self.model.selected_column is None:
             return {}
         columns_names = self.get_column_names()
-        column = columns_names[self.model.selected_column]
-        return self.get_column(column)
+        try:
+            column = columns_names[self.model.selected_column]
+        except IndexError:
+            return {}
+        else:
+            return self.get_column(column)
 
     @Slot()
     def get_column(self, column):

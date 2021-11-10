@@ -16,9 +16,8 @@ class DataSourcesView(QWidget):
         # connect signals and slots
         self.ui.pushButtonDelete.clicked.connect(self.delete_source)
         self.ui.pushButtonNewAnalysis.clicked.connect(self.parent.show_analysis_module_temperatures)
-        self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.controller.loadSource(name.text()))
+        self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.controller.load_source(name.text()))
         self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.ui.pushButtonDelete.setEnabled(name.text() != "Module Layout"))
-        self.ui.dataSourcesListWidget.itemSelectionChanged.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
         self.model.source_names_changed.connect(self.update)
         self.model.dataset_opened.connect(self.update)
         self.model.dataset_opened.connect(lambda: self.ui.pushButtonNewAnalysis.setEnabled(True))

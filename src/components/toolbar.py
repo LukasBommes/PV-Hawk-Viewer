@@ -1,39 +1,43 @@
 from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QComboBox
 from PySide6.QtCore import Slot
 
-from src.ui.ui_toolbar_temp_range import Ui_TempRange
+from src.ui.ui_toolbar_data_range import Ui_DataRange
 # from src.ui.ui_toolbar_colormap_selection import Ui_ColormapSelection
 
 
-class TempRangeView(QWidget):
+class DataRangeView(QWidget):
     def __init__(self, model, controller, parent=None):
         super().__init__(parent)
         self.model = model
         self.controller = controller
         self.parent = parent
-        self.ui = Ui_TempRange()
+        self.ui = Ui_DataRange()
         self.ui.setupUi(self)
         self.disable()
         # connect signals and slots
-        self.model.map_model.min_temp_changed.connect(self.ui.minTempSpinBox.setValue)
-        self.model.map_model.max_temp_changed.connect(self.ui.maxTempSpinBox.setValue)
-        self.ui.maxTempSpinBox.valueChanged.connect(lambda value: setattr(self.model.map_model, 'max_temp', value))
-        self.ui.minTempSpinBox.valueChanged.connect(lambda value: setattr(self.model.map_model, 'min_temp', value))
-
-        self.model.dataset_opened.connect(self.enable)
+        self.model.map_model.min_val_changed.connect(self.ui.minValSpinBox.setValue)
+        self.model.map_model.max_val_changed.connect(self.ui.maxValSpinBox.setValue)
+        self.ui.maxValSpinBox.valueChanged.connect(lambda value: setattr(self.model.map_model, 'max_val', value))
+        self.ui.minValSpinBox.valueChanged.connect(lambda value: setattr(self.model.map_model, 'min_val', value))
+        self.model.selected_source_changed.connect(self.enable)
         self.model.dataset_closed.connect(self.disable)
 
         # set default values (TODO: set automatically based on selected data column)
-        self.model.map_model.min_temp = -5
-        self.model.map_model.max_temp = 5
+        self.model.map_model.min_val = -5
+        self.model.map_model.max_val = 5
 
     def enable(self):
-        self.ui.minTempSpinBox.setEnabled(True)
-        self.ui.maxTempSpinBox.setEnabled(True)
+        if self.model.selected_source is None:
+            self.disable()
+        elif self.model.selected_source == "Module Layout":
+            self.disable()
+        else:
+            self.ui.minValSpinBox.setEnabled(True)
+            self.ui.maxValSpinBox.setEnabled(True)
 
     def disable(self):
-        self.ui.minTempSpinBox.setEnabled(False)
-        self.ui.maxTempSpinBox.setEnabled(False)
+        self.ui.minValSpinBox.setEnabled(False)
+        self.ui.maxValSpinBox.setEnabled(False)
 
 
 # class ColormapSelectionView(QWidget):
@@ -86,9 +90,11 @@ class DataColumnSelectionView(QWidget):
     @Slot()
     def update_options(self):
         self.comboBox.clear()
-        data_columns = self.controller.get_column_names()
-        self.comboBox.addItems(data_columns)
-        if len(data_columns) > 0:
-            self.model.selected_column = 0
+        if self.model.selected_source is None:
+            self.comboBox.setEnabled(False)
+        elif self.model.selected_source == "Module Layout":
+            self.comboBox.setEnabled(False)
         else:
-            self.model.selected_column = None
+            self.comboBox.setEnabled(True)
+            data_columns = self.controller.get_column_names()
+            self.comboBox.addItems(data_columns)

@@ -26,7 +26,6 @@ class SourceFrameView(QWidget):
         # connect signals and slots
         self.model.dataset_opened.connect(self.enable)
         self.model.dataset_closed.connect(self.disable)
-        self.model.dataset_closed.connect(setattr(self.model.source_frame_model, 'frame', None))
         self.model.track_id_changed.connect(lambda _: self.controller.source_frame_controller.update_source_frame())
 
         self.ui.minTempSpinBox.valueChanged.connect(lambda value: setattr(self.model.source_frame_model, 'min_temp', value))
@@ -39,6 +38,14 @@ class SourceFrameView(QWidget):
         self.model.source_frame_model.max_temp_changed.connect(lambda _: self.controller.source_frame_controller.update_source_frame())
         self.model.source_frame_model.colormap_changed.connect(lambda _: self.controller.source_frame_controller.update_source_frame())
         self.model.source_frame_model.frame_changed.connect(self.update_source_frame_label)
+
+        self.model.dataset_closed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
+        self.controller.source_deleted.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
+        self.model.selected_source_changed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
+        self.model.selected_column_changed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
+        self.model.map_model.min_val_changed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
+        self.model.map_model.max_val_changed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
+        self.model.map_model.colormap_changed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
 
         # set default values
         self.model.source_frame_model.min_temp = 30
@@ -75,6 +82,10 @@ class SourceFrameController(QObject):
     def __init__(self, model):
         super().__init__()
         self.model = model
+
+    @Slot()
+    def reset_source_frame(self):
+        self.source_frame = None
 
     @Slot()
     def update_source_frame(self):
