@@ -1,16 +1,24 @@
+import os
+import json
+import shutil
+import pickle
+import numpy as np
+
 from PySide6.QtWidgets import QMainWindow, QToolBar, QDockWidget, \
     QMessageBox, QFileDialog
-from PySide6.QtCore import Qt, Slot, QUrl, QDir
+from PySide6.QtCore import Qt, Slot, QUrl, QDir, Signal, QObject
 from PySide6.QtWebChannel import QWebChannel
 
 from src.common import get_immediate_subdirectories
+
 from src.ui.ui_mainwindow import Ui_MainWindow
-from src.views.map_view import MapView, ColorbarView
-from src.views.annotation_editor_view import AnnotationEditorView
-from src.views.data_sources_view import DataSourcesView
-from src.views.source_frame_view import SourceFrameView
-from src.views.analysis_module_temperatures_view import AnalysisModuleTemperaturesView
-from src.views.data_column_selection_view import DataColumnSelectionView
+from src.components.map import MapView, ColorbarView
+from src.components.annotation_editor import AnnotationEditorView
+from src.components.data_sources import DataSourcesView
+from src.components.source_frame import SourceFrameView
+from src.components.analysis_module_temperatures import AnalysisModuleTemperaturesView
+from src.components.data_column_selection import DataColumnSelectionView
+
 
 
 # class TempRangeView(QWidget):
@@ -182,3 +190,188 @@ class MainView(QMainWindow):
             "<p>- Qt Designer</p>"
             "<p>- Python</p>",
         )
+
+
+
+class MainController(QObject):
+    source_deleted = Signal()
+
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    @Slot(str)
+    def open_dataset(self, dataset_dir):
+        self.model.dataset_dir = dataset_dir
+        self.model.patch_meta = pickle.load(open(os.path.join(
+            self.model.dataset_dir, "patches", "meta.pkl"), "rb"))
+        self.update_source_names()
+        self.loadSource("Module Layout")
+        self.model.dataset_is_open = True
+
+    @Slot()
+    def close_dataset(self):
+        self.model.reset()
+        self.model.dataset_is_open = False
+
+    @Slot()
+    def update_source_names(self):
+        source_names = []
+        if self.model.dataset_dir is not None:
+            source_names = sorted(get_immediate_subdirectories(
+                os.path.join(self.model.dataset_dir, "analyses")))
+        source_names.insert(0, "Module Layout")
+        self.model.source_names = source_names
+
+    @Slot(str)
+    def loadSource(self, selected_source):
+        print("Updating", selected_source)
+        if self.model.dataset_dir is None:
+            return
+        if selected_source is None:
+            return
+        if selected_source == "Module Layout":
+            self.model.data = json.load(open(os.path.join(
+                self.model.dataset_dir, "mapping", "module_geolocations_refined.geojson"), "r"))
+            self.model.meta = None            
+        else:
+            self.model.data = json.load(open(os.path.join(
+                self.model.dataset_dir, "analyses", selected_source, "results.geojson"), "r"))
+            self.model.meta = json.load(open(os.path.join(
+                self.model.dataset_dir, "analyses", selected_source, "meta.json"), "r"))
+        self.model.selected_source = selected_source
+
+    @Slot()
+    def delete_source(self, selected_source):
+        if self.model.dataset_dir is None:
+            return
+        if selected_source is None:
+            return
+        if selected_source == "Module Layout":
+            return
+        if selected_source == self.model.selected_source:
+            self.source_deleted.emit()
+        rmdir = os.path.join(self.model.dataset_dir, "analyses", selected_source)
+        print("Deleting {}".format(rmdir))
+        shutil.rmtree(rmdir, ignore_errors=True)
+        self.update_source_names()
+
+    @Slot()
+    def get_column_names(self):
+        if self.model.dataset_dir is None:
+            return []
+        columns_names = set()
+        for feature in self.model.data["features"]:
+            columns_names = columns_names | set(feature["properties"].keys())
+        columns_names -= set(["track_id"])
+        return sorted(list(columns_names))
+
+    @Slot()
+    def get_selected_column(self):
+        if self.model.selected_column is None:
+            return {}
+        columns_names = self.get_column_names()
+        column = columns_names[self.model.selected_column]
+        return self.get_column(column)
+
+    @Slot()
+    def get_column(self, column):
+        if self.model.dataset_dir is None:
+            return {}        
+        column_values = {}
+        for feature in self.model.data["features"]:
+            track_id = feature["properties"]["track_id"]
+            try:
+                val = feature["properties"][column]
+                if val is None:
+                    val = np.nan
+                column_values[track_id] = val
+            except KeyError:
+                continue
+        return column_values
+
+
+
+class MainModel(QObject):
+    dataset_opened = Signal()
+    dataset_closed = Signal()
+    source_names_changed = Signal(object)
+    selected_source_changed = Signal(str)
+    selected_column_changed = Signal(int)
+    track_id_changed = Signal(str)
+    patch_idx_changed = Signal(int)
+
+    def __init__(self):
+        super().__init__()
+        self.reset()
+
+    def reset(self):
+        self.dataset_dir = None
+        self.data = None
+        self.meta = None
+        self.patch_meta = None
+        self._source_names = None
+        self._dataset_is_open = False
+        self._selected_source = None
+        self._selected_column = None
+        self._track_id = None
+        self._patch_idx = None
+
+    @property
+    def selected_column(self):
+        return self._selected_column
+
+    @selected_column.setter
+    def selected_column(self, value):
+        self._selected_column = value
+        self.selected_column_changed.emit(value)
+
+    @property
+    def track_id(self):
+        return self._track_id
+
+    @track_id.setter
+    def track_id(self, value):
+        self._track_id = value
+        self._patch_idx = 0
+        self.track_id_changed.emit(value)
+        self.patch_idx_changed.emit(value)
+
+    @property
+    def patch_idx(self):
+        return self._patch_idx
+
+    @patch_idx.setter
+    def patch_idx(self, value):
+        self._patch_idx = value
+        self.patch_idx_changed.emit(value)
+
+    @property
+    def dataset_is_open(self):
+        return self._dataset_is_open
+
+    @dataset_is_open.setter
+    def dataset_is_open(self, value):
+        self._dataset_is_open = value
+        if self._dataset_is_open:
+            self.dataset_opened.emit()
+        else:
+            self.dataset_closed.emit()
+
+    @property
+    def source_names(self):
+        return self._source_names
+
+    @source_names.setter
+    def source_names(self, value):
+        self._source_names = value
+        self.source_names_changed.emit(value)
+
+    @property
+    def selected_source(self):
+        return self._selected_source
+
+    @selected_source.setter
+    def selected_source(self, value):
+        self._selected_source = value
+        self.selected_source_changed.emit(value)

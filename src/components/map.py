@@ -121,3 +121,50 @@ class ColorbarView(QWidget):
         cbar.set_label(label, labelpad=0, fontsize=10)
         cbar.ax.tick_params(labelsize=10, length=2, width=1)
         self.widget.draw()
+
+
+
+class MapController(QObject):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+
+
+class MapModel(QObject):
+    min_temp_changed = Signal(int)
+    max_temp_changed = Signal(int)
+    colormap_changed = Signal(int)
+
+    def __init__(self):
+        super().__init__()
+        self._min_temp = None
+        self._max_temp = None
+        self._colormap = None
+    
+    @property
+    def min_temp(self):
+        return self._min_temp
+
+    @min_temp.setter
+    def min_temp(self, value):
+        self._min_temp = value
+        self.min_temp_changed.emit(value)
+
+    @property
+    def max_temp(self):
+        return self._max_temp
+
+    @max_temp.setter
+    def max_temp(self, value):
+        self._max_temp = value
+        self.max_temp_changed.emit(value)
+
+    @property
+    def colormap(self):
+        return self._colormap
+
+    @colormap.setter
+    def colormap(self, value):
+        self._colormap = value
+        self.colormap_changed.emit(value)

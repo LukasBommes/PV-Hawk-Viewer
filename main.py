@@ -14,17 +14,24 @@ from PySide6.QtWidgets import QApplication
 # from src.ui.ui_toolbar_temp_range import Ui_TempRange
 # from src.ui.ui_toolbar_colormap_selection import Ui_ColormapSelection
 
-from src.views.main_view import MainView
+# from src.views.main_view import MainView
 
-from src.controllers.analysis_module_temperatures_controller import AnalysisModuleTemperaturesController
-from src.controllers.source_frame_controller import SourceFrameController
-from src.controllers.map_controller import MapController
-from src.controllers.main_controller import MainController
+# from src.controllers.analysis_module_temperatures_controller import AnalysisModuleTemperaturesController
+# from src.controllers.source_frame_controller import SourceFrameController
+# from src.controllers.map_controller import MapController
+# from src.controllers.main_controller import MainController
 
-from src.models.analysis_module_temperatures_model import AnalysisModuleTemperaturesModel
-from src.models.source_frame_model import SourceFrameModel
-from src.models.map_model import MapModel
-from src.models.main_model import MainModel
+# from src.models.analysis_module_temperatures_model import AnalysisModuleTemperaturesModel
+# from src.models.source_frame_model import SourceFrameModel
+# from src.models.map_model import MapModel
+# from src.models.main_model import MainModel
+
+
+from src.components.mainwindow import MainController, MainView, MainModel
+from src.components.analysis_module_temperatures import AnalysisModuleTemperaturesController, AnalysisModuleTemperaturesModel
+from src.components.source_frame import SourceFrameController, SourceFrameModel
+from src.components.map import MapController, MapModel
+
 
 
 class App(QApplication):
