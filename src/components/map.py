@@ -20,18 +20,22 @@ class MapView(QObject):
         self.controller = controller
         self.parent = parent
         # connect signals and slots
-        self.controller.source_deleted.connect(self.dataset_closed)        
+        self.controller.source_deleted.connect(self.dataset_closed)
         self.model.dataset_closed.connect(self.dataset_closed)
         self.model.selected_source_changed.connect(self.dataset_changed)
         self.model.selected_column_changed.connect(self.dataset_changed)
+        self.model.map_model.min_temp_changed.connect(self.dataset_changed)
+        self.model.map_model.max_temp_changed.connect(self.dataset_changed)
+        self.model.map_model.colormap_changed.connect(self.dataset_changed)
 
     @Slot(str)
     def printObj(self, obj):
+        """Utility function for printing from javascript"""
         py_obj = json.loads(obj)
         print(py_obj)
 
     @Slot(result=str)
-    def loadData(self):
+    def load_data(self):
         data = []
         colors = {}
         if self.model.dataset_is_open:
@@ -44,8 +48,7 @@ class MapView(QObject):
                 #     2: "viridis"
                 # }
                 # colormap = colormaps[self.model.map_model.colormap]
-                # colors = get_colors(data_column, cmap=colormap, vmin=self.model.map_model.min_temp, vmax=self.model.map_model.max_temp)
-                colors = get_colors(data_column, cmap="plasma", vmin=-5, vmax=5)
+                colors = get_colors(data_column, cmap="plasma", vmin=self.model.map_model.min_temp, vmax=self.model.map_model.max_temp)
             else:
                 default_color = "#ff7800"
                 track_ids = list(self.controller.get_column("track_id").values())
@@ -75,19 +78,14 @@ class ColorbarView(QWidget):
         self.controller = controller
         self.widget = MplCanvas()
         self.widget.setFixedHeight(50)
-
-        #self.update()
         self.widget.hide()
 
         # connect signals and slots
         self.model.map_model.min_temp_changed.connect(self.update)
         self.model.map_model.max_temp_changed.connect(self.update)
         self.model.map_model.colormap_changed.connect(self.update)
-       
         self.model.selected_source_changed.connect(self.update)
         self.model.selected_column_changed.connect(self.update)
-
-        
         self.model.dataset_opened.connect(self.show)
         self.model.dataset_closed.connect(self.widget.hide)
         self.controller.source_deleted.connect(self.widget.hide)
@@ -102,9 +100,9 @@ class ColorbarView(QWidget):
             self.widget.hide()
             return
         
-        self.widget.show()
+        self.widget.show()    
 
-        cmap = matplotlib.cm.Reds
+        cmap = matplotlib.cm.plasma
         norm = matplotlib.colors.Normalize(
             vmin=self.model.map_model.min_temp, 
             vmax=self.model.map_model.max_temp)
@@ -124,10 +122,12 @@ class ColorbarView(QWidget):
 
 
 
-class MapController(QObject):
-    def __init__(self, model):
-        super().__init__()
-        self.model = model
+# class MapController(QObject):
+#     def __init__(self, model):
+#         super().__init__()
+#         self.model = model
+#         # connect signals and slots
+#         self.model.selected_source_changed.connect(self.update_temperature_range)
 
 
 

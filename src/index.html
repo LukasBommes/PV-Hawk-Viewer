@@ -106,7 +106,7 @@
           map_view.printObj(JSON.stringify("Loading dataset in JS."));
 
           // visualize modules
-          map_view.loadData(function(data) {
+          map_view.load_data(function(data) {
             js_data = JSON.parse(data);
             loadData(js_data);
           });

@@ -17,35 +17,7 @@ from src.components.annotation_editor import AnnotationEditorView
 from src.components.data_sources import DataSourcesView
 from src.components.source_frame import SourceFrameView
 from src.components.analysis_module_temperatures import AnalysisModuleTemperaturesView
-from src.components.data_column_selection import DataColumnSelectionView
-
-
-
-# class TempRangeView(QWidget):
-#     def __init__(self, model, controller, parent=None):
-#         super().__init__(parent)
-#         self.model = model
-#         self.controller = controller
-#         self.parent = parent
-#         self.ui = Ui_TempRange()
-#         self.ui.setupUi(self)
-#         # connect signals and slots
-#         self.ui.minTempSpinBox.valueChanged.connect(lambda: self.parent.setMinTemp(self.ui.minTempSpinBox.value()))
-#         self.ui.maxTempSpinBox.valueChanged.connect(lambda: self.parent.setMaxTemp(self.ui.maxTempSpinBox.value()))
-
-
-# class ColormapSelectionView(QWidget):
-#     def __init__(self, model, controller, parent=None):
-#         super().__init__(parent)
-#         self.model = model
-#         self.controller = controller
-#         self.parent = parent
-#         self.ui = Ui_ColormapSelection()
-#         self.ui.setupUi(self)
-#         self.ui.comboBox.addItems(["Gray", "Plasma", "Jet"])
-#         self.ui.comboBox.setCurrentIndex(0)
-#         # connect signals and slots
-#         self.ui.comboBox.currentIndexChanged.connect(lambda: self.parent.setColormap(self.ui.comboBox.currentIndex()))
+from src.components.toolbar import DataColumnSelectionView, TempRangeView
 
 
 class MainView(QMainWindow):
@@ -66,17 +38,10 @@ class MainView(QMainWindow):
         self.colorbarView = ColorbarView(self.model, self.controller)
         self.ui.gridLayout.addWidget(self.colorbarView.widget, 1, 0, 1, 1)
 
-        # setup toolbars
-        # self.toolBarTempRange = QToolBar(self)
-        # self.addToolBar(Qt.TopToolBarArea, self.toolBarTempRange)
-        # self.toolBarTempRange.setEnabled(False)
-        # self.tempRangeWidget = TempRangeWidget(model, controller, parent=self)
-        # self.toolBarTempRange.addWidget(self.tempRangeWidget)
-
         # self.toolBarColormapSelection = QToolBar(self)
         # self.addToolBar(Qt.TopToolBarArea, self.toolBarColormapSelection)
         # self.toolBarColormapSelection.setEnabled(False)
-        # self.colormapWidget = ColormapSelectionWidget(model, controller, parent=self)
+        # self.colormapWidget = ColormapSelectionWidget(self.model, self.controller, parent=self)
         # self.toolBarColormapSelection.addWidget(self.colormapWidget)
 
         # setup toolbars
@@ -84,6 +49,11 @@ class MainView(QMainWindow):
         self.addToolBar(Qt.TopToolBarArea, self.toolBarDataColumnSelection)
         self.dataColumnSelectionView = DataColumnSelectionView(self.model, self.controller, parent=self)
         self.toolBarDataColumnSelection.addWidget(self.dataColumnSelectionView)
+
+        self.toolBarTempRange = QToolBar(self)
+        self.addToolBar(Qt.TopToolBarArea, self.toolBarTempRange)
+        self.tempRangeWidget = TempRangeView(self.model, self.controller, parent=self)
+        self.toolBarTempRange.addWidget(self.tempRangeWidget)
 
         # setup widgets
         self.annotationEditorWidget = QDockWidget(u"Annotation Editor", self)
