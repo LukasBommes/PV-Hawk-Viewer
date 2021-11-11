@@ -25,7 +25,7 @@ class AnnotationEditorView(QWidget):
 
         # if anything wants to close the window, ask user if he wants to save unsaved changes
         self.controller.save_defect_annotation.connect(self.controller.annotation_editor_controller.save_annotation_file)
-
+        self.controller.load_defect_annotation.connect(self.controller.annotation_editor_controller.load_annotation_file)
 
     def loadDefectsScheme(self):
         try:
@@ -125,11 +125,7 @@ class AnnotationEditorController(QObject):
         self.print_annotation_data()
 
     @Slot()
-    def save_annotation_file(self):
-        # TODO:
-        # - dialog: ask if changes should be changed?
-        # - save annotation data to disk (different format)
-
+    def save_changes_dialog(self):
         msg = QMessageBox()
         msg.setWindowTitle("Save changes?")
         msg.setText("Do you want to save unchanged changes to the defect annotation?")
@@ -137,41 +133,82 @@ class AnnotationEditorController(QObject):
         msg.setStandardButtons(QMessageBox.Yes|QMessageBox.No|QMessageBox.Cancel)
         answer = msg.exec() 
         if answer == QMessageBox.Yes:
-            print("Saving defect annotation to file")
-            file_name, _ = QFileDialog.getSaveFileName(
-                None, "Save Defect Annotation", "", "", "JSON Files (*.json)")
-            # make sure filename has JSON extension
-            if len(file_name) > 0:
-                file_name = ".".join([os.path.splitext(file_name)[0], "json"])
-
-                if self.model.annotation_editor_model.annotation_data is not None:
-                    print("Saving to ", file_name)
-                    annotation_data_json = annotation_data_to_json(self.model.annotation_editor_model.annotation_data)
-                    #json.dump(annotation_data_json, open(file_name, "w"))
-                    print(annotation_data_json)
+            self.save_annotation_file()
 
         elif answer == QMessageBox.No:
             print("Discarding defect annotation")
-            self.discard_annotation()
+            self.reset_annotation_data()
 
         elif answer == QMessageBox.Cancel:
-            print("Doing nothing")
-            pass
+            print("Cancelled saving defect annotation")
+
+    @Slot()
+    def save_annotation_file(self):
+        file_name, _ = QFileDialog.getSaveFileName(
+            None, "Save Defect Annotation", "", "", "JSON Files (*.json)")
+        if file_name == "":
+            return
+        
+        # make sure filename has JSON extension
+        file_name = ".".join([os.path.splitext(file_name)[0], "json"])
+
+        if self.model.annotation_editor_model.annotation_data is not None:
+            print("Saving to ", file_name)
+            annotation_data_json = self.annotation_data_to_json(self.model.annotation_editor_model.annotation_data)
+            json.dump(annotation_data_json, open(file_name, "w"))
 
     @Slot()
     def load_annotation_file(self):
-        # TODO:
-        # - open file dialog to select annotation file
-        # - load from file and update annotation data model (should update checkboxes)
-        pass
+        file_name, _ = QFileDialog.getOpenFileName(
+            None, "Open Defect Annotation", "", "JSON Files (*.json)", "")
+        if file_name == "":
+            return
+        if self.model.track_ids is None:
+            return
+        try:
+            annotation_data_json = json.load(open(file_name, "r"))
+        except json.decoder.JSONDecodeError:
+            msg = QMessageBox()
+            msg.setWindowTitle("Error")
+            msg.setText("Not a valid defect annotation file.")
+            msg.setIcon(QMessageBox.Critical)
+            msg.exec()
+            return
 
-    @Slot()
-    def discard_annotation(self):
-        # TODO:
-        # - dialog: ask if changes should be discarded?
-        # -clear annotation data
-        # - also call when changes were made and are about to be lost when proceeding
-        pass
+        # convert to internal format of annotation data
+        try:
+            data = self.annotation_data_from_json(annotation_data_json)
+        except (KeyError, IndexError):
+            msg = QMessageBox()
+            msg.setWindowTitle("Error")
+            msg.setText("Not a valid defect annotation file.")
+            msg.setIcon(QMessageBox.Critical)
+            msg.exec()
+            return
+
+        # validate that this defect annotation belongs to the opened dataset
+        if not set(data.keys()) == set(self.model.track_ids):
+            msg = QMessageBox()
+            msg.setWindowTitle("Error")
+            msg.setText("This defect annotation file does not belong to the currently opened dataset. Please select another file.")
+            msg.setIcon(QMessageBox.Critical)
+            msg.exec()
+            return
+
+        self.model.annotation_editor_model.annotation_data = data
+        print("Successfully loaded defect annotations")
+
+    def annotation_data_to_json(self, data):
+        data_json = [{"plant_id": track_id, "faults": defects} for track_id, defects in data.items()]
+        return data_json
+
+    def annotation_data_from_json(self, data_json):
+        data = {}
+        for row in data_json:
+            track_id = row["plant_id"]
+            defects = row["faults"]
+            data[track_id] = defects
+        return data
 
     # for debugging
     def print_annotation_data(self):

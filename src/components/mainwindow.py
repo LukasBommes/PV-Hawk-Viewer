@@ -86,7 +86,6 @@ class MainView(QMainWindow):
         self.ui.actionNew_Defect_Annotation.triggered.connect(self.new_defect_annotation)
         self.ui.actionLoad_Defect_Annotation.triggered.connect(self.load_defect_annotation)
         self.ui.actionSave_Defect_Annotation.triggered.connect(self.save_defect_annotation)
-        self.ui.actionDiscard_Defect_Annotation.triggered.connect(self.discard_defect_annotation)
         self.ui.actionModule_Temperatures.triggered.connect(self.show_analysis_module_temperatures)
         self.ui.menuView.addAction(self.dataSourcesWidget.toggleViewAction())
         self.ui.menuView.addAction(self.annotationEditorWidget.toggleViewAction())
@@ -117,6 +116,8 @@ class MainView(QMainWindow):
     def open_dataset(self):
         dir = QFileDialog.getExistingDirectory(
             self, caption="Open Dataset", options=QFileDialog.ShowDirsOnly)
+        if dir == "":
+            return
         if self.valid_dataset(dir):
             self.controller.open_dataset(dir)
         else:
@@ -142,30 +143,25 @@ class MainView(QMainWindow):
         self.ui.actionNew_Defect_Annotation.setEnabled(False)
         self.ui.actionLoad_Defect_Annotation.setEnabled(False)
         self.ui.actionSave_Defect_Annotation.setEnabled(False)
-        self.ui.actionDiscard_Defect_Annotation.setEnabled(False)
         self.ui.actionNew_String_Annotation.setEnabled(False)
         self.ui.actionLoad_String_Annotation.setEnabled(False)
         self.ui.actionSave_String_Annotation.setEnabled(False)
-        self.ui.actionDiscard_String_Annotation.setEnabled(False)
 
     @Slot()
     def new_defect_annotation(self):
         # activate annotation editor widget
         # deactivate data selection, etc. (optional)
         # initialize defect annotation data
+        # set window title to contain unsaved defeect annotation with *
         pass
 
     @Slot()
     def load_defect_annotation(self):
-        pass
+        self.controller.load_defect_annotation.emit()
 
     @Slot()
     def save_defect_annotation(self):
         self.controller.save_defect_annotation.emit()
-
-    @Slot()
-    def discard_defect_annotation(self):
-        self.controller.discard_defect_annotation.emit()
 
     @Slot()
     def show_analysis_module_temperatures(self):
@@ -193,7 +189,6 @@ class MainController(QObject):
     new_defect_annotation = Signal()  # not needed yet
     save_defect_annotation = Signal()  # not needed yet
     load_defect_annotation = Signal()  # not needed yet
-    discard_defect_annotation = Signal()  # not needed yet
 
     def __init__(self, model):
         super().__init__()
@@ -218,8 +213,11 @@ class MainController(QObject):
     def update_source_names(self):
         source_names = []
         if self.model.dataset_dir is not None:
-            source_names = sorted(get_immediate_subdirectories(
-                os.path.join(self.model.dataset_dir, "analyses")))
+            try:
+                source_names = sorted(get_immediate_subdirectories(
+                    os.path.join(self.model.dataset_dir, "analyses")))
+            except FileNotFoundError:
+                pass
         source_names.insert(0, "Module Layout")
         self.model.source_names = source_names
 

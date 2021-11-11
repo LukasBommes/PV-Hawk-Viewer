@@ -54,12 +54,10 @@
     <addaction name="actionNew_Defect_Annotation"/>
     <addaction name="actionLoad_Defect_Annotation"/>
     <addaction name="actionSave_Defect_Annotation"/>
-    <addaction name="actionDiscard_Defect_Annotation"/>
     <addaction name="separator"/>
     <addaction name="actionNew_String_Annotation"/>
     <addaction name="actionLoad_String_Annotation"/>
     <addaction name="actionSave_String_Annotation"/>
-    <addaction name="actionDiscard_String_Annotation"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
     <addaction name="separator"/>
