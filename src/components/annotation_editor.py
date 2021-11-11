@@ -1,7 +1,8 @@
 import os
 import json
 
-from PySide6.QtWidgets import QWidget, QCheckBox, QSpacerItem, QSizePolicy
+from PySide6.QtWidgets import QWidget, QCheckBox, QSpacerItem, QSizePolicy, \
+    QMessageBox, QFileDialog
 from PySide6.QtCore import Slot, Signal, QObject
 
 from src.ui.ui_annotation_editor import Ui_AnnotationEditor
@@ -18,9 +19,12 @@ class AnnotationEditorView(QWidget):
         # connect signals and slots
         self.model.dataset_opened.connect(self.controller.annotation_editor_controller.set_annotation_data)
         self.model.dataset_closed.connect(self.controller.annotation_editor_controller.reset_annotation_data)
-
+        self.model.track_id_changed.connect(self.enable_disable)
         self.model.track_id_changed.connect(self.update_checkbox_states)
         self.model.annotation_editor_model.annotation_data_changed.connect(self.update_checkbox_states)
+
+        # if anything wants to close the window, ask user if he wants to save unsaved changes
+        self.controller.save_defect_annotation.connect(self.controller.annotation_editor_controller.save_annotation_file)
 
 
     def loadDefectsScheme(self):
@@ -35,24 +39,36 @@ class AnnotationEditorView(QWidget):
                 checkbox.setObjectName(u"defect_checkbox_{}".format(defect["name"]))
                 checkbox.setToolTip(", ".join(defect["examples"]))
                 checkbox.stateChanged.connect(self.controller.annotation_editor_controller.update_annotation_data)
+                checkbox.setEnabled(False)
                 self.ui.scrollAreaWidgetContents.layout().addWidget(checkbox)
                 self.ui.checkboxes.append(checkbox)
             self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
             self.ui.scrollAreaWidgetContents.layout().addItem(self.verticalSpacer)
 
     @Slot()
+    def enable_disable(self):
+        if self.model.track_id is None:
+            for checkbox in self.ui.checkboxes:
+                checkbox.setEnabled(False)
+            return
+        for checkbox in self.ui.checkboxes:
+                checkbox.setEnabled(True)
+
+    @Slot()
     def update_checkbox_states(self):
         """Update checkboxes based on annotation state"""
-        # TODO: reset all boxes when dataset is closed, etc.
-        track_id = self.model.track_id
-        if not self.model.dataset_is_open:
-            return
+        # clear checkboxes if dataset is closed
         if self.model.annotation_editor_model.annotation_data is None:
-            return
-        if track_id is None:
+            for checkbox in self.ui.checkboxes:
+                checkbox.setChecked(False)
             return
 
-        print("Updating checkboxes based on state ", self.ui.checkboxes)
+        track_id = self.model.track_id
+        if track_id is None:
+            for checkbox in self.ui.checkboxes:
+                checkbox.setChecked(False)
+            return
+
         defects = self.model.annotation_editor_model.annotation_data[track_id]
         for checkbox in self.ui.checkboxes:
             checkbox_name = checkbox.objectName()
@@ -92,7 +108,6 @@ class AnnotationEditorController(QObject):
         checkbox_name = checkbox.objectName()
         checked = value != 0
         defect = checkbox_name[16:]
-        print(checked)
 
         # update model
         if checked:
@@ -114,13 +129,48 @@ class AnnotationEditorController(QObject):
         # TODO:
         # - dialog: ask if changes should be changed?
         # - save annotation data to disk (different format)
-        pass
+
+        msg = QMessageBox()
+        msg.setWindowTitle("Save changes?")
+        msg.setText("Do you want to save unchanged changes to the defect annotation?")
+        msg.setIcon(QMessageBox.Question)
+        msg.setStandardButtons(QMessageBox.Yes|QMessageBox.No|QMessageBox.Cancel)
+        answer = msg.exec() 
+        if answer == QMessageBox.Yes:
+            print("Saving defect annotation to file")
+            file_name, _ = QFileDialog.getSaveFileName(
+                None, "Save Defect Annotation", "", "", "JSON Files (*.json)")
+            # make sure filename has JSON extension
+            if len(file_name) > 0:
+                file_name = ".".join([os.path.splitext(file_name)[0], "json"])
+
+                if self.model.annotation_editor_model.annotation_data is not None:
+                    print("Saving to ", file_name)
+                    annotation_data_json = annotation_data_to_json(self.model.annotation_editor_model.annotation_data)
+                    #json.dump(annotation_data_json, open(file_name, "w"))
+                    print(annotation_data_json)
+
+        elif answer == QMessageBox.No:
+            print("Discarding defect annotation")
+            self.discard_annotation()
+
+        elif answer == QMessageBox.Cancel:
+            print("Doing nothing")
+            pass
 
     @Slot()
     def load_annotation_file(self):
         # TODO:
         # - open file dialog to select annotation file
         # - load from file and update annotation data model (should update checkboxes)
+        pass
+
+    @Slot()
+    def discard_annotation(self):
+        # TODO:
+        # - dialog: ask if changes should be discarded?
+        # -clear annotation data
+        # - also call when changes were made and are about to be lost when proceeding
         pass
 
     # for debugging

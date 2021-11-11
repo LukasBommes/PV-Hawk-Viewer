@@ -75,6 +75,9 @@ class MainView(QMainWindow):
         # child windows
         self.module_temperatures_window = None
 
+        # for debugging
+        self.ui.actionSave_Defect_Annotation.setEnabled(True)
+
         # connect signals and slots
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionAbout.triggered.connect(self.about)
@@ -83,6 +86,7 @@ class MainView(QMainWindow):
         self.ui.actionNew_Defect_Annotation.triggered.connect(self.new_defect_annotation)
         self.ui.actionLoad_Defect_Annotation.triggered.connect(self.load_defect_annotation)
         self.ui.actionSave_Defect_Annotation.triggered.connect(self.save_defect_annotation)
+        self.ui.actionDiscard_Defect_Annotation.triggered.connect(self.discard_defect_annotation)
         self.ui.actionModule_Temperatures.triggered.connect(self.show_analysis_module_temperatures)
         self.ui.menuView.addAction(self.dataSourcesWidget.toggleViewAction())
         self.ui.menuView.addAction(self.annotationEditorWidget.toggleViewAction())
@@ -138,12 +142,17 @@ class MainView(QMainWindow):
         self.ui.actionNew_Defect_Annotation.setEnabled(False)
         self.ui.actionLoad_Defect_Annotation.setEnabled(False)
         self.ui.actionSave_Defect_Annotation.setEnabled(False)
+        self.ui.actionDiscard_Defect_Annotation.setEnabled(False)
         self.ui.actionNew_String_Annotation.setEnabled(False)
         self.ui.actionLoad_String_Annotation.setEnabled(False)
         self.ui.actionSave_String_Annotation.setEnabled(False)
+        self.ui.actionDiscard_String_Annotation.setEnabled(False)
 
     @Slot()
     def new_defect_annotation(self):
+        # activate annotation editor widget
+        # deactivate data selection, etc. (optional)
+        # initialize defect annotation data
         pass
 
     @Slot()
@@ -152,7 +161,11 @@ class MainView(QMainWindow):
 
     @Slot()
     def save_defect_annotation(self):
-        pass
+        self.controller.save_defect_annotation.emit()
+
+    @Slot()
+    def discard_defect_annotation(self):
+        self.controller.discard_defect_annotation.emit()
 
     @Slot()
     def show_analysis_module_temperatures(self):
@@ -177,6 +190,10 @@ class MainView(QMainWindow):
 
 class MainController(QObject):
     source_deleted = Signal()
+    new_defect_annotation = Signal()  # not needed yet
+    save_defect_annotation = Signal()  # not needed yet
+    load_defect_annotation = Signal()  # not needed yet
+    discard_defect_annotation = Signal()  # not needed yet
 
     def __init__(self, model):
         super().__init__()
@@ -268,7 +285,7 @@ class MainController(QObject):
     @Slot()
     def get_column(self, column):
         if self.model.dataset_dir is None:
-            return {}        
+            return {}
         column_values = {}
         for feature in self.model.data["features"]:
             track_id = feature["properties"]["track_id"]
