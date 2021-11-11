@@ -45,12 +45,12 @@ class MainView(QMainWindow):
         # self.toolBarColormapSelection.addWidget(self.colormapWidget)
 
         # setup toolbars
-        self.toolBarDataColumnSelection = QToolBar(self)
+        self.toolBarDataColumnSelection = QToolBar(u"Data Selection Toolbar", self)
         self.addToolBar(Qt.TopToolBarArea, self.toolBarDataColumnSelection)
         self.dataColumnSelectionView = DataColumnSelectionView(self.model, self.controller, parent=self)
         self.toolBarDataColumnSelection.addWidget(self.dataColumnSelectionView)
 
-        self.toolBarDataRange = QToolBar(self)
+        self.toolBarDataRange = QToolBar(u"Data Range Toolbar", self)
         self.addToolBar(Qt.TopToolBarArea, self.toolBarDataRange)
         self.dataRangeWidget = DataRangeView(self.model, self.controller, parent=self)
         self.toolBarDataRange.addWidget(self.dataRangeWidget)
@@ -80,13 +80,15 @@ class MainView(QMainWindow):
         self.ui.actionAbout.triggered.connect(self.about)
         self.ui.actionOpen_Dataset.triggered.connect(self.open_dataset)
         self.ui.actionClose_Dataset.triggered.connect(self.controller.close_dataset)
-        self.ui.actionNew_Annotation.triggered.connect(self.new_annotation)
-        self.ui.actionLoad_Annotation.triggered.connect(self.load_annotation)
-        self.ui.actionSave_Annotation.triggered.connect(self.save_annotation)
+        self.ui.actionNew_Defect_Annotation.triggered.connect(self.new_defect_annotation)
+        self.ui.actionLoad_Defect_Annotation.triggered.connect(self.load_defect_annotation)
+        self.ui.actionSave_Defect_Annotation.triggered.connect(self.save_defect_annotation)
         self.ui.actionModule_Temperatures.triggered.connect(self.show_analysis_module_temperatures)
         self.ui.menuView.addAction(self.dataSourcesWidget.toggleViewAction())
         self.ui.menuView.addAction(self.annotationEditorWidget.toggleViewAction())
         self.ui.menuView.addAction(self.sourceFrameWidget.toggleViewAction())
+        self.ui.menuView.addAction(self.toolBarDataColumnSelection.toggleViewAction())
+        self.ui.menuView.addAction(self.toolBarDataRange.toggleViewAction())
         self.model.dataset_opened.connect(self.dataset_opened)
         self.model.dataset_closed.connect(self.dataset_closed)
         
@@ -124,22 +126,32 @@ class MainView(QMainWindow):
         self.ui.actionClose_Dataset.setEnabled(True)
         self.ui.actionOpen_Dataset.setEnabled(False)
         self.ui.actionModule_Temperatures.setEnabled(True)
+        self.ui.actionNew_Defect_Annotation.setEnabled(True)
+        self.ui.actionLoad_Defect_Annotation.setEnabled(True)
+        self.ui.actionNew_String_Annotation.setEnabled(True)
+        self.ui.actionLoad_String_Annotation.setEnabled(True)
 
     def dataset_closed(self):
         self.ui.actionClose_Dataset.setEnabled(False)
         self.ui.actionOpen_Dataset.setEnabled(True)        
         self.ui.actionModule_Temperatures.setEnabled(False)
+        self.ui.actionNew_Defect_Annotation.setEnabled(False)
+        self.ui.actionLoad_Defect_Annotation.setEnabled(False)
+        self.ui.actionSave_Defect_Annotation.setEnabled(False)
+        self.ui.actionNew_String_Annotation.setEnabled(False)
+        self.ui.actionLoad_String_Annotation.setEnabled(False)
+        self.ui.actionSave_String_Annotation.setEnabled(False)
 
     @Slot()
-    def new_annotation(self):
+    def new_defect_annotation(self):
         pass
 
     @Slot()
-    def load_annotation(self):
+    def load_defect_annotation(self):
         pass
 
     @Slot()
-    def save_annotation(self):
+    def save_defect_annotation(self):
         pass
 
     @Slot()

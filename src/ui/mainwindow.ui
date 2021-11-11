@@ -51,9 +51,15 @@
     <addaction name="actionOpen_Dataset"/>
     <addaction name="actionClose_Dataset"/>
     <addaction name="separator"/>
-    <addaction name="actionNew_Annotation"/>
-    <addaction name="actionLoad_Annotation"/>
-    <addaction name="actionSave_Annotation"/>
+    <addaction name="actionNew_Defect_Annotation"/>
+    <addaction name="actionLoad_Defect_Annotation"/>
+    <addaction name="actionSave_Defect_Annotation"/>
+    <addaction name="actionDiscard_Defect_Annotation"/>
+    <addaction name="separator"/>
+    <addaction name="actionNew_String_Annotation"/>
+    <addaction name="actionLoad_String_Annotation"/>
+    <addaction name="actionSave_String_Annotation"/>
+    <addaction name="actionDiscard_String_Annotation"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
     <addaction name="separator"/>
@@ -108,22 +114,28 @@
     <string>About</string>
    </property>
   </action>
-  <action name="actionNew_Annotation">
-   <property name="text">
-    <string>New Annotation...</string>
-   </property>
-  </action>
-  <action name="actionSave_Annotation">
+  <action name="actionNew_Defect_Annotation">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Save Annotation</string>
+    <string>New Defect Annotation...</string>
    </property>
   </action>
-  <action name="actionLoad_Annotation">
+  <action name="actionSave_Defect_Annotation">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
-    <string>Load Annotation...</string>
+    <string>Save Defect Annotation</string>
+   </property>
+  </action>
+  <action name="actionLoad_Defect_Annotation">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Load Defect Annotation...</string>
    </property>
   </action>
   <action name="actionModule_Temperatures">
@@ -132,6 +144,46 @@
    </property>
    <property name="text">
     <string>Module Temperatures</string>
+   </property>
+  </action>
+  <action name="actionNew_String_Annotation">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>New String Annotation...</string>
+   </property>
+  </action>
+  <action name="actionLoad_String_Annotation">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Load String Annotation...</string>
+   </property>
+  </action>
+  <action name="actionSave_String_Annotation">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Save String Annotation</string>
+   </property>
+  </action>
+  <action name="actionDiscard_Defect_Annotation">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Discard Defect Annotation</string>
+   </property>
+  </action>
+  <action name="actionDiscard_String_Annotation">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Discard String Annotation</string>
    </property>
   </action>
  </widget>
