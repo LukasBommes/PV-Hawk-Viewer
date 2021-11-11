@@ -189,10 +189,11 @@ class MainController(QObject):
             self.model.dataset_dir, "patches", "meta.pkl"), "rb"))
         self.update_source_names()
         self.load_source("Module Layout")
+        self.update_track_ids()
         self.model.dataset_is_open = True
 
     @Slot()
-    def close_dataset(self):
+    def close_dataset(self):  # TODO: reset all subordinate models as well
         self.model.reset()
         self.model.dataset_is_open = False
 
@@ -204,6 +205,10 @@ class MainController(QObject):
                 os.path.join(self.model.dataset_dir, "analyses")))
         source_names.insert(0, "Module Layout")
         self.model.source_names = source_names
+
+    @Slot()
+    def update_track_ids(self):
+        self.model.track_ids = list(self.get_column("track_id").values())
 
     @Slot(str)
     def load_source(self, selected_source):
@@ -296,6 +301,7 @@ class MainModel(QObject):
         self.data = None
         self.meta = None
         self.patch_meta = None
+        self.track_ids = None
         self._source_names = None
         self._dataset_is_open = False
         self._selected_source = None

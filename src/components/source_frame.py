@@ -84,10 +84,6 @@ class SourceFrameController(QObject):
         self.model = model
 
     @Slot()
-    def reset_source_frame(self):
-        self.source_frame = None
-
-    @Slot()
     def update_source_frame(self):
         if not self.model.dataset_is_open:
             return None

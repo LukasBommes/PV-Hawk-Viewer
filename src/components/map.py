@@ -37,6 +37,7 @@ class MapView(QObject):
 
     @Slot(result=str)
     def load_data(self):
+        self.model.track_id = None
         data = []
         colors = {}
         if self.model.dataset_is_open:
@@ -52,8 +53,7 @@ class MapView(QObject):
                 colors = get_colors(data_column, cmap="plasma", vmin=self.model.map_model.min_val, vmax=self.model.map_model.max_val)
             else:
                 default_color = "#ff7800"
-                track_ids = list(self.controller.get_column("track_id").values())
-                colors = {track_id: default_color for track_id in track_ids}
+                colors = {track_id: default_color for track_id in self.model.track_ids}
         return json.dumps({
             "data": data,
             "colors": colors
