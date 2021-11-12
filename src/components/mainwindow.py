@@ -82,7 +82,7 @@ class MainView(QMainWindow):
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionAbout.triggered.connect(self.about)
         self.ui.actionOpen_Dataset.triggered.connect(self.open_dataset)
-        self.ui.actionClose_Dataset.triggered.connect(self.controller.close_dataset)
+        self.ui.actionClose_Dataset.triggered.connect(self.controller.close_dataset_request)
         self.ui.actionNew_Defect_Annotation.triggered.connect(self.new_defect_annotation)
         self.ui.actionLoad_Defect_Annotation.triggered.connect(self.load_defect_annotation)
         self.ui.actionSave_Defect_Annotation.triggered.connect(self.save_defect_annotation)
@@ -99,6 +99,8 @@ class MainView(QMainWindow):
         self.model.app_mode_changed.connect(self.app_mode_changed)
         self.model.annotation_editor_model.has_changes_changed.connect(self.defect_annotation_has_changes)
         self.model.annotation_editor_model.current_file_name_changed.connect(self.defect_annotation_has_changes)
+
+        self.controller.annotation_editor_controller.close_dataset.connect(self.controller.close_dataset)
         
         # load HTML document for map view
         index_file = QDir.current().filePath("src/index.html")
@@ -227,8 +229,6 @@ class MainView(QMainWindow):
         """Ask whether unsaved changes should be saved"""
         self.controller.mainwindow_close_requested.emit(event)
 
-    #def closeDatasetEvent(self, event):
-
 
 
 class MainController(QObject):
@@ -238,7 +238,7 @@ class MainController(QObject):
     load_defect_annotation = Signal()
     close_defect_annotation = Signal()
     mainwindow_close_requested = Signal(object)
-    dataset_close_requested = Signal(object)
+    dataset_close_requested = Signal()
 
     def __init__(self, model):
         super().__init__()
@@ -254,6 +254,15 @@ class MainController(QObject):
         self.update_track_ids()
         self.model.dataset_is_open = True
         self.model.app_mode = "data_visualization"
+
+    @Slot()
+    def close_dataset_request(self):
+        if self.model.app_mode == "defect_annotation":
+            self.dataset_close_requested.emit()
+        #elif self.model.app_mode == "string_annotation":
+        #    pass
+        else:
+            self.close_dataset()
 
     @Slot()
     def close_dataset(self):  # TODO: if there are unsaved changes ask if they should be changed and only then execute the event
