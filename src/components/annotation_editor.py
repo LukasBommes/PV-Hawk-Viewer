@@ -24,8 +24,11 @@ class AnnotationEditorView(QWidget):
         self.model.annotation_editor_model.annotation_data_changed.connect(self.update_checkbox_states)
 
         # if anything wants to close the window, ask user if he wants to save unsaved changes
+        self.model.app_mode_changed.connect(self.controller.annotation_editor_controller.app_mode_changed)
+
         self.controller.save_defect_annotation.connect(self.controller.annotation_editor_controller.save_annotation_file)
         self.controller.load_defect_annotation.connect(self.controller.annotation_editor_controller.load_annotation_file)
+        #self.controller.close_defect_annotation.connect(self.controller.annotation_editor_controller.save_changes_dialog)
 
     def loadDefectsScheme(self):
         try:
@@ -39,6 +42,7 @@ class AnnotationEditorView(QWidget):
                 checkbox.setObjectName(u"defect_checkbox_{}".format(defect["name"]))
                 checkbox.setToolTip(", ".join(defect["examples"]))
                 checkbox.stateChanged.connect(self.controller.annotation_editor_controller.update_annotation_data)
+                checkbox.stateChanged.connect(lambda: setattr(self.model.annotation_editor_model, 'has_changes', True))
                 checkbox.setEnabled(False)
                 self.ui.scrollAreaWidgetContents.layout().addWidget(checkbox)
                 self.ui.checkboxes.append(checkbox)
@@ -92,6 +96,14 @@ class AnnotationEditorController(QObject):
     @Slot()
     def reset_annotation_data(self):
         self.model.annotation_editor_model.annotation_data = None
+        self.model.annotation_editor_model.current_file_name = "new annotation.csv"
+        self.model.annotation_editor_model.has_changes = False
+
+    @Slot(str)
+    def app_mode_changed(self, app_mode):
+        if app_mode != "defect_annotation":
+            if self.model.annotation_editor_model.has_changes:
+                self.save_changes_dialog()
 
     @Slot()
     def update_annotation_data(self, value):
@@ -126,6 +138,8 @@ class AnnotationEditorController(QObject):
 
     @Slot()
     def save_changes_dialog(self):
+        if not self.model.annotation_editor_model.has_changes:
+            return "no_changes"
         msg = QMessageBox()
         msg.setWindowTitle("Save changes?")
         msg.setText("Do you want to save unchanged changes to the defect annotation?")
@@ -133,21 +147,24 @@ class AnnotationEditorController(QObject):
         msg.setStandardButtons(QMessageBox.Yes|QMessageBox.No|QMessageBox.Cancel)
         answer = msg.exec() 
         if answer == QMessageBox.Yes:
-            self.save_annotation_file()
+            ret = self.save_annotation_file()
+            return ret
 
         elif answer == QMessageBox.No:
             print("Discarding defect annotation")
             self.reset_annotation_data()
+            return "discarded"
 
         elif answer == QMessageBox.Cancel:
             print("Cancelled saving defect annotation")
+            return "cancelled"
 
     @Slot()
     def save_annotation_file(self):
         file_name, _ = QFileDialog.getSaveFileName(
             None, "Save Defect Annotation", "", "", "JSON Files (*.json)")
         if file_name == "":
-            return
+            return "cancelled"
         
         # make sure filename has JSON extension
         file_name = ".".join([os.path.splitext(file_name)[0], "json"])
@@ -156,6 +173,10 @@ class AnnotationEditorController(QObject):
             print("Saving to ", file_name)
             annotation_data_json = self.annotation_data_to_json(self.model.annotation_editor_model.annotation_data)
             json.dump(annotation_data_json, open(file_name, "w"))
+
+            self.model.annotation_editor_model.current_file_name = file_name
+            self.model.annotation_editor_model.has_changes = False
+            return "saved"
 
     @Slot()
     def load_annotation_file(self):
@@ -220,10 +241,14 @@ class AnnotationEditorController(QObject):
 
 class AnnotationEditorModel(QObject):
     annotation_data_changed = Signal()
+    has_changes_changed = Signal(bool)
+    current_file_name_changed = Signal(str)
 
     def __init__(self):
         super().__init__()
         self._annotation_data = None
+        self._has_changes = False  # whether there are unsaved changes
+        self._current_file_name = "new annotation.csv"
     
     @property
     def annotation_data(self):
@@ -233,3 +258,21 @@ class AnnotationEditorModel(QObject):
     def annotation_data(self, value):
         self._annotation_data = value
         self.annotation_data_changed.emit()
+
+    @property
+    def has_changes(self):
+        return self._has_changes
+
+    @has_changes.setter
+    def has_changes(self, value):
+        self._has_changes = value
+        self.has_changes_changed.emit(value)
+
+    @property
+    def current_file_name(self):
+        return self._current_file_name
+
+    @current_file_name.setter
+    def current_file_name(self, value):
+        self._current_file_name = value
+        self.current_file_name_changed.emit(value)

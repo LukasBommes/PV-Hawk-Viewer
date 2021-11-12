@@ -54,10 +54,12 @@
     <addaction name="actionNew_Defect_Annotation"/>
     <addaction name="actionLoad_Defect_Annotation"/>
     <addaction name="actionSave_Defect_Annotation"/>
+    <addaction name="actionClose_Defect_Annotation"/>
     <addaction name="separator"/>
     <addaction name="actionNew_String_Annotation"/>
     <addaction name="actionLoad_String_Annotation"/>
     <addaction name="actionSave_String_Annotation"/>
+    <addaction name="actionClose_String_Annotation"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
     <addaction name="separator"/>
@@ -182,6 +184,22 @@
    </property>
    <property name="text">
     <string>Discard String Annotation</string>
+   </property>
+  </action>
+  <action name="actionClose_Defect_Annotation">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Close Defect Annotation</string>
+   </property>
+  </action>
+  <action name="actionClose_String_Annotation">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Close String Annotation</string>
    </property>
   </action>
  </widget>

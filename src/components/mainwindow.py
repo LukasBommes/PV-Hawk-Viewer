@@ -76,7 +76,7 @@ class MainView(QMainWindow):
         self.module_temperatures_window = None
 
         # for debugging
-        self.ui.actionSave_Defect_Annotation.setEnabled(True)
+        #self.ui.actionSave_Defect_Annotation.setEnabled(True)
 
         # connect signals and slots
         self.ui.actionQuit.triggered.connect(self.close)
@@ -86,6 +86,7 @@ class MainView(QMainWindow):
         self.ui.actionNew_Defect_Annotation.triggered.connect(self.new_defect_annotation)
         self.ui.actionLoad_Defect_Annotation.triggered.connect(self.load_defect_annotation)
         self.ui.actionSave_Defect_Annotation.triggered.connect(self.save_defect_annotation)
+        self.ui.actionClose_Defect_Annotation.triggered.connect(self.close_defect_annotation)
         self.ui.actionModule_Temperatures.triggered.connect(self.show_analysis_module_temperatures)
         self.ui.menuView.addAction(self.dataSourcesWidget.toggleViewAction())
         self.ui.menuView.addAction(self.annotationEditorWidget.toggleViewAction())
@@ -94,6 +95,11 @@ class MainView(QMainWindow):
         self.ui.menuView.addAction(self.toolBarDataRange.toggleViewAction())
         self.model.dataset_opened.connect(self.dataset_opened)
         self.model.dataset_closed.connect(self.dataset_closed)
+
+
+        self.model.app_mode_changed.connect(self.app_mode_changed)
+
+        self.model.annotation_editor_model.has_changes_changed.connect(self.defect_annotation_has_changes)
         
         # load HTML document for map view
         index_file = QDir.current().filePath("src/index.html")
@@ -111,6 +117,11 @@ class MainView(QMainWindow):
         if not "splitted" in probe_dirs:
             return False
         return True
+
+    @Slot(str)
+    def app_mode_changed(self, app_mode):
+        """(De)activate components and set window title based on the app mode"""
+        pass
 
     @Slot()
     def open_dataset(self):
@@ -143,12 +154,26 @@ class MainView(QMainWindow):
         self.ui.actionNew_Defect_Annotation.setEnabled(False)
         self.ui.actionLoad_Defect_Annotation.setEnabled(False)
         self.ui.actionSave_Defect_Annotation.setEnabled(False)
+        self.ui.actionClose_Defect_Annotation.setEnabled(False)
         self.ui.actionNew_String_Annotation.setEnabled(False)
         self.ui.actionLoad_String_Annotation.setEnabled(False)
         self.ui.actionSave_String_Annotation.setEnabled(False)
+        self.ui.actionClose_String_Annotation.setEnabled(False)
+
+    @Slot(bool)
+    def defect_annotation_has_changes(self, has_changes):
+        if has_changes:
+            self.ui.actionSave_Defect_Annotation.setEnabled(True)
+            self.ui.actionClose_Defect_Annotation.setEnabled(True)
+            # TODO: set window title
+            #file_name = self.model.annotation_editor_model.current_file_name
+            #self.setWindowTitle("PV Mapper - {}*".format(file_name))
+        #else:
+
 
     @Slot()
     def new_defect_annotation(self):
+        self.model.app_mode = "defect_annotation"
         # activate annotation editor widget
         # deactivate data selection, etc. (optional)
         # initialize defect annotation data
@@ -162,6 +187,10 @@ class MainView(QMainWindow):
     @Slot()
     def save_defect_annotation(self):
         self.controller.save_defect_annotation.emit()
+
+    @Slot()
+    def close_defect_annotation(self):
+        self.controller.close_defect_annotation.emit()
 
     @Slot()
     def show_analysis_module_temperatures(self):
@@ -182,13 +211,22 @@ class MainView(QMainWindow):
             "<p>- Python</p>",
         )
 
+    def closeEvent(self, event):
+        """Ask whether unsavedchnages should be saved"""
+        status = self.controller.annotation_editor_controller.save_changes_dialog()
+        if status == "no_changes" or status == "saved" or status == "discarded":
+            event.accept()
+        elif status == "cancelled":
+            event.ignore()
+
 
 
 class MainController(QObject):
     source_deleted = Signal()
-    new_defect_annotation = Signal()  # not needed yet
-    save_defect_annotation = Signal()  # not needed yet
-    load_defect_annotation = Signal()  # not needed yet
+    new_defect_annotation = Signal()
+    save_defect_annotation = Signal()
+    load_defect_annotation = Signal()
+    close_defect_annotation = Signal()
 
     def __init__(self, model):
         super().__init__()
@@ -202,6 +240,7 @@ class MainController(QObject):
         self.update_source_names()
         self.load_source("Module Layout")
         self.update_track_ids()
+        self.model.app_mode = "data_visualization"
         self.model.dataset_is_open = True
 
     @Slot()
@@ -306,6 +345,7 @@ class MainModel(QObject):
     selected_column_changed = Signal(int)
     track_id_changed = Signal(str)
     patch_idx_changed = Signal(int)
+    app_mode_changed = Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -317,12 +357,22 @@ class MainModel(QObject):
         self.meta = None
         self.patch_meta = None
         self.track_ids = None
+        self._app_mode = None # "None", "data_visualization", "defect_annotation", "string_annotation"
         self._source_names = None
         self._dataset_is_open = False
         self._selected_source = None
         self._selected_column = None
         self._track_id = None
         self._patch_idx = None
+
+    @property
+    def app_mode(self):
+        return self._app_mode
+
+    @app_mode.setter
+    def app_mode(self, value):
+        self._app_mode = value
+        self.app_mode_changed.emit(value)
 
     @property
     def selected_column(self):
