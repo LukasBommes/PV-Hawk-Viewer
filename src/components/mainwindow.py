@@ -75,9 +75,6 @@ class MainView(QMainWindow):
         # child windows
         self.module_temperatures_window = None
 
-        # for debugging
-        #self.ui.actionSave_Defect_Annotation.setEnabled(True)
-
         # connect signals and slots
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionAbout.triggered.connect(self.about)
@@ -106,6 +103,9 @@ class MainView(QMainWindow):
         index_file = QDir.current().filePath("src/index.html")
         index_url = QUrl.fromLocalFile(index_file)
         self.ui.widget.load(index_url)
+
+        # set defaults
+        self.model.app_mode = None
 
     def valid_dataset(self, dir):
         probe_dirs = get_immediate_subdirectories(dir)
