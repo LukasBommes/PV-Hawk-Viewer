@@ -75,7 +75,7 @@
           //loadPatches(track_id);
 
           // update source frame and patches
-          map_view.updateImages(JSON.stringify(track_id));
+          map_view.update_images(JSON.stringify(track_id));
         }
 
         function onEachFeature(feature, layer) {
@@ -112,12 +112,14 @@
         }
       }
 
+      //function draw_defect_annotations
+
       // wait for modules to be updated
       map_view.dataset_changed.connect(function(fit_map_bounds) {
           map_view.printObj(JSON.stringify("Loading dataset in JS."));
 
           // visualize modules
-          map_view.load_data(function(data) {
+          map_view.get_data(function(data) {
             drawData(data, fit_map_bounds);
           });
       });
@@ -128,6 +130,13 @@
           modules_geojson = null;
           data_prev = null;
           resetMap();
+      });
+
+      // load annotation data whenever annotations change
+      map_view.annotation_data_changed.connect(function() {
+        map_view.get_annotation_data(function(data) {
+          map_view.printObj(JSON.stringify("Received defect annotation data " + data));
+        });        
       });
   });
  </script>

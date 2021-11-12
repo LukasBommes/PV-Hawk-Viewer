@@ -13,6 +13,7 @@ from src.colormap import get_colors
 class MapView(QObject):
     dataset_changed = Signal(bool)  # signals for notification of Javascript
     dataset_closed = Signal()
+    annotation_data_changed = Signal()
 
     def __init__(self, model, controller, parent=None):
         super(MapView, self).__init__()
@@ -29,6 +30,8 @@ class MapView(QObject):
         self.model.map_model.max_val_changed.connect(lambda: self.dataset_changed.emit(False))
         self.model.map_model.colormap_changed.connect(lambda: self.dataset_changed.emit(False))
 
+        self.model.annotation_editor_model.annotation_data_changed.connect(self.annotation_data_changed)
+
     @Slot(str)
     def printObj(self, obj):
         """Utility function for printing from javascript"""
@@ -36,7 +39,7 @@ class MapView(QObject):
         print(py_obj)
 
     @Slot(result=str)
-    def load_data(self):
+    def get_data(self):
         self.model.track_id = None
         data = []
         colors = {}
@@ -60,8 +63,28 @@ class MapView(QObject):
         })
 
     @Slot(str)
-    def updateImages(self, track_id):
+    def update_images(self, track_id):
         self.model.track_id = json.loads(track_id)
+
+    @Slot(result=str)
+    def get_annotation_data(self):
+        if not self.model.dataset_is_open:
+            return ""
+
+        track_id = self.model.track_id
+        annotation_data = self.model.annotation_editor_model.annotation_data
+
+        if track_id is None:
+            return ""
+        if annotation_data is None:
+            return ""
+        
+        defects = self.model.annotation_editor_model.annotation_data[track_id]
+        print("Annotation for module {} changed to {}".format(track_id, defects))
+        return json.dumps({
+            "track_id": track_id,
+            "defects": defects
+        })
 
 
 class MplCanvas(FigureCanvasQTAgg):

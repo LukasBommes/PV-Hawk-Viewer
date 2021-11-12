@@ -19,6 +19,7 @@ class AnnotationEditorView(QWidget):
         # connect signals and slots
         self.model.dataset_opened.connect(self.controller.annotation_editor_controller.set_annotation_data)
         self.model.track_id_changed.connect(self.enable_disable)
+        self.model.app_mode_changed.connect(self.enable_disable)
         self.model.track_id_changed.connect(self.update_checkbox_states)
         self.model.annotation_editor_model.annotation_data_changed.connect(self.update_checkbox_states)
 
@@ -50,6 +51,10 @@ class AnnotationEditorView(QWidget):
 
     @Slot()
     def enable_disable(self):
+        if self.model.app_mode != "defect_annotation":
+            for checkbox in self.ui.checkboxes:
+                checkbox.setEnabled(False)
+            return
         if self.model.track_id is None:
             for checkbox in self.ui.checkboxes:
                 checkbox.setEnabled(False)
