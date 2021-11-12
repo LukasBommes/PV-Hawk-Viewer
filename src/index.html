@@ -20,6 +20,7 @@
       var map_view = channel.objects.map_view;
       var modules_geojson = null;
       var data_prev = null;
+      var annotation_data = null;
       var map = L.map('map');
       L.tileLayer(
           'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -68,10 +69,8 @@
               fillColor: 'red'
           });
 
-          // load patches, annotations and source frame of module
-          //drawAnnotations(fault_annotations);
+          draw_defect_annotations();
           //loadAnnotatedFaults(track_id);
-
           //loadPatches(track_id);
 
           // update source frame and patches
@@ -97,8 +96,10 @@
             return (feature.geometry.type == "Polygon");
           },
           style: function(feature) {
+            var color = js_data.colors[feature.properties.track_id];
             return {
-              "color": js_data.colors[feature.properties.track_id],
+              "color": color,
+              "fillColor": color,
               "weight": 1,
               "opacity": 1,
               "fill": true,
@@ -107,18 +108,46 @@
           }
         }).addTo(map);
 
+        draw_defect_annotations();
+
         if (fit_map_bounds) {
           map.fitBounds(modules_geojson.getBounds());
         }
       }
 
-      //function draw_defect_annotations
+      function reset_defect_annotations() {
+        modules_geojson.eachLayer(function (layer) {
+          var fill_color = layer.options.fillColor;
+          layer.setStyle({color: fill_color, fillColor: fill_color, weight: 1});
+        });
+      }
+
+      function draw_defect_annotations() {
+        if (annotation_data === null) { 
+          reset_defect_annotations();
+          return;
+        }
+        map_view.printObj(JSON.stringify("Drawing defect annotations."));
+        modules_geojson.eachLayer(function (layer) {
+          var track_id = layer.feature.properties.track_id;
+          var defects = annotation_data[track_id];          
+          if (defects.length > 0) {
+            var fill_color = layer.options.fillColor;
+            layer.setStyle({color: 'red', fillColor: fill_color, weight: 3});
+          }
+          // reset style
+          else {
+            var fill_color = layer.options.fillColor;
+            layer.setStyle({color: fill_color, fillColor: fill_color, weight: 1});
+          }
+        });
+      }
 
       // wait for modules to be updated
       map_view.dataset_changed.connect(function(fit_map_bounds) {
           map_view.printObj(JSON.stringify("Loading dataset in JS."));
 
-          // visualize modules
+          // draw modules + data
           map_view.get_data(function(data) {
             drawData(data, fit_map_bounds);
           });
@@ -135,7 +164,8 @@
       // load annotation data whenever annotations change
       map_view.annotation_data_changed.connect(function() {
         map_view.get_annotation_data(function(data) {
-          map_view.printObj(JSON.stringify("Received defect annotation data " + data));
+          annotation_data = JSON.parse(data);
+          draw_defect_annotations();
         });        
       });
   });

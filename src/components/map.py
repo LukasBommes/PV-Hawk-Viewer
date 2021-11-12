@@ -69,22 +69,13 @@ class MapView(QObject):
     @Slot(result=str)
     def get_annotation_data(self):
         if not self.model.dataset_is_open:
-            return ""
+            return json.dumps(None)
 
-        track_id = self.model.track_id
         annotation_data = self.model.annotation_editor_model.annotation_data
-
-        if track_id is None:
-            return ""
         if annotation_data is None:
-            return ""
-        
-        defects = self.model.annotation_editor_model.annotation_data[track_id]
-        print("Annotation for module {} changed to {}".format(track_id, defects))
-        return json.dumps({
-            "track_id": track_id,
-            "defects": defects
-        })
+            return json.dumps(None)
+
+        return json.dumps(annotation_data)
 
 
 class MplCanvas(FigureCanvasQTAgg):
