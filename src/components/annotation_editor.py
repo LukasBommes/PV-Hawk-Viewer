@@ -138,9 +138,9 @@ class AnnotationEditorController(QObject):
         self.print_annotation_data()
 
     # @Slot(str)
-    def app_mode_changed(self, app_mode):
-        if app_mode != "defect_annotation":
-            self.close_annotation()
+    # def app_mode_changed(self, app_mode):
+    #     if app_mode != "defect_annotation":
+    #         self.close_annotation()
 
     @Slot(object)
     def mainwindow_close_requested(self, event):
@@ -152,7 +152,6 @@ class AnnotationEditorController(QObject):
 
     @Slot()
     def close_annotation(self):
-        #self.save_changes_dialog()
         status = self.save_changes_dialog()
         if status == "no_changes":
             self.reset_annotation_data()

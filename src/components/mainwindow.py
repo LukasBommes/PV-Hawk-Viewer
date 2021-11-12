@@ -168,14 +168,10 @@ class MainView(QMainWindow):
         if app_mode is None or app_mode == "data_visualization":
             self.setWindowTitle("PV Mapper")
 
-        # if app_mode is None:
-        #     self.dataset_closed()
-        # elif app_mode == "data_visualization":
-        #     self.dataset_opened()
-        # elif app_mode == "defect_annotation":
-        #     self.addDockWidget(Qt.LeftDockWidgetArea, self.annotationEditorWidget)
-
-        #elif self.model.app_mode == "string_annotation":
+        #if app_mode == "string_annotation":
+        #
+        #else:
+        #
 
     @Slot(bool)
     def defect_annotation_has_changes(self, has_changes):
@@ -188,7 +184,6 @@ class MainView(QMainWindow):
         else:
             self.ui.actionSave_Defect_Annotation.setEnabled(False)
             self.setWindowTitle("PV Mapper - {}".format(file_name))
-
 
     @Slot()
     def new_defect_annotation(self):
@@ -206,7 +201,6 @@ class MainView(QMainWindow):
 
     @Slot()
     def close_defect_annotation(self):
-        #self.model.app_mode = "data_visualization"
         self.controller.close_defect_annotation.emit()
 
     @Slot()
