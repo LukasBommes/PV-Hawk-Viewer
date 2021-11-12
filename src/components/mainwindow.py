@@ -194,7 +194,6 @@ class MainView(QMainWindow):
 
     @Slot()
     def load_defect_annotation(self):
-        self.model.app_mode = "defect_annotation"
         self.controller.load_defect_annotation.emit()
 
     @Slot()

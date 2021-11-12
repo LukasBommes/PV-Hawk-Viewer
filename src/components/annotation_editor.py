@@ -250,6 +250,7 @@ class AnnotationEditorController(QObject):
 
         self.model.annotation_editor_model.annotation_data = data
         self.model.annotation_editor_model.current_file_name = file_name
+        self.model.app_mode = "defect_annotation"
         print("Successfully loaded defect annotations")
 
     def annotation_data_to_json(self, data):
