@@ -18,18 +18,19 @@ class AnnotationEditorView(QWidget):
         self.loadDefectsScheme()
         # connect signals and slots
         self.model.dataset_opened.connect(self.controller.annotation_editor_controller.set_annotation_data)
-        self.model.dataset_closed.connect(self.controller.annotation_editor_controller.reset_annotation_data)
+        #self.model.dataset_closed.connect(self.controller.annotation_editor_controller.reset_annotation_data)
         self.model.track_id_changed.connect(self.enable_disable)
         self.model.track_id_changed.connect(self.update_checkbox_states)
         self.model.annotation_editor_model.annotation_data_changed.connect(self.update_checkbox_states)
 
         # if anything wants to close the window, ask user if he wants to save unsaved changes
-        #self.model.app_mode_changed.connect(self.controller.annotation_editor_controller.app_mode_changed)
         self.controller.new_defect_annotation.connect(self.controller.annotation_editor_controller.set_annotation_data)
         self.controller.save_defect_annotation.connect(self.controller.annotation_editor_controller.save_annotation_file)
         self.controller.load_defect_annotation.connect(self.controller.annotation_editor_controller.load_annotation_file)
         self.controller.close_defect_annotation.connect(self.controller.annotation_editor_controller.close_annotation)
+        #self.model.dataset_closed.connect(self.controller.annotation_editor_controller.close_annotation)
         self.controller.mainwindow_close_requested.connect(self.controller.annotation_editor_controller.mainwindow_close_requested)
+        self.controller.dataset_close_requested.connect(self.controller.annotation_editor_controller.dataset_close_requested)
 
     def loadDefectsScheme(self):
         try:
@@ -137,31 +138,34 @@ class AnnotationEditorController(QObject):
 
         self.print_annotation_data()
 
-    # @Slot(str)
-    # def app_mode_changed(self, app_mode):
-    #     if app_mode != "defect_annotation":
-    #         self.close_annotation()
-
     @Slot(object)
     def mainwindow_close_requested(self, event):
-        status = self.save_changes_dialog()
-        if status == "no_changes" or status == "saved" or status == "discarded":
-            event.accept()
-        elif status == "cancelled":
-            event.ignore()
+        if self.model.app_mode == "defect_annotation":
+            status = self.save_changes_dialog()
+            if status == "no_changes" or status == "saved" or status == "discarded":
+                event.accept()
+            elif status == "cancelled":
+                event.ignore()
+
+    @Slot(object)
+    def dataset_close_requested(self, event):
+        if self.model.app_mode == "defect_annotation":
+            status = self.save_changes_dialog()
+            if status == "no_changes" or status == "saved" or status == "discarded":
+                self.reset_annotation_data()
+                self.model.app_mode = "data_visualization"
+                event.accept()
+            elif status == "cancelled":
+                event.ignore()
 
     @Slot()
     def close_annotation(self):
         status = self.save_changes_dialog()
-        if status == "no_changes":
+        if status == "no_changes" or status == "saved" or status == "discarded":
             self.reset_annotation_data()
             self.model.app_mode = "data_visualization"
         elif status == "cancelled":
             return
-        elif status == "saved" or status == "discarded":
-            self.reset_annotation_data()
-            self.model.app_mode = "data_visualization"
-
 
     @Slot()
     def save_changes_dialog(self):

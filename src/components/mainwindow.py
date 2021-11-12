@@ -201,6 +201,7 @@ class MainView(QMainWindow):
 
     @Slot()
     def close_defect_annotation(self):
+        # TODO: emit the close_defect_annotation signal when creating a new (or loading) a string annotation
         self.controller.close_defect_annotation.emit()
 
     @Slot()
@@ -226,6 +227,8 @@ class MainView(QMainWindow):
         """Ask whether unsaved changes should be saved"""
         self.controller.mainwindow_close_requested.emit(event)
 
+    #def closeDatasetEvent(self, event):
+
 
 
 class MainController(QObject):
@@ -235,6 +238,7 @@ class MainController(QObject):
     load_defect_annotation = Signal()
     close_defect_annotation = Signal()
     mainwindow_close_requested = Signal(object)
+    dataset_close_requested = Signal(object)
 
     def __init__(self, model):
         super().__init__()
@@ -252,7 +256,7 @@ class MainController(QObject):
         self.model.app_mode = "data_visualization"
 
     @Slot()
-    def close_dataset(self):  # TODO: reset all subordinate models as well
+    def close_dataset(self):  # TODO: if there are unsaved changes ask if they should be changed and only then execute the event
         self.model.reset()
         self.model.dataset_is_open = False
         self.model.app_mode = None
