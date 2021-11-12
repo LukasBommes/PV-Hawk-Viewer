@@ -96,10 +96,9 @@ class MainView(QMainWindow):
         self.model.dataset_opened.connect(self.dataset_opened)
         self.model.dataset_closed.connect(self.dataset_closed)
 
-
         self.model.app_mode_changed.connect(self.app_mode_changed)
-
         self.model.annotation_editor_model.has_changes_changed.connect(self.defect_annotation_has_changes)
+        self.model.annotation_editor_model.current_file_name_changed.connect(self.defect_annotation_has_changes)
         
         # load HTML document for map view
         index_file = QDir.current().filePath("src/index.html")
@@ -117,11 +116,6 @@ class MainView(QMainWindow):
         if not "splitted" in probe_dirs:
             return False
         return True
-
-    @Slot(str)
-    def app_mode_changed(self, app_mode):
-        """(De)activate components and set window title based on the app mode"""
-        pass
 
     @Slot()
     def open_dataset(self):
@@ -160,28 +154,50 @@ class MainView(QMainWindow):
         self.ui.actionSave_String_Annotation.setEnabled(False)
         self.ui.actionClose_String_Annotation.setEnabled(False)
 
+    @Slot(str)
+    def app_mode_changed(self, app_mode):
+        if app_mode == "defect_annotation":
+            self.annotationEditorWidget.show()
+            self.ui.actionClose_Defect_Annotation.setEnabled(True)
+            self.defect_annotation_has_changes(False)
+        else:
+            self.annotationEditorWidget.hide()
+            self.ui.actionSave_Defect_Annotation.setEnabled(False)
+            self.ui.actionClose_Defect_Annotation.setEnabled(False)
+
+        if app_mode is None or app_mode == "data_visualization":
+            self.setWindowTitle("PV Mapper")
+
+        # if app_mode is None:
+        #     self.dataset_closed()
+        # elif app_mode == "data_visualization":
+        #     self.dataset_opened()
+        # elif app_mode == "defect_annotation":
+        #     self.addDockWidget(Qt.LeftDockWidgetArea, self.annotationEditorWidget)
+
+        #elif self.model.app_mode == "string_annotation":
+
     @Slot(bool)
     def defect_annotation_has_changes(self, has_changes):
+        if self.model.app_mode != "defect_annotation":
+            return
+        file_name = os.path.basename(self.model.annotation_editor_model.current_file_name)
         if has_changes:
-            self.ui.actionSave_Defect_Annotation.setEnabled(True)
-            self.ui.actionClose_Defect_Annotation.setEnabled(True)
-            # TODO: set window title
-            #file_name = self.model.annotation_editor_model.current_file_name
-            #self.setWindowTitle("PV Mapper - {}*".format(file_name))
-        #else:
+            self.ui.actionSave_Defect_Annotation.setEnabled(True)            
+            self.setWindowTitle("PV Mapper - {}*".format(file_name))
+        else:
+            self.ui.actionSave_Defect_Annotation.setEnabled(False)
+            self.setWindowTitle("PV Mapper - {}".format(file_name))
 
 
     @Slot()
     def new_defect_annotation(self):
         self.model.app_mode = "defect_annotation"
-        # activate annotation editor widget
-        # deactivate data selection, etc. (optional)
-        # initialize defect annotation data
-        # set window title to contain unsaved defeect annotation with *
-        pass
+        self.controller.new_defect_annotation.emit()
 
     @Slot()
     def load_defect_annotation(self):
+        self.model.app_mode = "defect_annotation"
         self.controller.load_defect_annotation.emit()
 
     @Slot()
@@ -190,6 +206,7 @@ class MainView(QMainWindow):
 
     @Slot()
     def close_defect_annotation(self):
+        #self.model.app_mode = "data_visualization"
         self.controller.close_defect_annotation.emit()
 
     @Slot()
@@ -212,12 +229,8 @@ class MainView(QMainWindow):
         )
 
     def closeEvent(self, event):
-        """Ask whether unsavedchnages should be saved"""
-        status = self.controller.annotation_editor_controller.save_changes_dialog()
-        if status == "no_changes" or status == "saved" or status == "discarded":
-            event.accept()
-        elif status == "cancelled":
-            event.ignore()
+        """Ask whether unsaved changes should be saved"""
+        self.controller.mainwindow_close_requested.emit(event)
 
 
 
@@ -227,6 +240,7 @@ class MainController(QObject):
     save_defect_annotation = Signal()
     load_defect_annotation = Signal()
     close_defect_annotation = Signal()
+    mainwindow_close_requested = Signal(object)
 
     def __init__(self, model):
         super().__init__()
@@ -240,13 +254,14 @@ class MainController(QObject):
         self.update_source_names()
         self.load_source("Module Layout")
         self.update_track_ids()
-        self.model.app_mode = "data_visualization"
         self.model.dataset_is_open = True
+        self.model.app_mode = "data_visualization"
 
     @Slot()
     def close_dataset(self):  # TODO: reset all subordinate models as well
         self.model.reset()
         self.model.dataset_is_open = False
+        self.model.app_mode = None
 
     @Slot()
     def update_source_names(self):
