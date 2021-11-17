@@ -21,6 +21,7 @@ class SourceFrameView(QWidget):
         self.ui.setupUi(self)
         self.parent = parent
         self.ui.colormapComboBox.addItems(["Gray", "Plasma", "Jet"])
+        self.ui.sourceFrameLabel.setGeometry(0, 0, 640, 512)  # initial size
         self.disable()
 
         # connect signals and slots

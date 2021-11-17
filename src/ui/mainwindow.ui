@@ -86,6 +86,7 @@
    <addaction name="menuView"/>
    <addaction name="menuHelp"/>
   </widget>
+  <widget class="QStatusBar" name="statusBar"/>
   <action name="actionOpen_Dataset">
    <property name="text">
     <string>Open Dataset...</string>

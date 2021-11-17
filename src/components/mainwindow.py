@@ -1,11 +1,14 @@
 import os
 import json
+import csv
 import shutil
 import pickle
+import datetime
 import numpy as np
+import networkx
 
 from PySide6.QtWidgets import QMainWindow, QToolBar, QDockWidget, \
-    QMessageBox, QFileDialog
+    QMessageBox, QFileDialog, QLabel
 from PySide6.QtCore import Qt, Slot, QUrl, QDir, Signal, QObject
 from PySide6.QtWebChannel import QWebChannel
 
@@ -72,6 +75,18 @@ class MainView(QMainWindow):
         self.addDockWidget(Qt.LeftDockWidgetArea, self.annotationEditorWidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.sourceFrameWidget)
 
+        # setup status bar        
+        self.numModulesLabel = QLabel()
+        self.ui.statusBar.addPermanentWidget(self.numModulesLabel)
+        self.numPatchesLabel = QLabel()        
+        self.ui.statusBar.addPermanentWidget(self.numPatchesLabel)
+        self.flightDurationLabel = QLabel()
+        self.ui.statusBar.addPermanentWidget(self.flightDurationLabel)
+        self.trajectoryLengthLabel = QLabel()
+        self.ui.statusBar.addPermanentWidget(self.trajectoryLengthLabel)
+
+        self.update_status_bar(stats=None)
+
         # child windows
         self.module_temperatures_window = None
 
@@ -92,6 +107,8 @@ class MainView(QMainWindow):
         self.ui.menuView.addAction(self.toolBarDataRange.toggleViewAction())
         self.model.dataset_opened.connect(self.dataset_opened)
         self.model.dataset_closed.connect(self.dataset_closed)
+
+        self.model.dataset_stats_changed.connect(self.update_status_bar)
 
         self.model.app_mode_changed.connect(self.app_mode_changed)
         self.model.annotation_editor_model.has_changes_changed.connect(self.defect_annotation_has_changes)
@@ -142,6 +159,7 @@ class MainView(QMainWindow):
         self.ui.actionLoad_Defect_Annotation.setEnabled(True)
         self.ui.actionNew_String_Annotation.setEnabled(True)
         self.ui.actionLoad_String_Annotation.setEnabled(True)
+        self.ui.statusBar.showMessage("Dataset opened", 5000)
 
     def dataset_closed(self):
         self.ui.actionClose_Dataset.setEnabled(False)
@@ -155,6 +173,22 @@ class MainView(QMainWindow):
         self.ui.actionLoad_String_Annotation.setEnabled(False)
         self.ui.actionSave_String_Annotation.setEnabled(False)
         self.ui.actionClose_String_Annotation.setEnabled(False)
+        self.ui.statusBar.showMessage("Dataset closed", 5000)
+
+    @Slot(object)
+    def update_status_bar(self, stats):
+        if stats is None:
+            stats = {
+                "num_modules": 0,
+                "num_patches": 0,
+                "flight_duration": "00:00:00.000",
+                "trajectory_length": 0,
+            }
+
+        self.numModulesLabel.setText("Modules: {}".format(stats["num_modules"]))
+        self.numPatchesLabel.setText("Patches: {}".format(stats["num_patches"]))
+        self.flightDurationLabel.setText("Flight duration: {}".format(stats["flight_duration"]))
+        self.trajectoryLengthLabel.setText("Trajectory length: {} m".format(int(stats["trajectory_length"])))
 
     @Slot(str)
     def app_mode_changed(self, app_mode):
@@ -251,6 +285,7 @@ class MainController(QObject):
         self.update_source_names()
         self.load_source("Module Layout")
         self.update_track_ids()
+        self.update_dataset_stats()
         self.model.dataset_is_open = True
         self.model.app_mode = "data_visualization"
 
@@ -267,6 +302,7 @@ class MainController(QObject):
     def close_dataset(self):  # TODO: if there are unsaved changes ask if they should be changed and only then execute the event
         self.model.reset()
         self.model.dataset_is_open = False
+        self.model.dataset_stats = None
         self.model.app_mode = None
 
     @Slot()
@@ -357,6 +393,52 @@ class MainController(QObject):
         return column_values
 
 
+    def update_dataset_stats(self):
+        if self.model.dataset_dir is None:
+            return
+
+        # num modules
+        num_modules = 0
+        for feature in self.model.data["features"]:
+            geometry = feature["geometry"]["type"]
+            if geometry == "Polygon":
+                num_modules += 1
+
+        # num patches
+        num_patches = 0
+        for _, _, files in os.walk(os.path.join(self.model.dataset_dir, "patches_final", "radiometric")):
+            num_patches += len(files)
+
+        # flight duration
+        timestamps = []
+        with open(os.path.join(self.model.dataset_dir, "splitted", "timestamps.csv"), newline='') as csvfile:
+            csvreader = csv.reader(csvfile, delimiter=',', quotechar='|')
+            for row in csvreader:
+                timestamps.append(datetime.datetime.fromisoformat(*row))                
+        dt = (timestamps[-1] - timestamps[0]).total_seconds()
+        hours, remainder = divmod(dt, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        flight_duration = "{:02d}:{:02d}:{:0.3f}".format(int(hours), int(minutes), seconds)
+
+        # trajectory length
+        pose_graph = pickle.load(open(os.path.join(self.model.dataset_dir, "mapping", "pose_graph.pkl"), "rb"))
+        positions = []
+        for node_id, data in pose_graph.nodes(data=True):
+            pose = data["pose"][3:].reshape(3, 1)
+            positions.append(pose)
+        trajectory_length = 0
+        for i in range(1, len(positions)):
+            trajectory_length += np.linalg.norm(positions[i] - positions[i-1])
+
+        stats = {
+            "num_modules": num_modules,
+            "num_patches": num_patches,
+            "flight_duration": flight_duration,
+            "trajectory_length": trajectory_length,
+        }
+        self.model.dataset_stats = stats
+
+
 
 class MainModel(QObject):
     dataset_opened = Signal()
@@ -366,6 +448,7 @@ class MainModel(QObject):
     selected_column_changed = Signal(int)
     track_id_changed = Signal(str)
     patch_idx_changed = Signal(int)
+    dataset_stats_changed = Signal(object)
     app_mode_changed = Signal(str)
 
     def __init__(self):
@@ -385,6 +468,7 @@ class MainModel(QObject):
         self._selected_column = None
         self._track_id = None
         self._patch_idx = None
+        self._dataset_stats = None
 
     @property
     def app_mode(self):
@@ -453,3 +537,12 @@ class MainModel(QObject):
     def selected_source(self, value):
         self._selected_source = value
         self.selected_source_changed.emit(value)
+
+    @property
+    def dataset_stats(self):
+        return self._dataset_stats
+
+    @dataset_stats.setter
+    def dataset_stats(self, value):
+        self._dataset_stats = value
+        self.dataset_stats_changed.emit(value)
