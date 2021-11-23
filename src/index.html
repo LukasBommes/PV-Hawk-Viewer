@@ -193,19 +193,15 @@
       }
 
       function draw_string_annotations() {
+        // TODO: show string ID on each string
         reset_string_annotations();
         if (string_annotation_data === null) {
           return;
         }
         map_view.printObj(JSON.stringify("Drawing string annotations."));
-        // TODO:
-        // - delete prvious layer group containing polylines and string labels
-        // - assemble all polylines in a single geojson object
-        // - add polylines and string labels as a layer group to the map
-
         var layers = [];
         for (const [string_id, data] of Object.entries(string_annotation_data.string_data)) {
-          layers.push(L.geoJSON(data.polyline));
+          layers.push(L.geoJSON(data.polyline, {style: {weight: 1, opacity: 1, color: '#636363'}}));
         }
         string_annotation_layer = L.layerGroup(layers).addTo(map);
       }
@@ -275,7 +271,7 @@
 
       // "new string" clicked
       string_editor_map_backend.new_string.connect(function() {
-        current_line_string = new L.Polyline([]).addTo(map);
+        current_line_string = new L.Polyline([], {weight: 1, opacity: 1, color: '#425df5'}).addTo(map);
         intersecting_modules = [];
       });
       

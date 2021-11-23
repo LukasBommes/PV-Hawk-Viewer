@@ -33,8 +33,6 @@ class StringEditorView(QWidget):
 
         self.ui.pushButtonStartDrawing.clicked.connect(self.start_drawing)
         self.ui.pushButtonEndDrawing.clicked.connect(self.end_drawing)
-        self.ui.checkBoxReverseDirection.stateChanged.connect(lambda value: setattr(self.model.string_editor_model, 'reverse_direction', value))
-        self.model.string_editor_model.reverse_direction_changed.connect(self.ui.checkBoxReverseDirection.setChecked)
         self.ui.lineEditTrackerID.textChanged.connect(lambda value: setattr(self.model.string_editor_model, 'tracker_id', value))
         self.model.string_editor_model.tracker_id_changed.connect(self.ui.lineEditTrackerID.setText)
         self.ui.lineEditArrayID.textChanged.connect(lambda value: setattr(self.model.string_editor_model, 'array_id', value))
@@ -57,7 +55,6 @@ class StringEditorView(QWidget):
         self.ui.lineEditArrayID.setEnabled(False)
         self.ui.lineEditInverterID.setEnabled(False)
         self.ui.lineEditStringID.setEnabled(False)
-        self.ui.checkBoxReverseDirection.setEnabled(False)
 
     def enable(self):
         self.ui.pushButtonStartDrawing.setEnabled(True)
@@ -68,7 +65,6 @@ class StringEditorView(QWidget):
         self.ui.lineEditArrayID.setEnabled(True)
         self.ui.lineEditInverterID.setEnabled(True)
         self.ui.lineEditStringID.setEnabled(True)
-        self.ui.checkBoxReverseDirection.setEnabled(True)
 
     def start_drawing(self):
         self.model.string_editor_model.drawing_string = True
@@ -81,6 +77,7 @@ class StringEditorView(QWidget):
         self.ui.pushButtonEndDrawing.setEnabled(False)
 
     def new_string(self):
+        self.ui.pushButtonNewString.setEnabled(False)
         self.controller.string_editor_controller.reset_temp_string_data()
         self.controller.string_editor_controller.new_string.emit()
         self.enable()
@@ -88,10 +85,12 @@ class StringEditorView(QWidget):
     def cancel_string(self):
         self.controller.string_editor_controller.reset_temp_string_data()
         self.controller.string_editor_controller.cancel_string.emit()
+        self.ui.pushButtonNewString.setEnabled(True)
         self.disable()
 
     def confirm_string(self):
         self.controller.string_editor_controller.update_string_annotation_data()
+        self.ui.pushButtonNewString.setEnabled(True)
 
     @Slot(str)
     def show_validation_error(self, text):
@@ -190,7 +189,6 @@ class StringEditorController(QObject):
 
     @Slot()
     def reset_temp_string_data(self):
-        self.model.string_editor_model.reverse_direction = False
         self.model.string_editor_model.drawing_string = False
 
     def is_valid(self, value):
@@ -240,7 +238,6 @@ class StringEditorModel(QObject):
     array_id_changed = Signal(str)
     inverter_id_changed = Signal(str)
     string_id_changed = Signal(str)
-    reverse_direction_changed = Signal(bool)
     drawing_string_changed = Signal(bool)
     string_annotation_data_changed = Signal()
 
@@ -250,7 +247,6 @@ class StringEditorModel(QObject):
         self._array_id = ""
         self._inverter_id = ""
         self._string_id = ""
-        self._reverse_direction = False
         self._drawing_string = False
         # string data of entire plant
         self._string_annotation_data = None
@@ -290,19 +286,6 @@ class StringEditorModel(QObject):
     def string_id(self, value):
         self._string_id = value
         self.string_id_changed.emit(value)
-
-    @property
-    def reverse_direction(self):
-        return self._reverse_direction
-
-    @reverse_direction.setter
-    def reverse_direction(self, value):
-        if value == 0:
-            self._reverse_direction = False
-            self.reverse_direction_changed.emit(False)
-        else:
-            self._reverse_direction = True
-            self.reverse_direction_changed.emit(True)
 
     @property
     def drawing_string(self):
