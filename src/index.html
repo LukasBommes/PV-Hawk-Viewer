@@ -70,7 +70,6 @@
           });
 
           draw_defect_annotations();
-          //loadAnnotatedFaults(track_id);
           //loadPatches(track_id);
 
           // update source frame and patches
@@ -260,8 +259,10 @@
       // string annotation data changed
       string_editor_map_backend.string_annotation_data_changed.connect(function() {
         map_view.printObj(JSON.stringify("string_annotation_data_changed"));
-        // TODO: redraw map using new string annotation data
-        
+        // get annotation data
+        map_backend.get_string_annotation_data(function() {
+
+        });
       })
   });
  </script>

@@ -1,9 +1,8 @@
 import json
 import copy
 
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget, QMessageBox
 from PySide6.QtCore import Slot, Signal, QObject
-from PySide6.QtWebChannel import QWebChannel
 
 from src.ui.ui_string_editor import Ui_StringEditor
 
@@ -24,27 +23,30 @@ class StringEditorView(QWidget):
         self.disable()
 
         # connect signals and slots
+        # TODO: handle opening and closing of dataset, e.g. set defautl values, reset string annotation data
         self.ui.pushButtonNewString.clicked.connect(self.new_string)
         self.ui.pushButtonCancelString.clicked.connect(self.cancel_string)
         self.ui.pushButtonConfirmString.clicked.connect(self.confirm_string)
-        self.ui.pushButtonStartDrawing.clicked.connect(lambda: setattr(self.model.string_editor_model, 'drawing_string', True))
-        self.ui.pushButtonEndDrawing.clicked.connect(lambda: setattr(self.model.string_editor_model, 'drawing_string', False))
-        self.model.string_editor_model.drawing_string_changed.connect(
-            lambda value: self.ui.pushButtonStartDrawing.setEnabled(not self.model.string_editor_model.drawing_string))
-        self.model.string_editor_model.drawing_string_changed.connect(
-            lambda value: self.ui.pushButtonEndDrawing.setEnabled(self.model.string_editor_model.drawing_string))
+        self.controller.string_editor_controller.show_validation_error.connect(self.show_validation_error)
+        self.controller.string_editor_controller.confirm_string.connect(self.disable)
+        self.controller.string_editor_controller.confirm_string.connect(self.controller.string_editor_controller.reset_temp_string_data)
 
+        self.ui.pushButtonStartDrawing.clicked.connect(self.start_drawing)
+        self.ui.pushButtonEndDrawing.clicked.connect(self.end_drawing)
         self.ui.checkBoxReverseDirection.stateChanged.connect(lambda value: setattr(self.model.string_editor_model, 'reverse_direction', value))
         self.model.string_editor_model.reverse_direction_changed.connect(self.ui.checkBoxReverseDirection.setChecked)
-        self.ui.lineEditTrackerID.textChanged.connect(self.controller.string_editor_controller.set_tracker_id)
+        self.ui.lineEditTrackerID.textChanged.connect(lambda value: setattr(self.model.string_editor_model, 'tracker_id', value))
         self.model.string_editor_model.tracker_id_changed.connect(self.ui.lineEditTrackerID.setText)
-        self.ui.lineEditArrayID.textChanged.connect(self.controller.string_editor_controller.set_array_id)
+        self.ui.lineEditArrayID.textChanged.connect(lambda value: setattr(self.model.string_editor_model, 'array_id', value))
         self.model.string_editor_model.array_id_changed.connect(self.ui.lineEditArrayID.setText)
-        self.ui.lineEditInverterID.textChanged.connect(self.controller.string_editor_controller.set_inverter_id)
+        self.ui.lineEditInverterID.textChanged.connect(lambda value: setattr(self.model.string_editor_model, 'inverter_id', value))
         self.model.string_editor_model.inverter_id_changed.connect(self.ui.lineEditInverterID.setText)
-        self.ui.lineEditStringID.textChanged.connect(self.controller.string_editor_controller.set_string_id)
+        self.ui.lineEditStringID.textChanged.connect(lambda value: setattr(self.model.string_editor_model, 'string_id', value))
         self.model.string_editor_model.string_id_changed.connect(self.ui.lineEditStringID.setText)
 
+        # set default values
+        # TODO: remove this and connect to dataset open/close handlers
+        self.controller.string_editor_controller.set_default_values()
 
     def disable(self):
         self.ui.pushButtonStartDrawing.setEnabled(False)
@@ -58,8 +60,8 @@ class StringEditorView(QWidget):
         self.ui.checkBoxReverseDirection.setEnabled(False)
 
     def enable(self):
-        self.ui.pushButtonStartDrawing.setEnabled(not self.model.string_editor_model.drawing_string)
-        self.ui.pushButtonEndDrawing.setEnabled(self.model.string_editor_model.drawing_string)
+        self.ui.pushButtonStartDrawing.setEnabled(True)
+        self.ui.pushButtonEndDrawing.setEnabled(False)
         self.ui.pushButtonCancelString.setEnabled(True)
         self.ui.pushButtonConfirmString.setEnabled(True)
         self.ui.lineEditTrackerID.setEnabled(True)
@@ -67,6 +69,16 @@ class StringEditorView(QWidget):
         self.ui.lineEditInverterID.setEnabled(True)
         self.ui.lineEditStringID.setEnabled(True)
         self.ui.checkBoxReverseDirection.setEnabled(True)
+
+    def start_drawing(self):
+        self.model.string_editor_model.drawing_string = True
+        self.ui.pushButtonStartDrawing.setEnabled(False)
+        self.ui.pushButtonEndDrawing.setEnabled(True)
+
+    def end_drawing(self):
+        self.model.string_editor_model.drawing_string = False
+        self.ui.pushButtonStartDrawing.setEnabled(True)
+        self.ui.pushButtonEndDrawing.setEnabled(False)
 
     def new_string(self):
         self.controller.string_editor_controller.reset_temp_string_data()
@@ -79,11 +91,16 @@ class StringEditorView(QWidget):
         self.disable()
 
     def confirm_string(self):
-        # TODO: 
-        # - validate all inputs are available and correct (self.controller.string_editor_controller.validate_temp_string_data)
-        # - update the string annotation data by instering the module IDs of the current string in the data structure
         self.controller.string_editor_controller.update_string_annotation_data()
-        self.disable()
+
+    @Slot(str)
+    def show_validation_error(self, text):
+        print("validation error")
+        msg = QMessageBox()
+        msg.setWindowTitle("Error")
+        msg.setText(text)
+        msg.setIcon(QMessageBox.Critical)
+        msg.exec()
 
 
 
@@ -100,12 +117,24 @@ class MapBackend(QObject):
         self.controller = controller
         self.parent = parent
 
+        # connect signals and slots
         self.model.string_editor_model.drawing_string_changed.connect(self.drawing_string_changed)
         self.controller.string_editor_controller.new_string.connect(self.new_string)
         self.controller.string_editor_controller.cancel_string.connect(self.cancel_string)
         self.controller.string_editor_controller.confirm_string.connect(self.confirm_string)
-
         self.model.string_editor_model.string_annotation_data_changed.connect(self.string_annotation_data_changed)
+
+    @Slot(result=str)
+    def get_string_annotation_data(self):
+        """Retrieve string annotation data from model."""
+        if not self.model.dataset_is_open:
+            return json.dumps(None)
+
+        string_annotation_data = self.model.string_editor_model.string_annotation_data
+        if string_annotation_data is None:
+            return json.dumps(None)
+
+        return json.dumps(string_annotation_data)
 
     @Slot(str)
     def update_string_annotation_data(self, current_string_data):
@@ -114,7 +143,7 @@ class MapBackend(QObject):
         current_string_data = json.loads(current_string_data)
         modules = current_string_data["modules"]
         polyline = current_string_data["polyline"]
-        string_id = "{}_{}_{}".format(
+        string_id = "{}_{}_{}_{}".format(
             self.model.string_editor_model.tracker_id,
             self.model.string_editor_model.array_id,
             self.model.string_editor_model.inverter_id,
@@ -140,7 +169,6 @@ class MapBackend(QObject):
             data["plant_id_track_id_mapping"].append((plant_id, module["track_id"]))
 
         self.model.string_editor_model.string_annotation_data = data
-        self.controller.string_editor_controller.reset_temp_string_data()
 
 
 
@@ -148,34 +176,49 @@ class StringEditorController(QObject):
     new_string = Signal()
     confirm_string = Signal()
     cancel_string = Signal()
+    show_validation_error = Signal(str)
 
     def __init__(self, model):
         super().__init__()
         self.model = model
 
+    def set_default_values(self):
+        self.model.string_editor_model.tracker_id = "00"
+        self.model.string_editor_model.array_id = "00"
+        self.model.string_editor_model.inverter_id = "00"
+        self.model.string_editor_model.string_id = "00"
+
+    @Slot()
     def reset_temp_string_data(self):
-        self.model.string_editor_model.tracker_id = ""
-        self.model.string_editor_model.array_id = ""
-        self.model.string_editor_model.inverter_id = ""
-        self.model.string_editor_model.string_id = ""
         self.model.string_editor_model.reverse_direction = False
         self.model.string_editor_model.drawing_string = False
 
-    # TODO: validate correct format of IDs (only update state if valid, otherwise show error message)
-    def set_tracker_id(self, value):
-        self.model.string_editor_model.tracker_id = value
+    def is_valid(self, value):
+        return isinstance(value, str) and value.isalnum() and (len(value) == 2 or len(value) == 3)
 
-    def set_array_id(self, value):
-        self.model.string_editor_model.array_id = value
+    def validate_string_id(self):
 
-    def set_inverter_id(self, value):
-        self.model.string_editor_model.inverter_id = value
+        def error_msg(text):
+            return "{} is invalid. Provide a 2-digit or 3-digit alphanumeric value.".format(text)
 
-    def set_string_id(self, value):
-        self.model.string_editor_model.string_id = value
+        if not self.is_valid(self.model.string_editor_model.tracker_id):
+            self.show_validation_error.emit(error_msg("Tracker ID"))
+            return False
+        if not self.is_valid(self.model.string_editor_model.array_id):
+            self.show_validation_error.emit(error_msg("Array ID"))
+            return False
+        if not self.is_valid(self.model.string_editor_model.inverter_id):
+            self.show_validation_error.emit(error_msg("Inverter ID"))
+            return False
+        if not self.is_valid(self.model.string_editor_model.string_id):
+            self.show_validation_error.emit(error_msg("String ID"))
+            return False
+        return True
 
     def update_string_annotation_data(self):
-        self.confirm_string.emit()
+        ret = self.validate_string_id()
+        if ret:
+            self.confirm_string.emit()
 
 
 
