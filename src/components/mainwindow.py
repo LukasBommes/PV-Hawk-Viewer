@@ -107,6 +107,7 @@ class MainView(QMainWindow):
         self.ui.actionClose_Defect_Annotation.triggered.connect(self.close_defect_annotation)
         self.ui.actionModule_Temperatures.triggered.connect(self.show_analysis_module_temperatures)
         self.ui.menuView.addAction(self.dataSourcesWidget.toggleViewAction())
+        self.ui.menuView.addAction(self.stringEditorWidget.toggleViewAction())
         self.ui.menuView.addAction(self.annotationEditorWidget.toggleViewAction())
         self.ui.menuView.addAction(self.sourceFrameWidget.toggleViewAction())
         self.ui.menuView.addAction(self.toolBarDataColumnSelection.toggleViewAction())

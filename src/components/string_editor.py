@@ -17,7 +17,7 @@ class StringEditorView(QWidget):
         self.parent = parent
 
         # register map backend
-        self.map_backend = MapBackend(model, controller, parent=self)
+        self.map_backend = MapBackend(model, controller)
         parent.channel.registerObject("string_editor_map_backend", self.map_backend)
 
         self.disable()
@@ -197,7 +197,7 @@ class StringEditorController(QObject):
         return isinstance(value, str) and value.isalnum() and (len(value) == 2 or len(value) == 3)
 
     def validate_string_id(self):
-
+        # check if individual IDs are valid
         def error_msg(text):
             return "{} is invalid. Provide a 2-digit or 3-digit alphanumeric value.".format(text)
 
@@ -213,6 +213,19 @@ class StringEditorController(QObject):
         if not self.is_valid(self.model.string_editor_model.string_id):
             self.show_validation_error.emit(error_msg("String ID"))
             return False
+
+        # check if a string with this id exists already
+        string_id = "{}_{}_{}_{}".format(
+            self.model.string_editor_model.tracker_id,
+            self.model.string_editor_model.array_id,
+            self.model.string_editor_model.inverter_id,
+            self.model.string_editor_model.string_id,
+        )
+        if ((self.model.string_editor_model.string_annotation_data is not None) and
+             string_id in self.model.string_editor_model.string_annotation_data["string_data"]):
+            self.show_validation_error.emit("A string with this ID exists already.")
+            return False
+
         return True
 
     def update_string_annotation_data(self):
