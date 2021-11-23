@@ -8,6 +8,7 @@ from src.components.analysis_module_temperatures import AnalysisModuleTemperatur
 from src.components.source_frame import SourceFrameController, SourceFrameModel
 from src.components.map import MapModel
 from src.components.annotation_editor import AnnotationEditorController, AnnotationEditorModel
+from src.components.string_editor import StringEditorController, StringEditorModel
 
 
 
@@ -21,13 +22,15 @@ class App(QApplication):
         self.main_model.analysis_module_temperatures_model = AnalysisModuleTemperaturesModel()
         self.main_model.map_model = MapModel()
         self.main_model.annotation_editor_model = AnnotationEditorModel()
+        self.main_model.string_editor_model = StringEditorModel()
 
         # controllers
         self.main_controller = MainController(self.main_model)
         self.main_controller.source_frame_controller = SourceFrameController(self.main_model)
         self.main_controller.analysis_module_temperatures_controller = AnalysisModuleTemperaturesController(self.main_model)
         self.main_controller.annotation_editor_controller = AnnotationEditorController(self.main_model)
-
+        self.main_controller.string_editor_controller = StringEditorController(self.main_model)
+        
         self.main_view = MainView(self.main_model, self.main_controller)
         self.main_view.show()
 

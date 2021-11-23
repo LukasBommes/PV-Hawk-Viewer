@@ -24,12 +24,13 @@ class MapView(QObject):
         self.controller.source_deleted.connect(self.dataset_closed)
         self.model.dataset_closed.connect(self.dataset_closed)
         self.model.dataset_opened.connect(lambda: self.dataset_changed.emit(True))
-        self.model.selected_column_changed.connect(lambda: self.dataset_changed.emit(False))
+        self.model.selected_column_changed.connect(lambda: self.dataset_changed.emit(True))  # False, just for development set to True
 
         self.model.map_model.min_val_changed.connect(lambda: self.dataset_changed.emit(False))
         self.model.map_model.max_val_changed.connect(lambda: self.dataset_changed.emit(False))
         self.model.map_model.colormap_changed.connect(lambda: self.dataset_changed.emit(False))
 
+        # defect annotation editor
         self.model.annotation_editor_model.annotation_data_changed.connect(self.annotation_data_changed)
 
     @Slot(str)
@@ -76,7 +77,8 @@ class MapView(QObject):
             return json.dumps(None)
 
         return json.dumps(annotation_data)
-
+        
+        
 
 class MplCanvas(FigureCanvasQTAgg):
     def __init__(self, dpi=96):

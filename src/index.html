@@ -5,9 +5,8 @@
 <meta name="viewport" content="initial-scale=1.0, user-scalable=yes"/>
 <link rel="stylesheet" href="resources/web/style.css">
 <link rel="stylesheet" href="resources/web/leaflet-1.7.1.css"/>
-  <!-- Make sure you put this AFTER Leaflet's CSS -->
 <script src="resources/web/leaflet-1.7.1.js"></script>
-
+<script src="resources/web/turf.js"></script>
 <script type="text/javascript" src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
 <body>
@@ -18,6 +17,7 @@
 
   new QWebChannel(qt.webChannelTransport, function (channel) {
       var map_view = channel.objects.map_view;
+      var string_editor_map_backend = channel.objects.string_editor_map_backend;
       var modules_geojson = null;
       var data_prev = null;
       var annotation_data = null;
@@ -161,13 +161,108 @@
           resetMap();
       });
 
-      // load annotation data whenever annotations change
+      // load annotation data whenever defect annotations change
       map_view.annotation_data_changed.connect(function() {
         map_view.get_annotation_data(function(data) {
           annotation_data = JSON.parse(data);
           draw_defect_annotations();
         });        
       });
+
+      //*****************************************************************
+      //  String Annotation
+      //*****************************************************************
+
+      var current_line_string;
+      var intersecting_modules;
+
+      // perform string annotation
+      function handle_line_drawing(event) {
+        intersecting_modules = [];
+
+        var click_point = turf.point([event.latlng.lng, event.latlng.lat]);
+        var clicked_module_center = null;
+
+        // get center point of module clicked
+        modules_geojson.eachLayer(function (layer) {
+          var module = turf.polygon(layer.feature.geometry.coordinates);
+          if (turf.booleanWithin(click_point, module)) {
+            clicked_module_center = turf.centroid(module);
+          }
+        });
+        if (clicked_module_center === null) { return; }
+        clicked_module_center = turf.getCoord(clicked_module_center);
+        current_line_string.addLatLng(L.latLng(clicked_module_center[1], clicked_module_center[0]));
+
+        if (current_line_string.getLatLngs().length < 2) { return; }
+
+        // get intersecting modules
+        var line = turf.lineString(current_line_string.toGeoJSON().geometry.coordinates);
+
+        modules_geojson.eachLayer(function (layer) {
+          var track_id = layer.feature.properties.track_id;
+          var module = turf.polygon(layer.feature.geometry.coordinates);
+          if (turf.booleanIntersects(module, line)) {
+            //layer.setStyle({color: "#660000", fillColor: "#660000", weight: 1});
+            intersecting_modules.push({"track_id": track_id, "module": module});
+          }
+        });
+
+        // determine order of modules (yielding lowest level module IDs)
+        var distance_along_line = {};
+        for (var i = 0; i < intersecting_modules.length; i++) {
+          var track_id = intersecting_modules[i].track_id
+          var module_center = turf.centroid(intersecting_modules[i].module);
+          var nearest_line_point = turf.nearestPointOnLine(line, module_center, {units: 'kilometers'});
+          distance_along_line[track_id] = nearest_line_point.properties.location;
+        }
+        intersecting_modules = intersecting_modules.slice().sort(function(a, b) {  
+          return distance_along_line[a.track_id] - distance_along_line[b.track_id];
+        });
+        
+        map_view.printObj(JSON.stringify(intersecting_modules));
+      }
+
+      // "new string" clicked
+      string_editor_map_backend.new_string.connect(function() {
+        current_line_string = new L.Polyline([]).addTo(map);
+        intersecting_modules = [];
+      });
+      
+      // "start drawing" / "end drawing" clicked
+      string_editor_map_backend.drawing_string_changed.connect(function(drawing_string) {
+        if (drawing_string) { // drawing started
+          if (modules_geojson === null) { return; }
+          // attach click handler to map
+          map.on('click', handle_line_drawing);          
+
+        } else { // drawing ended
+          // detach click handler
+          map.off('click', handle_line_drawing);
+        }
+      });
+
+      // "cancel string" clicked
+      string_editor_map_backend.cancel_string.connect(function() {
+        map.removeLayer(current_line_string);
+        intersecting_modules = [];
+      });
+
+      // "confirm string" clicked
+      string_editor_map_backend.confirm_string.connect(function() {
+        // insert string annotation data into string annotation model
+        string_editor_map_backend.update_string_annotation_data(JSON.stringify({
+          "modules": intersecting_modules,
+          "polyline": current_line_string.toGeoJSON()
+        }));
+      });
+
+      // string annotation data changed
+      string_editor_map_backend.string_annotation_data_changed.connect(function() {
+        map_view.printObj(JSON.stringify("string_annotation_data_changed"));
+        // TODO: redraw map using new string annotation data
+        
+      })
   });
  </script>
 

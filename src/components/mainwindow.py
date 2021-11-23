@@ -21,6 +21,7 @@ from src.components.data_sources import DataSourcesView
 from src.components.source_frame import SourceFrameView
 from src.components.analysis_module_temperatures import AnalysisModuleTemperaturesView
 from src.components.toolbar import DataColumnSelectionView, DataRangeView
+from src.components.string_editor import StringEditorView
 
 
 class MainView(QMainWindow):
@@ -33,9 +34,9 @@ class MainView(QMainWindow):
 
         # register map view
         self.map_view = MapView(model, controller, parent=self)
-        channel = QWebChannel(self.ui.widget.page())
-        self.ui.widget.page().setWebChannel(channel)
-        channel.registerObject("map_view", self.map_view)
+        self.channel = QWebChannel(self.ui.widget.page())
+        self.ui.widget.page().setWebChannel(self.channel)
+        self.channel.registerObject("map_view", self.map_view)
 
         # add colorbar for map view
         self.colorbarView = ColorbarView(self.model, self.controller)
@@ -63,6 +64,10 @@ class MainView(QMainWindow):
         self.annotation_editor = AnnotationEditorView(self.model, self.controller, parent=self)
         self.annotationEditorWidget.setWidget(self.annotation_editor)
         
+        self.stringEditorWidget = QDockWidget(u"String Editor", self)
+        self.string_editor = StringEditorView(self.model, self.controller, parent=self)
+        self.stringEditorWidget.setWidget(self.string_editor)
+
         self.sourceFrameWidget = QDockWidget(u"Source Frame", self)
         self.source_frame = SourceFrameView(self.model, self.controller, parent=self)
         self.sourceFrameWidget.setWidget(self.source_frame)
@@ -71,6 +76,7 @@ class MainView(QMainWindow):
         self.data_sources = DataSourcesView(self.model, self.controller, parent=self)
         self.dataSourcesWidget.setWidget(self.data_sources)
 
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.stringEditorWidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.dataSourcesWidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.annotationEditorWidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.sourceFrameWidget)
@@ -123,6 +129,10 @@ class MainView(QMainWindow):
 
         # set defaults
         self.model.app_mode = None
+
+        # for development
+        dir = "/home/lukas/HI-ERN-2020/Dataset-Viewer-Georeferencing-Desktop/test_data"
+        self.controller.open_dataset(dir)
 
     def valid_dataset(self, dir):
         probe_dirs = get_immediate_subdirectories(dir)
