@@ -22,7 +22,8 @@
       var data_prev = null;
       var annotation_data = null;
       var string_annotation_data = null;
-      var string_annotation_layer = null;
+      var string_annotation_lines = null;
+      var string_annotation_labels = null;
 
       var map = L.map('map');
       L.tileLayer(
@@ -185,25 +186,40 @@
       //*****************************************************************
 
       function reset_string_annotations() {
-        if (string_annotation_layer === null) {
+        if (string_annotation_lines === null) {
           return;
         }
-        map.removeLayer(string_annotation_layer);
-        string_annotation_layer = null;
+        map.removeLayer(string_annotation_lines);
+        map.removeLayer(string_annotation_labels);
+        string_annotation_lines = null;
+        string_annotation_labels = null;
       }
 
       function draw_string_annotations() {
-        // TODO: show string ID on each string
         reset_string_annotations();
         if (string_annotation_data === null) {
           return;
         }
         map_view.printObj(JSON.stringify("Drawing string annotations."));
-        var layers = [];
+        var lines = [];
+        var labels = [];
         for (const [string_id, data] of Object.entries(string_annotation_data.string_data)) {
-          layers.push(L.geoJSON(data.polyline, {style: {weight: 1, opacity: 1, color: '#636363'}}));
+          // polyline
+          var line = new L.geoJSON(data.polyline, {style: {weight: 1, opacity: 1, color: '#636363'}});
+          lines.push(line);
+          // string ID label
+          var label_svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          label_svg.setAttribute('xmlns', "http://www.w3.org/2000/svg");
+          label_svg.setAttribute('viewBox', "0 0 200 200");          
+          label_svg.setAttribute('style', "font-size: 8em; fill: #636363; overflow: visible;");
+          label_svg.innerHTML = '<text x="100" y="100" text-anchor="middle" alignment-baseline="central" class="string_annotation_label">' + string_id + '</text>';
+          var center = line.getBounds().getCenter();
+          var bounds = L.latLngBounds([center.lat - 0.00001, center.lng - 0.00001], [center.lat + 0.00001, center.lng + 0.00001])
+          var label = new L.svgOverlay(label_svg, bounds);
+          labels.push(label);
         }
-        string_annotation_layer = L.layerGroup(layers).addTo(map);
+        string_annotation_lines = L.layerGroup(lines).addTo(map);
+        string_annotation_labels = L.layerGroup(labels).addTo(map);
       }
 
       // string annotation data changed

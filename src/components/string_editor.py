@@ -1,3 +1,4 @@
+import os
 import json
 import copy
 
@@ -180,6 +181,7 @@ class StringEditorController(QObject):
     def __init__(self, model):
         super().__init__()
         self.model = model
+        self.save_dir = os.path.join(self.model.dataset_dir, "annotations")
 
     def set_default_values(self):
         self.model.string_editor_model.tracker_id = "00"
@@ -230,6 +232,29 @@ class StringEditorController(QObject):
         ret = self.validate_string_id()
         if ret:
             self.confirm_string.emit()
+            #self.save_annotation_file()
+
+    # def save_annotation_file(self):
+    #     # TODO:
+    #     # - call every time "confirm string" is clicked or when a string is deleted
+    #     print("Saving string annotation to file")
+    #     data = self.model.string_editor_model.string_annotation_data
+    #     if data is None:
+    #         return
+    #     os.makedirs(self.save_dir, exist_ok=True)
+    #     json.dump(data, open(os.path.join(self.save_dir, "string_anotation.json"), "w"))
+
+    # @Slot()
+    # def load_annotation_file(self):
+    #     # TODO:
+    #     # - connect to dataset_opened signal
+    #     print("Loading string annotation from file")
+    #     try:
+    #         data = json.load(open(os.path.join(self.save_dir, "string_anotation.json"), "r"))
+    #     except FileNotFoundError:
+    #         pass
+    #     else:
+    #         self.model.string_editor_model.string_annotation_data = data
 
 
 
