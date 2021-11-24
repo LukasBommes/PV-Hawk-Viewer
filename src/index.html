@@ -17,7 +17,7 @@
 
   new QWebChannel(qt.webChannelTransport, function (channel) {
       var map_view = channel.objects.map_view;
-      var string_editor_map_backend = channel.objects.string_editor_map_backend;
+      var string_editor_controller = channel.objects.string_editor_controller;
       var modules_geojson = null;
       var data_prev = null;
       var annotation_data = null;
@@ -223,12 +223,11 @@
       }
 
       // string annotation data changed
-      string_editor_map_backend.string_annotation_data_changed.connect(function() {
+      string_editor_controller.string_annotation_data_changed.connect(function() {
         map_view.printObj(JSON.stringify("string_annotation_data_changed"));
         // get annotation data
-        string_editor_map_backend.get_string_annotation_data(function(data) {
+        string_editor_controller.get_string_annotation_data(function(data) {
           string_annotation_data = JSON.parse(data);
-          map_view.printObj(JSON.stringify(data));
           draw_string_annotations();
         }); 
       })
@@ -286,13 +285,13 @@
       }
 
       // "new string" clicked
-      string_editor_map_backend.new_string.connect(function() {
+      string_editor_controller.new_string.connect(function() {
         current_line_string = new L.Polyline([], {weight: 1, opacity: 1, color: '#425df5'}).addTo(map);
         intersecting_modules = [];
       });
       
       // "start drawing" / "end drawing" clicked
-      string_editor_map_backend.drawing_string_changed.connect(function(drawing_string) {
+      string_editor_controller.drawing_string_changed.connect(function(drawing_string) {
         if (drawing_string) { // drawing started
           if (modules_geojson === null) { return; }
           map.on('click', handle_line_drawing);
@@ -303,15 +302,15 @@
       });
 
       // "cancel string" clicked
-      string_editor_map_backend.cancel_string.connect(function() {
+      string_editor_controller.cancel_string.connect(function() {
         map.removeLayer(current_line_string);
         intersecting_modules = [];
       });
 
       // "confirm string" clicked
-      string_editor_map_backend.confirm_string.connect(function() {
+      string_editor_controller.confirm_string.connect(function() {
         // insert string annotation data into string annotation model
-        string_editor_map_backend.update_string_annotation_data(JSON.stringify({
+        string_editor_controller.send_string_annotation_data(JSON.stringify({
           "modules": intersecting_modules,
           "polyline": current_line_string.toGeoJSON()
         }));

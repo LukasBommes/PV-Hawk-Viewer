@@ -17,10 +17,6 @@ class StringEditorView(QWidget):
         self.ui.setupUi(self)
         self.parent = parent
 
-        # register map backend
-        self.map_backend = MapBackend(model, controller)
-        parent.channel.registerObject("string_editor_map_backend", self.map_backend)
-
         self.disable()
 
         # connect signals and slots
@@ -101,75 +97,7 @@ class StringEditorView(QWidget):
         msg.setText(text)
         msg.setIcon(QMessageBox.Critical)
         msg.exec()
-
-
-
-class MapBackend(QObject):
-    drawing_string_changed = Signal(bool)
-    new_string = Signal()
-    cancel_string = Signal()
-    confirm_string = Signal()
-    string_annotation_data_changed = Signal()
-
-    def __init__(self, model, controller, parent=None):
-        super(MapBackend, self).__init__()
-        self.model = model
-        self.controller = controller
-        self.parent = parent
-
-        # connect signals and slots
-        self.model.string_editor_model.drawing_string_changed.connect(self.drawing_string_changed)
-        self.controller.string_editor_controller.new_string.connect(self.new_string)
-        self.controller.string_editor_controller.cancel_string.connect(self.cancel_string)
-        self.controller.string_editor_controller.confirm_string.connect(self.confirm_string)
-        self.model.string_editor_model.string_annotation_data_changed.connect(self.string_annotation_data_changed)
-
-    @Slot(result=str)
-    def get_string_annotation_data(self):
-        """Retrieve string annotation data from model."""
-        if not self.model.dataset_is_open:
-            return json.dumps(None)
-
-        string_annotation_data = self.model.string_editor_model.string_annotation_data
-        if string_annotation_data is None:
-            return json.dumps(None)
-
-        return json.dumps(string_annotation_data)
-
-    @Slot(str)
-    def update_string_annotation_data(self, current_string_data):
-        """Insert current string annotation into string annotation data."""
-        #print("current_string_data", json.loads(current_string_data))
-        current_string_data = json.loads(current_string_data)
-        modules = current_string_data["modules"]
-        polyline = current_string_data["polyline"]
-        string_id = "{}_{}_{}_{}".format(
-            self.model.string_editor_model.tracker_id,
-            self.model.string_editor_model.array_id,
-            self.model.string_editor_model.inverter_id,
-            self.model.string_editor_model.string_id,
-        )
-
-        data = copy.deepcopy(self.model.string_editor_model.string_annotation_data)
-        if data is None:
-            data = {
-                "string_data": {},
-                "plant_id_track_id_mapping": []
-            }
-
-        # insert data of current string (e.g. polyline, contained modules)
-        data["string_data"][string_id] = {
-            "track_ids": [module["track_id"] for module in modules],
-            "polyline": polyline
-        }
-
-        # update plant_id / track_id mapping
-        for module_id, module in enumerate(modules):
-            plant_id = "{}_{:02d}".format(string_id, module_id)
-            data["plant_id_track_id_mapping"].append((plant_id, module["track_id"]))
-
-        self.model.string_editor_model.string_annotation_data = data
-
+    
 
 
 class StringEditorController(QObject):
@@ -177,11 +105,16 @@ class StringEditorController(QObject):
     confirm_string = Signal()
     cancel_string = Signal()
     show_validation_error = Signal(str)
+    drawing_string_changed = Signal(bool)
+    string_annotation_data_changed = Signal()
 
     def __init__(self, model):
         super().__init__()
         self.model = model
-        self.save_dir = os.path.join(self.model.dataset_dir, "annotations")
+        # connect signals and slots
+        self.model.dataset_opened.connect(self.load_annotation_file)
+        self.model.string_editor_model.drawing_string_changed.connect(self.drawing_string_changed)
+        self.model.string_editor_model.string_annotation_data_changed.connect(self.string_annotation_data_changed)
 
     def set_default_values(self):
         self.model.string_editor_model.tracker_id = "00"
@@ -232,29 +165,78 @@ class StringEditorController(QObject):
         ret = self.validate_string_id()
         if ret:
             self.confirm_string.emit()
-            #self.save_annotation_file()
 
-    # def save_annotation_file(self):
-    #     # TODO:
-    #     # - call every time "confirm string" is clicked or when a string is deleted
-    #     print("Saving string annotation to file")
-    #     data = self.model.string_editor_model.string_annotation_data
-    #     if data is None:
-    #         return
-    #     os.makedirs(self.save_dir, exist_ok=True)
-    #     json.dump(data, open(os.path.join(self.save_dir, "string_anotation.json"), "w"))
+    def save_annotation_file(self):
+        # - also call every time a string is deleted
+        print("Saving string annotation to file")
+        if not self.model.dataset_is_open:
+            return
+        data = self.model.string_editor_model.string_annotation_data
+        if data is None:
+            return
+        save_dir = os.path.join(self.model.dataset_dir, "annotations")
+        os.makedirs(save_dir, exist_ok=True)
+        json.dump(data, open(os.path.join(save_dir, "string_anotation.json"), "w"))
 
-    # @Slot()
-    # def load_annotation_file(self):
-    #     # TODO:
-    #     # - connect to dataset_opened signal
-    #     print("Loading string annotation from file")
-    #     try:
-    #         data = json.load(open(os.path.join(self.save_dir, "string_anotation.json"), "r"))
-    #     except FileNotFoundError:
-    #         pass
-    #     else:
-    #         self.model.string_editor_model.string_annotation_data = data
+    @Slot()
+    def load_annotation_file(self):
+        print("Loading string annotation from file")
+        if not self.model.dataset_is_open:
+            return
+        save_dir = os.path.join(self.model.dataset_dir, "annotations")
+        try:
+            data = json.load(open(os.path.join(save_dir, "string_anotation.json"), "r"))
+        except FileNotFoundError:
+            pass
+        else:
+            self.model.string_editor_model.string_annotation_data = data
+
+    @Slot(result=str)
+    def get_string_annotation_data(self):
+        """Retrieve string annotation data from model and send to JS backend."""
+        if not self.model.dataset_is_open:
+            return json.dumps(None)
+
+        string_annotation_data = self.model.string_editor_model.string_annotation_data
+        if string_annotation_data is None:
+            return json.dumps(None)
+
+        return json.dumps(string_annotation_data)
+
+    @Slot(str)
+    def send_string_annotation_data(self, current_string_data):
+        """Insert current string annotation into string annotation data."""
+        #print("current_string_data", json.loads(current_string_data))
+        current_string_data = json.loads(current_string_data)
+        modules = current_string_data["modules"]
+        polyline = current_string_data["polyline"]
+        string_id = "{}_{}_{}_{}".format(
+            self.model.string_editor_model.tracker_id,
+            self.model.string_editor_model.array_id,
+            self.model.string_editor_model.inverter_id,
+            self.model.string_editor_model.string_id,
+        )
+
+        data = copy.deepcopy(self.model.string_editor_model.string_annotation_data)
+        if data is None:
+            data = {
+                "string_data": {},
+                "plant_id_track_id_mapping": []
+            }
+
+        # insert data of current string (e.g. polyline, contained modules)
+        data["string_data"][string_id] = {
+            "track_ids": [module["track_id"] for module in modules],
+            "polyline": polyline
+        }
+
+        # update plant_id / track_id mapping
+        for module_id, module in enumerate(modules):
+            plant_id = "{}_{:02d}".format(string_id, module_id)
+            data["plant_id_track_id_mapping"].append((plant_id, module["track_id"]))
+
+        self.model.string_editor_model.string_annotation_data = data
+        self.save_annotation_file()
 
 
 

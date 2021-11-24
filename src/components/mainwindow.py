@@ -38,6 +38,10 @@ class MainView(QMainWindow):
         self.ui.widget.page().setWebChannel(self.channel)
         self.channel.registerObject("map_view", self.map_view)
 
+        # register string editor controller with web engine
+        #self.map_backend = StringEditorController(model, controller)
+        self.channel.registerObject("string_editor_controller", self.controller.string_editor_controller)
+
         # add colorbar for map view
         self.colorbarView = ColorbarView(self.model, self.controller)
         self.ui.gridLayout.addWidget(self.colorbarView.widget, 1, 0, 1, 1)
