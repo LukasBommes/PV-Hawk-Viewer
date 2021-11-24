@@ -167,7 +167,7 @@ class StringEditorController(QObject):
             self.confirm_string.emit()
 
     def save_annotation_file(self):
-        # - also call every time a string is deleted
+        # TODO: - also call every time a string is deleted
         print("Saving string annotation to file")
         if not self.model.dataset_is_open:
             return
@@ -206,7 +206,6 @@ class StringEditorController(QObject):
     @Slot(str)
     def send_string_annotation_data(self, current_string_data):
         """Insert current string annotation into string annotation data."""
-        #print("current_string_data", json.loads(current_string_data))
         current_string_data = json.loads(current_string_data)
         modules = current_string_data["modules"]
         polyline = current_string_data["polyline"]
@@ -310,7 +309,6 @@ class StringEditorModel(QObject):
     @string_annotation_data.setter
     def string_annotation_data(self, value):
         self._string_annotation_data = value
-        print(self._string_annotation_data)
         self.string_annotation_data_changed.emit()
         
        

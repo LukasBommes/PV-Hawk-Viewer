@@ -56,10 +56,8 @@
     <addaction name="actionSave_Defect_Annotation"/>
     <addaction name="actionClose_Defect_Annotation"/>
     <addaction name="separator"/>
-    <addaction name="actionNew_String_Annotation"/>
-    <addaction name="actionLoad_String_Annotation"/>
-    <addaction name="actionSave_String_Annotation"/>
-    <addaction name="actionClose_String_Annotation"/>
+    <addaction name="actionEdit_Strings"/>
+    <addaction name="actionClose_String_Editor"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
     <addaction name="separator"/>
@@ -147,20 +145,20 @@
     <string>Module Temperatures</string>
    </property>
   </action>
-  <action name="actionNew_String_Annotation">
+  <action name="actionEdit_Strings">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>New String Annotation...</string>
+    <string>Edit Strings...</string>
    </property>
   </action>
-  <action name="actionLoad_String_Annotation">
+  <action name="actionClose_String_Editor">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Load String Annotation...</string>
+    <string>Close String Editor</string>
    </property>
   </action>
   <action name="actionSave_String_Annotation">
