@@ -51,16 +51,7 @@
     <addaction name="actionOpen_Dataset"/>
     <addaction name="actionClose_Dataset"/>
     <addaction name="separator"/>
-    <addaction name="actionNew_Defect_Annotation"/>
-    <addaction name="actionLoad_Defect_Annotation"/>
-    <addaction name="actionSave_Defect_Annotation"/>
-    <addaction name="actionClose_Defect_Annotation"/>
-    <addaction name="separator"/>
-    <addaction name="actionEdit_Strings"/>
-    <addaction name="actionClose_String_Editor"/>
-    <addaction name="separator"/>
     <addaction name="actionQuit"/>
-    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -79,7 +70,21 @@
     </property>
     <addaction name="actionModule_Temperatures"/>
    </widget>
+   <widget class="QMenu" name="menuAnnotation">
+    <property name="title">
+     <string>Annotation</string>
+    </property>
+    <addaction name="actionNew_Defect_Annotation"/>
+    <addaction name="actionLoad_Defect_Annotation"/>
+    <addaction name="actionSave_Defect_Annotation"/>
+    <addaction name="actionClose_Defect_Annotation"/>
+    <addaction name="separator"/>
+    <addaction name="actionAnnotate_Strings"/>
+    <addaction name="actionExport_String_Annotation"/>
+    <addaction name="actionClose_String_Annotation"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuAnnotation"/>
    <addaction name="menuAnalysis"/>
    <addaction name="menuView"/>
    <addaction name="menuHelp"/>
@@ -145,20 +150,20 @@
     <string>Module Temperatures</string>
    </property>
   </action>
-  <action name="actionEdit_Strings">
+  <action name="actionAnnotate_Strings">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Edit Strings...</string>
+    <string>Annotate Strings...</string>
    </property>
   </action>
-  <action name="actionClose_String_Editor">
+  <action name="actionClose_String_Annotation">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Close String Editor</string>
+    <string>Close String Annotation</string>
    </property>
   </action>
   <action name="actionSave_String_Annotation">
@@ -193,12 +198,12 @@
     <string>Close Defect Annotation</string>
    </property>
   </action>
-  <action name="actionClose_String_Annotation">
+  <action name="actionExport_String_Annotation">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Close String Annotation</string>
+    <string>Export String Annotation...</string>
    </property>
   </action>
  </widget>

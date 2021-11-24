@@ -109,8 +109,9 @@ class MainView(QMainWindow):
         self.ui.actionLoad_Defect_Annotation.triggered.connect(self.load_defect_annotation)
         self.ui.actionSave_Defect_Annotation.triggered.connect(self.save_defect_annotation)
         self.ui.actionClose_Defect_Annotation.triggered.connect(self.close_defect_annotation)
-        self.ui.actionEdit_Strings.triggered.connect(self.edit_strings)
-        self.ui.actionClose_String_Editor.triggered.connect(self.close_string_editor)
+        self.ui.actionAnnotate_Strings.triggered.connect(self.annotate_strings)
+        self.ui.actionClose_String_Annotation.triggered.connect(self.close_string_annotation)
+        self.ui.actionExport_String_Annotation.triggered.connect(self.export_string_annotation)
         self.ui.actionModule_Temperatures.triggered.connect(self.show_analysis_module_temperatures)
         self.ui.menuView.addAction(self.dataSourcesWidget.toggleViewAction())
         self.ui.menuView.addAction(self.stringEditorWidget.toggleViewAction())
@@ -174,8 +175,9 @@ class MainView(QMainWindow):
         self.ui.actionModule_Temperatures.setEnabled(True)
         self.ui.actionNew_Defect_Annotation.setEnabled(True)
         self.ui.actionLoad_Defect_Annotation.setEnabled(True)
-        self.ui.actionEdit_Strings.setEnabled(True)
-        self.ui.actionClose_String_Editor.setEnabled(False)
+        self.ui.actionAnnotate_Strings.setEnabled(True)
+        self.ui.actionExport_String_Annotation.setEnabled(True)
+        self.ui.actionClose_String_Annotation.setEnabled(False)
         self.ui.statusBar.showMessage("Dataset opened", 5000)
 
     def dataset_closed(self):
@@ -186,8 +188,9 @@ class MainView(QMainWindow):
         self.ui.actionLoad_Defect_Annotation.setEnabled(False)
         self.ui.actionSave_Defect_Annotation.setEnabled(False)
         self.ui.actionClose_Defect_Annotation.setEnabled(False)
-        self.ui.actionEdit_Strings.setEnabled(False)
-        self.ui.actionClose_String_Editor.setEnabled(False)
+        self.ui.actionAnnotate_Strings.setEnabled(False)
+        self.ui.actionExport_String_Annotation.setEnabled(False)
+        self.ui.actionClose_String_Annotation.setEnabled(False)
         self.ui.statusBar.showMessage("Dataset closed", 5000)
 
     @Slot(object)
@@ -207,23 +210,26 @@ class MainView(QMainWindow):
 
     @Slot(str)
     def app_mode_changed(self, app_mode):
+        print("app_mode ", app_mode)
         if app_mode == "defect_annotation":
             self.annotationEditorWidget.show()
+            self.annotationEditorWidget.setEnabled(True)
             self.ui.actionClose_Defect_Annotation.setEnabled(True)
             self.defect_annotation_has_changes(False)
         else:
             self.annotationEditorWidget.hide()
+            self.annotationEditorWidget.setEnabled(False)
             self.ui.actionSave_Defect_Annotation.setEnabled(False)
             self.ui.actionClose_Defect_Annotation.setEnabled(False)
 
         if app_mode == "string_annotation":
             self.stringEditorWidget.show()
-            self.ui.actionEdit_Strings.setEnabled(False)
-            self.ui.actionClose_String_Editor.setEnabled(True)
+            self.stringEditorWidget.setEnabled(True)
+            self.ui.actionClose_String_Annotation.setEnabled(True)
         else:
             self.stringEditorWidget.hide()
-            self.ui.actionEdit_Strings.setEnabled(True)
-            self.ui.actionClose_String_Editor.setEnabled(False)
+            self.stringEditorWidget.setEnabled(False)
+            self.ui.actionClose_String_Annotation.setEnabled(False)
 
         if app_mode is None or app_mode == "data_visualization":
             self.setWindowTitle("PV Mapper")
@@ -260,11 +266,15 @@ class MainView(QMainWindow):
         self.controller.close_defect_annotation.emit()
 
     @Slot()
-    def edit_strings(self):
+    def annotate_strings(self):
         self.model.app_mode = "string_annotation"
 
     @Slot()
-    def close_string_editor(self):
+    def export_string_annotation(self):
+        self.controller.export_string_annotation.emit()
+
+    @Slot()
+    def close_string_annotation(self):
         self.model.app_mode = "data_visualization"
 
     @Slot()
@@ -298,6 +308,7 @@ class MainController(QObject):
     save_defect_annotation = Signal()
     load_defect_annotation = Signal()
     close_defect_annotation = Signal()
+    export_string_annotation = Signal()
     mainwindow_close_requested = Signal(object)
     dataset_close_requested = Signal()
 

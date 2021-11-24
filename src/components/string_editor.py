@@ -2,7 +2,7 @@ import os
 import json
 import copy
 
-from PySide6.QtWidgets import QWidget, QMessageBox
+from PySide6.QtWidgets import QWidget, QMessageBox, QFileDialog
 from PySide6.QtCore import Slot, Signal, QObject
 
 from src.ui.ui_string_editor import Ui_StringEditor
@@ -38,6 +38,8 @@ class StringEditorView(QWidget):
         self.model.string_editor_model.inverter_id_changed.connect(self.ui.lineEditInverterID.setText)
         self.ui.lineEditStringID.textChanged.connect(lambda value: setattr(self.model.string_editor_model, 'string_id', value))
         self.model.string_editor_model.string_id_changed.connect(self.ui.lineEditStringID.setText)
+
+        self.controller.export_string_annotation.connect(self.controller.string_editor_controller.export_string_annotation)
 
         # set default values
         # TODO: remove this and connect to dataset open/close handlers
@@ -190,6 +192,25 @@ class StringEditorController(QObject):
             pass
         else:
             self.model.string_editor_model.string_annotation_data = data
+
+    @Slot()
+    def export_string_annotation(self):
+        """Export current string annotation data to a user selected file."""
+        file_name, _ = QFileDialog.getSaveFileName(
+            None, "Export String Annotation", "", "", "JSON Files (*.json)")
+        if file_name == "":
+            return
+        
+        # make sure filename has JSON extension
+        file_name = ".".join([os.path.splitext(file_name)[0], "json"])
+
+        data = self.model.string_editor_model.string_annotation_data
+        if data is None:
+            return
+        
+        print("Exporting string annotation to ", file_name)
+        json.dump(data, open(file_name, "w"))
+        
 
     @Slot(result=str)
     def get_string_annotation_data(self):
