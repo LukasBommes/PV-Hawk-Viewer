@@ -488,7 +488,7 @@ class MainModel(QObject):
     source_names_changed = Signal(object)
     selected_source_changed = Signal(str)
     selected_column_changed = Signal(int)
-    track_id_changed = Signal(str)
+    track_id_changed = Signal(str, str)
     patch_idx_changed = Signal(int)
     dataset_stats_changed = Signal(object)
     app_mode_changed = Signal(str)
@@ -536,9 +536,10 @@ class MainModel(QObject):
 
     @track_id.setter
     def track_id(self, value):
+        track_id_prev = self._track_id
         self._track_id = value
         self._patch_idx = 0
-        self.track_id_changed.emit(value)
+        self.track_id_changed.emit(track_id_prev, value)
         self.patch_idx_changed.emit(value)
 
     @property

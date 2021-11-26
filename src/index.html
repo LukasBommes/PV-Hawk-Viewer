@@ -20,7 +20,6 @@
       var string_editor_controller = channel.objects.string_editor_controller;
       var modules_geojson = null;
       var data_prev = null;
-      var active_module;
       var annotation_data = null;
       var string_annotation_data = null;
       var string_annotation_lines = null;
@@ -45,35 +44,20 @@
         highlight_string(selected_string_id);
       });
 
-      resetMap();
+      reset_map();
 
-      function resetMap() {
+      function reset_map() {
         map.setView(new L.LatLng(48.1, 11.5), 8);
       }
 
       // callback when module is clicked
-      function moduleClicked(e) {
-        var layer = e.target;
-        const track_id = layer.feature.properties.track_id;
+      function module_clicked(event) {
+        const track_id = event.target.feature.properties.track_id;
         map_view.printObj(JSON.stringify("Clicked on module " + track_id));
-
-        // highlight active module
-        if (active_module) {
-          modules_geojson.resetStyle(active_module);
-        }
-        active_module = layer;
-        layer.setStyle({
-            color: 'red',
-            fillColor: 'red'
-        });
-
-        draw_defect_annotations();
-        //loadPatches(track_id);
-
         map_view.set_track_id(JSON.stringify(track_id));
       }
 
-      function drawData(data, fit_map_bounds) {
+      function draw_data(data, fit_map_bounds) {
         // do not redraw if data has not changed
         if (data == data_prev) { 
           map_view.printObj(JSON.stringify("Data has not changed, not redrawing"));
@@ -94,8 +78,10 @@
         // draw PV modules on map
         modules_geojson = L.geoJSON(js_data.data, {
           onEachFeature: function(feature, layer) {
+            layer._leaflet_id = feature.properties.track_id;
+            //layer.track_id = layer.feature.properties.track_id;
             layer.on({
-              click: moduleClicked
+              click: module_clicked
             });
           },
           filter: function(feature, layer) {
@@ -126,22 +112,38 @@
       //  Draw modules and analysis data
       //*****************************************************************
 
-      // wait for modules to be updated
+      // draw modules whenever dataset changes
       map_view.dataset_changed.connect(function(fit_map_bounds) {
           map_view.printObj(JSON.stringify("Loading dataset in JS."));
 
           // draw modules + data
           map_view.get_data(function(data) {
-            drawData(data, fit_map_bounds);
+            draw_data(data, fit_map_bounds);
           });
       });
 
+      // clear modules when dataset is closed
       map_view.dataset_closed.connect(function() {
         map_view.printObj(JSON.stringify("Closing dataset, clearing data in JS"));
         map.removeLayer(modules_geojson);
         modules_geojson = null;
         data_prev = null;
-        resetMap();
+        reset_map();
+      });
+
+      // highlight currently selected module
+      map_view.track_id_changed.connect(function(track_id_prev, track_id) {
+        if (modules_geojson === null) { return; }
+        if (track_id_prev) {
+          var layer = modules_geojson.getLayer(track_id_prev);
+          modules_geojson.resetStyle(layer);
+        }
+        var layer = modules_geojson.getLayer(track_id);
+        layer.setStyle({
+          color: 'red',
+          fillColor: 'red'
+        });
+        draw_defect_annotations();
       });
 
       //*****************************************************************

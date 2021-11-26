@@ -14,6 +14,7 @@ class MapView(QObject):
     dataset_changed = Signal(bool)  # signals for notification of Javascript
     dataset_closed = Signal()
     annotation_data_changed = Signal()
+    track_id_changed = Signal(str, str)
 
     def __init__(self, model, controller, parent=None):
         super(MapView, self).__init__()
@@ -32,6 +33,7 @@ class MapView(QObject):
 
         # defect annotation editor
         self.model.annotation_editor_model.annotation_data_changed.connect(self.annotation_data_changed)
+        self.model.track_id_changed.connect(self.track_id_changed)
 
     @Slot(str)
     def printObj(self, obj):
