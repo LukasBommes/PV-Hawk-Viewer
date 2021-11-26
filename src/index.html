@@ -41,7 +41,6 @@
         map_view.printObj(JSON.stringify("Clicked on map"));
         var selected_string_id = null;
         string_editor_controller.set_selected_string_id(JSON.stringify(selected_string_id));
-        highlight_string(selected_string_id);
       });
 
       reset_map();
@@ -206,7 +205,6 @@
         map_view.printObj(JSON.stringify("String clicked"));
         var selected_string_id = event.target.string_id;
         string_editor_controller.set_selected_string_id(JSON.stringify(selected_string_id));
-        highlight_string(selected_string_id);
         L.DomEvent.stopPropagation(event);
       }
 
@@ -250,24 +248,29 @@
       })
 
       // string selection changed
-      string_editor_controller.selected_string_id_changed.connect(function(string_id) {
-        map_view.printObj(JSON.stringify("selected_string_id_changed"));
-        map_view.printObj(JSON.stringify(string_id));
-      })
-
-      function highlight_string(selected_string_id) {
+      string_editor_controller.selected_string_id_changed.connect(function(selected_string_id_prev, selected_string_id) {
+        map_view.printObj(JSON.stringify("selected_string_id_changed " + selected_string_id + " " + selected_string_id_prev));
         if (modules_geojson === null) { return; }
         if (string_annotation_data === null) { return; }
-        // reset highlighting
-        // ...
-        map_view.printObj(JSON.stringify("resetting string highlighting"));
-
-        if (selected_string_id !== null) {
-          // get other modules of that string
-          // highlight those modules
-          map_view.printObj(JSON.stringify("highlighting string"));
+        // reset highlighting of previous selected string
+        if (selected_string_id_prev) {
+          for (track_id of string_annotation_data.string_data[selected_string_id_prev].track_ids) {
+            var layer = modules_geojson.getLayer(track_id);
+            modules_geojson.resetStyle(layer);
+          }
         }
-      }
+        // highlight selected string
+        if (selected_string_id) {
+          for (track_id of string_annotation_data.string_data[selected_string_id].track_ids) {
+            var layer = modules_geojson.getLayer(track_id);
+            layer.setStyle({
+              color: '#9673ba',
+              fillColor: '#9673ba'
+            });
+          }
+        }
+        draw_defect_annotations();
+      });
 
       //*****************************************************************
       //  Handle string annotation

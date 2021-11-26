@@ -116,7 +116,7 @@ class StringEditorController(QObject):
     confirm_string = Signal()
     cancel_string = Signal()
     show_validation_error = Signal(str)
-    selected_string_id_changed = Signal(str)
+    selected_string_id_changed = Signal(str, str)
     drawing_string_changed = Signal(bool)
     string_annotation_data_changed = Signal()
 
@@ -308,7 +308,7 @@ class StringEditorModel(QObject):
     array_id_changed = Signal(str)
     inverter_id_changed = Signal(str)
     string_id_changed = Signal(str)
-    selected_string_id_changed = Signal(str)
+    selected_string_id_changed = Signal(str, str)
     drawing_string_changed = Signal(bool)
     string_annotation_data_changed = Signal()
 
@@ -374,8 +374,9 @@ class StringEditorModel(QObject):
 
     @selected_string_id.setter
     def selected_string_id(self, value):
+        selected_string_id_prev = self._selected_string_id
         self._selected_string_id = value
-        self.selected_string_id_changed.emit(value)
+        self.selected_string_id_changed.emit(selected_string_id_prev, value)
 
     @property
     def string_annotation_data(self):
