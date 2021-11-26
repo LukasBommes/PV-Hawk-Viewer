@@ -43,6 +43,30 @@
         map.setView(new L.LatLng(48.1, 11.5), 8);
       }
 
+      var active_module;
+
+      // callback when module is clicked
+      function moduleClicked(e) {
+        var layer = e.target;
+        const track_id = layer.feature.properties.track_id;
+        map_view.printObj(JSON.stringify("Clicked on module " + track_id));
+
+        // highlight active module
+        if (active_module) {
+          modules_geojson.resetStyle(active_module);
+        }
+        active_module = layer;
+        layer.setStyle({
+            color: 'red',
+            fillColor: 'red'
+        });
+
+        draw_defect_annotations();
+        //loadPatches(track_id);
+
+        map_view.set_track_id(JSON.stringify(track_id));
+      }
+
       function drawData(data, fit_map_bounds) {
         // do not redraw if data has not changed
         if (data == data_prev) { 
@@ -55,37 +79,6 @@
         js_data = JSON.parse(data);
         if (js_data.data.length === 0) { return; }
 
-        var active_module;
-
-        // callback when module is clicked
-        function moduleClicked(e) {
-          var layer = e.target;
-          const track_id = layer.feature.properties.track_id;
-          map_view.printObj(JSON.stringify("Clicked on module " + track_id));
-
-          // highlight active module
-          if (active_module) {
-            modules_geojson.resetStyle(active_module);
-          }
-          active_module = layer;
-          layer.setStyle({
-              color: 'red',
-              fillColor: 'red'
-          });
-
-          draw_defect_annotations();
-          //loadPatches(track_id);
-
-          // update source frame and patches
-          map_view.update_images(JSON.stringify(track_id));
-        }
-
-        function onEachFeature(feature, layer) {
-          layer.on({
-              click: moduleClicked
-          });
-        }
-
         // clear map
         if (modules_geojson !== null) {
           map_view.printObj(JSON.stringify("Deleting modules_geojson"));
@@ -94,7 +87,11 @@
 
         // draw PV modules on map
         modules_geojson = L.geoJSON(js_data.data, {
-          onEachFeature: onEachFeature,
+          onEachFeature: function(feature, layer) {
+            layer.on({
+              click: moduleClicked
+            });
+          },
           filter: function(feature, layer) {
             return (feature.geometry.type == "Polygon");
           },
@@ -195,6 +192,11 @@
         string_annotation_labels = null;
       }
 
+      function handle_string_clicked(event) {
+        map_view.printObj(JSON.stringify("String clicked"));
+        string_editor_controller.set_selected_string_id(JSON.stringify(event.target.string_id));
+      }
+
       function draw_string_annotations() {
         reset_string_annotations();
         if (string_annotation_data === null) {
@@ -205,17 +207,21 @@
         var labels = [];
         for (const [string_id, data] of Object.entries(string_annotation_data.string_data)) {
           // polyline
-          var line = new L.geoJSON(data.polyline, {style: {weight: 1, opacity: 1, color: '#636363'}});
+          var line = new L.geoJSON(data.polyline, {style: {weight: 2, opacity: 1, color: '#636363'}});
+          line.string_id = string_id;
+          line.on('click', handle_string_clicked);
           lines.push(line);
-          // string ID label
+          // string ID label as SVG
           var label_svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
           label_svg.setAttribute('xmlns', "http://www.w3.org/2000/svg");
           label_svg.setAttribute('viewBox', "0 0 200 200");          
-          label_svg.setAttribute('style', "font-size: 8em; fill: #636363; overflow: visible;");
+          label_svg.setAttribute('style', "font-size: 10em; fill: #636363; overflow: visible;");
           label_svg.innerHTML = '<text x="100" y="100" text-anchor="middle" alignment-baseline="central" class="string_annotation_label">' + string_id + '</text>';
           var center = line.getBounds().getCenter();
-          var bounds = L.latLngBounds([center.lat - 0.00001, center.lng - 0.00001], [center.lat + 0.00001, center.lng + 0.00001])
-          var label = new L.svgOverlay(label_svg, bounds);
+          var bounds = L.latLngBounds([center.lat - 0.000005, center.lng - 0.00001], [center.lat + 0.000005, center.lng + 0.00001])
+          var label = new L.svgOverlay(label_svg, bounds, {interactive: true});
+          label.string_id = string_id;
+          label.on('click', handle_string_clicked);
           labels.push(label);
         }
         string_annotation_lines = L.layerGroup(lines).addTo(map);

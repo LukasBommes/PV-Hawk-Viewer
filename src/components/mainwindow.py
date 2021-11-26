@@ -138,8 +138,8 @@ class MainView(QMainWindow):
         self.model.app_mode = None
 
         # for development
-        dir = "/home/lukas/HI-ERN-2020/Dataset-Viewer-Georeferencing-Desktop/test_data"
-        self.controller.open_dataset(dir)
+        #dir = "/home/lukas/HI-ERN-2020/Dataset-Viewer-Georeferencing-Desktop/test_data"
+        #self.controller.open_dataset(dir)
 
     def valid_dataset(self, dir):
         probe_dirs = get_immediate_subdirectories(dir)

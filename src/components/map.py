@@ -64,7 +64,7 @@ class MapView(QObject):
         })
 
     @Slot(str)
-    def update_images(self, track_id):
+    def set_track_id(self, track_id):
         self.model.track_id = json.loads(track_id)
 
     @Slot(result=str)
