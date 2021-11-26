@@ -261,12 +261,16 @@ class MainView(QMainWindow):
 
     @Slot()
     def close_defect_annotation(self):
-        # TODO: emit the close_defect_annotation signal when creating a new (or loading) a string annotation
         self.controller.close_defect_annotation.emit()
 
     @Slot()
     def annotate_strings(self):
+        if self.model.app_mode == "defect_annotation":
+            self.controller.close_defect_annotation.emit()
         self.model.app_mode = "string_annotation"
+        # remark on line above: in close defect annotation app mode is set to
+        # "data_visualization". Nothing guarantees that the subsequent line
+        # is executed after the app mode was set to "data_visualization".
 
     @Slot()
     def export_string_annotation(self):
