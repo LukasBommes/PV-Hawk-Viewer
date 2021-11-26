@@ -20,6 +20,7 @@
       var string_editor_controller = channel.objects.string_editor_controller;
       var modules_geojson = null;
       var data_prev = null;
+      var active_module;
       var annotation_data = null;
       var string_annotation_data = null;
       var string_annotation_lines = null;
@@ -37,13 +38,18 @@
           wheelPxPerZoomLevel: 70,
       }).addTo(map);
 
+      map.on('click', () => {
+        map_view.printObj(JSON.stringify("Clicked on map"));
+        var selected_string_id = null;
+        string_editor_controller.set_selected_string_id(JSON.stringify(selected_string_id));
+        highlight_string(selected_string_id);
+      });
+
       resetMap();
 
       function resetMap() {
         map.setView(new L.LatLng(48.1, 11.5), 8);
       }
-
-      var active_module;
 
       // callback when module is clicked
       function moduleClicked(e) {
@@ -132,10 +138,10 @@
 
       map_view.dataset_closed.connect(function() {
         map_view.printObj(JSON.stringify("Closing dataset, clearing data in JS"));
-          map.removeLayer(modules_geojson);
-          modules_geojson = null;
-          data_prev = null;
-          resetMap();
+        map.removeLayer(modules_geojson);
+        modules_geojson = null;
+        data_prev = null;
+        resetMap();
       });
 
       //*****************************************************************
@@ -143,6 +149,7 @@
       //*****************************************************************
 
       function reset_defect_annotations() {
+        if (modules_geojson === null) { return; }
         modules_geojson.eachLayer(function (layer) {
           var fill_color = layer.options.fillColor;
           layer.setStyle({color: fill_color, fillColor: fill_color, weight: 1});
@@ -150,6 +157,7 @@
       }
 
       function draw_defect_annotations() {
+        if (modules_geojson === null) { return; }
         if (annotation_data === null) { 
           reset_defect_annotations();
           return;
@@ -194,14 +202,15 @@
 
       function handle_string_clicked(event) {
         map_view.printObj(JSON.stringify("String clicked"));
-        string_editor_controller.set_selected_string_id(JSON.stringify(event.target.string_id));
+        var selected_string_id = event.target.string_id;
+        string_editor_controller.set_selected_string_id(JSON.stringify(selected_string_id));
+        highlight_string(selected_string_id);
+        L.DomEvent.stopPropagation(event);
       }
 
       function draw_string_annotations() {
         reset_string_annotations();
-        if (string_annotation_data === null) {
-          return;
-        }
+        if (string_annotation_data === null) { return; }
         map_view.printObj(JSON.stringify("Drawing string annotations."));
         var lines = [];
         var labels = [];
@@ -238,6 +247,26 @@
         }); 
       })
 
+      // string selection changed
+      string_editor_controller.selected_string_id_changed.connect(function(string_id) {
+        map_view.printObj(JSON.stringify("selected_string_id_changed"));
+        map_view.printObj(JSON.stringify(string_id));
+      })
+
+      function highlight_string(selected_string_id) {
+        if (modules_geojson === null) { return; }
+        if (string_annotation_data === null) { return; }
+        // reset highlighting
+        // ...
+        map_view.printObj(JSON.stringify("resetting string highlighting"));
+
+        if (selected_string_id !== null) {
+          // get other modules of that string
+          // highlight those modules
+          map_view.printObj(JSON.stringify("highlighting string"));
+        }
+      }
+
       //*****************************************************************
       //  Handle string annotation
       //*****************************************************************
@@ -247,6 +276,7 @@
 
       // perform string annotation
       function handle_line_drawing(event) {
+        if (modules_geojson === null) { return; }
         intersecting_modules = [];
 
         var click_point = turf.point([event.latlng.lng, event.latlng.lat]);

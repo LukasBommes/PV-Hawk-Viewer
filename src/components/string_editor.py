@@ -20,7 +20,6 @@ class StringEditorView(QWidget):
         self.disable()
 
         # connect signals and slots
-        # TODO: handle opening and closing of dataset, e.g. set defautl values, reset string annotation data
         self.ui.pushButtonNewString.clicked.connect(self.new_string)
         self.ui.pushButtonCancelString.clicked.connect(self.cancel_string)
         self.ui.pushButtonConfirmString.clicked.connect(self.confirm_string)
@@ -117,6 +116,7 @@ class StringEditorController(QObject):
     confirm_string = Signal()
     cancel_string = Signal()
     show_validation_error = Signal(str)
+    selected_string_id_changed = Signal(str)
     drawing_string_changed = Signal(bool)
     string_annotation_data_changed = Signal()
 
@@ -125,6 +125,7 @@ class StringEditorController(QObject):
         self.model = model
         # connect signals and slots
         self.model.dataset_opened.connect(self.load_annotation_file)
+        self.model.string_editor_model.selected_string_id_changed.connect(self.selected_string_id_changed)
         self.model.string_editor_model.drawing_string_changed.connect(self.drawing_string_changed)
         self.model.string_editor_model.string_annotation_data_changed.connect(self.string_annotation_data_changed)
 
@@ -249,7 +250,6 @@ class StringEditorController(QObject):
         
         print("Exporting string annotation to ", file_name)
         json.dump(data, open(file_name, "w"))
-
 
     @Slot(str)
     def set_selected_string_id(self, selected_string_id):
