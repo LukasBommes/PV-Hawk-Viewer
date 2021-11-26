@@ -153,6 +153,7 @@
       }
 
       function draw_defect_annotations() {
+        map_view.printObj(JSON.stringify(annotation_data));
         if (annotation_data === null) { 
           reset_defect_annotations();
           return;

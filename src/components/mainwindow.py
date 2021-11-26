@@ -5,7 +5,6 @@ import shutil
 import pickle
 import datetime
 import numpy as np
-import networkx
 
 from PySide6.QtWidgets import QMainWindow, QToolBar, QDockWidget, \
     QMessageBox, QFileDialog, QLabel

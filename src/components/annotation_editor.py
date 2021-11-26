@@ -17,7 +17,6 @@ class AnnotationEditorView(QWidget):
         self.ui.setupUi(self)
         self.loadDefectsScheme()
         # connect signals and slots
-        self.model.dataset_opened.connect(self.controller.annotation_editor_controller.set_annotation_data)
         self.model.track_id_changed.connect(self.enable_disable)
         self.model.app_mode_changed.connect(self.enable_disable)
         self.model.track_id_changed.connect(self.update_checkbox_states)

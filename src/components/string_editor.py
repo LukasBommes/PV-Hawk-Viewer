@@ -24,10 +24,6 @@ class StringEditorView(QWidget):
         self.ui.pushButtonNewString.clicked.connect(self.new_string)
         self.ui.pushButtonCancelString.clicked.connect(self.cancel_string)
         self.ui.pushButtonConfirmString.clicked.connect(self.confirm_string)
-        self.controller.string_editor_controller.show_validation_error.connect(self.show_validation_error)
-        self.controller.string_editor_controller.confirm_string.connect(self.disable)
-        self.controller.string_editor_controller.confirm_string.connect(self.controller.string_editor_controller.reset_temp_string_data)
-
         self.ui.pushButtonStartDrawing.clicked.connect(self.start_drawing)
         self.ui.pushButtonEndDrawing.clicked.connect(self.end_drawing)
         self.ui.lineEditTrackerID.textChanged.connect(lambda value: setattr(self.model.string_editor_model, 'tracker_id', value))
@@ -39,11 +35,12 @@ class StringEditorView(QWidget):
         self.ui.lineEditStringID.textChanged.connect(lambda value: setattr(self.model.string_editor_model, 'string_id', value))
         self.model.string_editor_model.string_id_changed.connect(self.ui.lineEditStringID.setText)
 
+        self.controller.string_editor_controller.show_validation_error.connect(self.show_validation_error)
+        self.controller.string_editor_controller.confirm_string.connect(self.disable)
         self.controller.export_string_annotation.connect(self.controller.string_editor_controller.export_string_annotation)
-
-        # set default values
-        # TODO: remove this and connect to dataset open/close handlers
-        self.controller.string_editor_controller.set_default_values()
+        self.model.dataset_opened.connect(self.controller.string_editor_controller.set_default_values)
+        self.model.dataset_closed.connect(self.controller.string_editor_controller.reset_temp_string_data)
+        self.model.dataset_closed.connect(self.controller.string_editor_controller.reset_string_annotation_data)
 
     def disable(self):
         self.ui.pushButtonStartDrawing.setEnabled(False)
@@ -128,6 +125,10 @@ class StringEditorController(QObject):
     def reset_temp_string_data(self):
         self.model.string_editor_model.drawing_string = False
 
+    @Slot()
+    def reset_string_annotation_data(self):
+        self.model.string_editor_model.string_annotation_data = None
+
     def is_valid(self, value):
         return isinstance(value, str) and value.isalnum() and (len(value) == 2 or len(value) == 3)
 
@@ -167,6 +168,7 @@ class StringEditorController(QObject):
         ret = self.validate_string_id()
         if ret:
             self.confirm_string.emit()
+            self.reset_temp_string_data()
 
     def save_annotation_file(self):
         # TODO: - also call every time a string is deleted
