@@ -19,7 +19,6 @@
       var map_view = channel.objects.map_view;
       var string_editor_controller = channel.objects.string_editor_controller;
       var modules_geojson = null;
-      var data_prev = null;
       var annotation_data = null;
       var string_annotation_data = null;
       var string_annotation_lines = null;
@@ -57,15 +56,8 @@
       }
 
       function draw_data(data, fit_map_bounds) {
-        // do not redraw if data has not changed
-        if (data == data_prev) { 
-          map_view.printObj(JSON.stringify("Data has not changed, not redrawing"));
-          return; 
-        }
-        map_view.printObj(JSON.stringify("Data changed, redrawing"));
-        data_prev = data;
-
         js_data = JSON.parse(data);
+        if (js_data === null) { return; }
         if (js_data.data.length === 0) { return; }
 
         // clear map
@@ -126,7 +118,6 @@
         map_view.printObj(JSON.stringify("Closing dataset, clearing data in JS"));
         map.removeLayer(modules_geojson);
         modules_geojson = null;
-        data_prev = null;
         reset_map();
       });
 

@@ -27,9 +27,7 @@ class MapView(QObject):
         self.controller.source_deleted.connect(self.dataset_closed)
         self.model.dataset_closed.connect(self.dataset_closed)
         self.model.dataset_opened.connect(lambda: self.dataset_changed.emit(True))
-
         self.model.selected_source_changed.connect(lambda: self.dataset_changed.emit(True))
-
         self.model.selected_column_changed.connect(lambda: self.dataset_changed.emit(False))
         self.model.map_model.colormap_changed.connect(lambda: self.dataset_changed.emit(False))
 
@@ -39,6 +37,8 @@ class MapView(QObject):
         # defect annotation editor
         self.model.annotation_editor_model.annotation_data_changed.connect(self.annotation_data_changed)
         self.model.track_id_changed.connect(self.track_id_changed)
+
+        self.current_map_data = None
 
     @Slot(str)
     def printObj(self, obj):
@@ -65,10 +65,17 @@ class MapView(QObject):
             else:
                 default_color = "#ff7800"
                 colors = {track_id: default_color for track_id in self.model.track_ids}
-        return json.dumps({
+        map_data = {
             "data": data,
             "colors": colors
-        })
+        }
+        if map_data != self.current_map_data:
+            print("Data changed, redrawing")
+            self.current_map_data = map_data
+            return json.dumps(map_data)
+        else:
+            print("Data has not changed, not redrawing")
+            return json.dumps(None)
 
     @Slot(str)
     def set_track_id(self, track_id):
