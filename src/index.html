@@ -55,10 +55,8 @@
         map_view.set_track_id(JSON.stringify(track_id));
       }
 
-      function draw_data(data, fit_map_bounds) {
-        js_data = JSON.parse(data);
-        if (js_data === null) { return; }
-        if (js_data.data.length === 0) { return; }
+      function draw_data(data, colors, fit_map_bounds) {
+        if (data.length === 0) { return; }
 
         // clear map
         if (modules_geojson !== null) {
@@ -67,7 +65,7 @@
         }
 
         // draw PV modules on map
-        modules_geojson = L.geoJSON(js_data.data, {
+        modules_geojson = L.geoJSON(data, {
           onEachFeature: function(feature, layer) {
             layer._leaflet_id = feature.properties.track_id;
             //layer.track_id = layer.feature.properties.track_id;
@@ -79,7 +77,7 @@
             return (feature.geometry.type == "Polygon");
           },
           style: function(feature) {
-            var color = js_data.colors[feature.properties.track_id];
+            var color = colors[feature.properties.track_id];
             return {
               "color": color,
               "fillColor": color,
@@ -109,7 +107,9 @@
 
           // draw modules + data
           map_view.get_data(function(data) {
-            draw_data(data, fit_map_bounds);
+            var map_data = JSON.parse(data);
+            if (map_data === null) { return; }
+            draw_data(map_data.data, map_data.colors, fit_map_bounds);
           });
       });
 
