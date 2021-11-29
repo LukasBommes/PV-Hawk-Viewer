@@ -290,13 +290,16 @@ class MainView(QMainWindow):
         self.module_temperatures_window.show()
 
     def about(self):
+        gh = "LukasBommes/Dataset-Viewer"
+        about_text = "Dataset Viewer for PV-Mapper<br><br>" \
+            + "Author: Lukas Bommes<br>" \
+            + "Organization: Helmholtz Institute Erlangen-Nürnberg for Renewable Energy (HI ERN)<br>" \
+            + "GitHub: " \
+            + "<a href='https://github.com/{gh}'>{gh}</a><br>".format(gh=gh)
         QMessageBox.about(
             self,
-            "About Sample Editor",
-            "<p>A sample text editor app built with:</p>"
-            "<p>- PyQt</p>"
-            "<p>- Qt Designer</p>"
-            "<p>- Python</p>",
+            "About Dateset Viewer for PV-Mapper",
+            about_text
         )
 
     def closeEvent(self, event):
