@@ -28,9 +28,6 @@ class MapView(QObject):
         self.model.dataset_closed.connect(self.dataset_closed)
         self.model.dataset_opened.connect(lambda: self.dataset_changed.emit(True))
         self.model.selected_column_changed.connect(lambda: self.dataset_changed.emit(False))
-
-        #self.model.map_model.min_val_changed.connect(lambda: self.dataset_changed.emit(False))
-        #self.model.map_model.max_val_changed.connect(lambda: self.dataset_changed.emit(False))
         self.model.map_model.colormap_changed.connect(lambda: self.dataset_changed.emit(False))
 
         # signal for explicitly redrawing themap
