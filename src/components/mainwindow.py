@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QMainWindow, QToolBar, QDockWidget, \
     QMessageBox, QFileDialog, QLabel
 from PySide6.QtCore import Qt, Slot, QUrl, QDir, Signal, QObject
 from PySide6.QtWebChannel import QWebChannel
+from PySide6.QtGui import QIcon
 
 from src.common import get_immediate_subdirectories
 
@@ -31,6 +32,18 @@ class MainView(QMainWindow):
         self.model = model
         self.controller = controller
 
+        # add icons QStyle.SP_MessageBoxCritical
+        self.ui.actionOpen_Dataset.setIcon(QIcon.fromTheme("document-open"))
+        self.ui.actionClose_Dataset.setIcon(QIcon.fromTheme("window-close"))
+        self.ui.actionQuit.setIcon(QIcon.fromTheme("application-exit"))
+        self.ui.actionNew_Defect_Annotation.setIcon(QIcon.fromTheme("document-new"))
+        self.ui.actionLoad_Defect_Annotation.setIcon(QIcon.fromTheme("document-open"))
+        self.ui.actionSave_Defect_Annotation.setIcon(QIcon.fromTheme("document-save"))
+        self.ui.actionClose_Defect_Annotation.setIcon(QIcon.fromTheme("window-close"))
+        self.ui.actionExport_String_Annotation.setIcon(QIcon.fromTheme("document-save"))
+        self.ui.actionClose_String_Annotation.setIcon(QIcon.fromTheme("window-close"))
+        self.ui.actionAbout.setIcon(QIcon.fromTheme("help-about"))        
+        
         # register map view
         self.map_view = MapView(model, controller, parent=self)
         self.channel = QWebChannel(self.ui.widget.page())

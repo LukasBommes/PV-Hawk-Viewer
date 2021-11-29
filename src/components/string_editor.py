@@ -4,6 +4,7 @@ import copy
 
 from PySide6.QtWidgets import QWidget, QMessageBox, QFileDialog
 from PySide6.QtCore import Slot, Signal, QObject
+from PySide6.QtGui import QIcon
 
 from src.ui.ui_string_editor import Ui_StringEditor
 
@@ -16,6 +17,9 @@ class StringEditorView(QWidget):
         self.ui = Ui_StringEditor()
         self.ui.setupUi(self)
         self.parent = parent
+        # setup icons
+        self.ui.pushButtonNewString.setIcon(QIcon.fromTheme("list-add"))
+        self.ui.pushButtonDeleteString.setIcon(QIcon.fromTheme("list-remove"))
 
         self.disable()
 

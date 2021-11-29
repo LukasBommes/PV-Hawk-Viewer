@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QWidget, QMessageBox
 from PySide6.QtCore import Slot
+from PySide6.QtGui import QIcon
 
 from src.ui.ui_data_sources import Ui_DataSources
 
@@ -12,6 +13,10 @@ class DataSourcesView(QWidget):
         self.parent = parent
         self.ui = Ui_DataSources()
         self.ui.setupUi(self)
+        # setup icons
+        self.ui.pushButtonNewAnalysis.setIcon(QIcon.fromTheme("list-add"))
+        self.ui.pushButtonDelete.setIcon(QIcon.fromTheme("list-remove"))
+
         self.update()
         # connect signals and slots
         self.ui.pushButtonDelete.clicked.connect(self.delete_source)
