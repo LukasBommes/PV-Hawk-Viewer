@@ -11,7 +11,6 @@ string annotation:
 
 map controls:
 - colormap selection
-- automatically set min/max temperatures when changing data source
 
 
 status bar

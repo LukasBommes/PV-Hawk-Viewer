@@ -413,18 +413,16 @@ class MainController(QObject):
 
     @Slot(int)
     def set_selected_column(self, value):
-        # first update min and max temp of map value range
+        # first update map value range then set selected column
         columns_names = self.get_column_names()
         try:
             column = columns_names[value]
         except IndexError:
-            print("Index Error")
             min_val = -5
             max_val = 5
         else:
             data_column = self.get_column(column)
             if len(data_column) == 0:
-                print("Len zero")
                 min_val = -5
                 max_val = 5
             else:

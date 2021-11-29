@@ -27,6 +27,9 @@ class MapView(QObject):
         self.controller.source_deleted.connect(self.dataset_closed)
         self.model.dataset_closed.connect(self.dataset_closed)
         self.model.dataset_opened.connect(lambda: self.dataset_changed.emit(True))
+
+        self.model.selected_source_changed.connect(lambda: self.dataset_changed.emit(True))
+
         self.model.selected_column_changed.connect(lambda: self.dataset_changed.emit(False))
         self.model.map_model.colormap_changed.connect(lambda: self.dataset_changed.emit(False))
 
