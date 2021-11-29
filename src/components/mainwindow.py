@@ -15,12 +15,11 @@ from PySide6.QtGui import QIcon
 from src.common import get_immediate_subdirectories
 
 from src.ui.ui_mainwindow import Ui_MainWindow
-from src.components.map import MapView, ColorbarView
+from src.components.map import MapView, ColorbarView, DataColumnSelectionView, DataRangeView
 from src.components.annotation_editor import AnnotationEditorView
 from src.components.data_sources import DataSourcesView
 from src.components.source_frame import SourceFrameView
 from src.components.analysis_module_temperatures import AnalysisModuleTemperaturesView
-from src.components.toolbar import DataColumnSelectionView, DataRangeView
 from src.components.string_editor import StringEditorView
 
 
@@ -51,7 +50,6 @@ class MainView(QMainWindow):
         self.channel.registerObject("map_view", self.map_view)
 
         # register string editor controller with web engine
-        #self.map_backend = StringEditorController(model, controller)
         self.channel.registerObject("string_editor_controller", self.controller.string_editor_controller)
 
         # add colorbar for map view
@@ -330,6 +328,7 @@ class MainController(QObject):
     export_string_annotation = Signal()
     mainwindow_close_requested = Signal(object)
     dataset_close_requested = Signal()
+    redraw_map = Signal()
 
     def __init__(self, model):
         super().__init__()
@@ -412,6 +411,30 @@ class MainController(QObject):
         shutil.rmtree(rmdir, ignore_errors=True)
         self.update_source_names()
 
+    @Slot(int)
+    def set_selected_column(self, value):
+        # first update min and max temp of map value range
+        columns_names = self.get_column_names()
+        try:
+            column = columns_names[value]
+        except IndexError:
+            print("Index Error")
+            min_val = -5
+            max_val = 5
+        else:
+            data_column = self.get_column(column)
+            if len(data_column) == 0:
+                print("Len zero")
+                min_val = -5
+                max_val = 5
+            else:
+                min_val = min(data_column.values())
+                max_val = max(data_column.values())
+        self.model.map_model.min_val = min_val
+        self.model.map_model.max_val = max_val
+        # set selected column
+        self.model.selected_column = value
+
     @Slot()
     def get_column_names(self):
         if self.model.dataset_dir is None:
@@ -449,7 +472,6 @@ class MainController(QObject):
             except KeyError:
                 continue
         return column_values
-
 
     def update_dataset_stats(self):
         if self.model.dataset_dir is None:

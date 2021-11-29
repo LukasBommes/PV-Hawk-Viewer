@@ -138,10 +138,12 @@
           modules_geojson.resetStyle(layer);
         }
         var layer = modules_geojson.getLayer(track_id);
-        layer.setStyle({
-          color: 'red',
-          fillColor: 'red'
-        });
+        if (layer) {
+          layer.setStyle({
+            color: 'red',
+            fillColor: 'red'
+          });
+        }
         draw_defect_annotations();
       });
 
@@ -307,7 +309,6 @@
           var track_id = layer.feature.properties.track_id;
           var module = turf.polygon(layer.feature.geometry.coordinates);
           if (turf.booleanIntersects(module, line)) {
-            //layer.setStyle({color: "#660000", fillColor: "#660000", weight: 1});
             intersecting_modules.push({"track_id": track_id, "module": module});
           }
         });

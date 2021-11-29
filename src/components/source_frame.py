@@ -29,9 +29,11 @@ class SourceFrameView(QWidget):
         self.model.dataset_closed.connect(self.disable)
         self.model.track_id_changed.connect(lambda _: self.controller.source_frame_controller.update_source_frame())
 
-        self.ui.minTempSpinBox.valueChanged.connect(lambda value: setattr(self.model.source_frame_model, 'min_temp', value))
+        #self.ui.minTempSpinBox.valueChanged.connect(lambda value: setattr(self.model.source_frame_model, 'min_temp', value))
+        self.ui.minTempSpinBox.editingFinished.connect(self.set_min_temp)
         self.model.source_frame_model.min_temp_changed.connect(self.ui.minTempSpinBox.setValue)
-        self.ui.maxTempSpinBox.valueChanged.connect(lambda value: setattr(self.model.source_frame_model, 'max_temp', value))
+        #self.ui.maxTempSpinBox.valueChanged.connect(lambda value: setattr(self.model.source_frame_model, 'max_temp', value))
+        self.ui.maxTempSpinBox.editingFinished.connect(self.set_max_temp)
         self.model.source_frame_model.max_temp_changed.connect(self.ui.maxTempSpinBox.setValue)
         self.ui.colormapComboBox.currentIndexChanged.connect(lambda value: setattr(self.model.source_frame_model, 'colormap', value))
         self.model.source_frame_model.colormap_changed.connect(self.ui.colormapComboBox.setCurrentIndex)
@@ -72,6 +74,22 @@ class SourceFrameView(QWidget):
         self.ui.minTempSpinBox.setEnabled(True)
         self.ui.maxTempSpinBox.setEnabled(True)
         self.ui.colormapComboBox.setEnabled(True)
+
+    @Slot()
+    def set_min_temp(self):
+        value = self.ui.minTempSpinBox.value()
+        if value < self.model.source_frame_model.max_temp:
+            self.model.source_frame_model.min_temp = value
+        else:
+            self.ui.minTempSpinBox.setValue(self.model.source_frame_model.min_temp)
+
+    @Slot()
+    def set_max_temp(self):
+        value = self.ui.maxTempSpinBox.value()
+        if value > self.model.source_frame_model.min_temp:
+            self.model.source_frame_model.max_temp = value
+        else:
+            self.ui.maxTempSpinBox.setValue(self.model.source_frame_model.min_temp)
 
     # def updatePatches(self, track_id):
     #
