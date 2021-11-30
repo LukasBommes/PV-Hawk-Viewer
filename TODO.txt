@@ -1,4 +1,6 @@
 general:
+- set application icon
+- set initial window size as half of screen size
 - show patches of selected module
 - make a settings for which patch to select (e.g. max temp patch, first patch, user selected patch, ...)
 
@@ -8,6 +10,9 @@ string annotation:
 - improve enabling/disabling of buttons to ensure a better user guidance through the string annotation process
 - only enable "conform string" button after user has finished drawing the string
 - make a "lifting pen" function to allow drawing strings that are spatially seperated
+
+defect anotation:
+- show tooltip with module defects on hover
 
 analysis:
 - use pretrained ResNet for defect analysis

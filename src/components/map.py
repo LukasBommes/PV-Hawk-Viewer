@@ -3,13 +3,14 @@ import matplotlib
 matplotlib.use('QtAgg')
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 
 from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QComboBox
 from PySide6.QtCore import Slot, Signal, QObject
 
 from src.colormap import get_colors
 from src.ui.ui_toolbar_data_range import Ui_DataRange
-# from src.ui.ui_toolbar_colormap_selection import Ui_ColormapSelection
+from src.ui.ui_toolbar_colormap_selection import Ui_ColormapSelection
 
 
 class MapView(QObject):
@@ -55,13 +56,12 @@ class MapView(QObject):
             data = self.model.data
             data_column = self.controller.get_selected_column()
             if len(data_column) > 0:
-                # colormaps = {
-                #     0: "plasma",
-                #     1: "Reds",
-                #     2: "viridis"
-                # }
-                # colormap = colormaps[self.model.map_model.colormap]
-                colors = get_colors(data_column, cmap="plasma", vmin=self.model.map_model.min_val, vmax=self.model.map_model.max_val)
+                colors = get_colors(
+                    data_column, 
+                    cmap=self.model.map_model.colormap, 
+                    vmin=self.model.map_model.min_val, 
+                    vmax=self.model.map_model.max_val
+                )
             else:
                 default_color = "#ff7800"
                 colors = {track_id: default_color for track_id in self.model.track_ids}
@@ -131,9 +131,9 @@ class ColorbarView(QWidget):
             self.widget.hide()
             return
         
-        self.widget.show()    
+        self.widget.show()
 
-        cmap = matplotlib.cm.plasma
+        cmap = matplotlib.cm.get_cmap(self.model.map_model.colormap, 256)
         norm = matplotlib.colors.Normalize(
             vmin=self.model.map_model.min_val, 
             vmax=self.model.map_model.max_val)
@@ -207,18 +207,34 @@ class DataRangeView(QWidget):
 
 
 
-# class ColormapSelectionView(QWidget):
-#     def __init__(self, model, controller, parent=None):
-#         super().__init__(parent)
-#         self.model = model
-#         self.controller = controller
-#         self.parent = parent
-#         self.ui = Ui_ColormapSelection()
-#         self.ui.setupUi(self)
-#         self.ui.comboBox.addItems(["Gray", "Plasma", "Jet"])
-#         self.ui.comboBox.setCurrentIndex(0)
-#         # connect signals and slots
-#         self.ui.comboBox.currentIndexChanged.connect(lambda: self.parent.setColormap(self.ui.comboBox.currentIndex()))
+class ColormapSelectionView(QWidget):
+    def __init__(self, model, controller, parent=None):
+        super().__init__(parent)
+        self.model = model
+        self.controller = controller
+        self.parent = parent
+        self.ui = Ui_ColormapSelection()
+        self.ui.setupUi(self)
+        self.disable()        
+        self.ui.colormapComboBox.addItems(self.model.map_model.colormaps)
+        # connect signals and slots
+        self.ui.colormapComboBox.currentIndexChanged.connect(lambda value: setattr(self.model.map_model, 'colormap', value))
+        self.model.map_model.colormap_changed.connect(self.ui.colormapComboBox.setCurrentIndex)
+        self.model.selected_source_changed.connect(self.enable)
+        self.model.dataset_closed.connect(self.disable)
+        # set default values
+        self.model.map_model.colormap = 0
+
+    def enable(self):
+        if self.model.selected_source is None:
+            self.disable()
+        elif self.model.selected_source == "Module Layout":
+            self.disable()
+        else:
+            self.ui.colormapComboBox.setEnabled(True)
+
+    def disable(self):
+        self.ui.colormapComboBox.setEnabled(False)
 
 
 
@@ -279,6 +295,7 @@ class MapModel(QObject):
         self._min_val = None
         self._max_val = None
         self._colormap = None
+        self._colormaps = sorted(plt.colormaps(), key=lambda x: str.lower(x))
     
     @property
     def min_val(self):
@@ -304,5 +321,11 @@ class MapModel(QObject):
 
     @colormap.setter
     def colormap(self, value):
-        self._colormap = value
+        #cmap = list(self._colormaps.values())[value]
+        cmap = self._colormaps[value]
+        self._colormap = cmap
         self.colormap_changed.emit(value)
+
+    @property
+    def colormaps(self):
+        return self._colormaps

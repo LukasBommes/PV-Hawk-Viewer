@@ -16,13 +16,13 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QSizePolicy,
-    QSpacerItem, QSpinBox, QWidget)
+    QSpinBox, QWidget)
 
 class Ui_DataRange(object):
     def setupUi(self, DataRange):
         if not DataRange.objectName():
             DataRange.setObjectName(u"DataRange")
-        DataRange.resize(258, 26)
+        DataRange.resize(252, 26)
         self.horizontalLayout = QHBoxLayout(DataRange)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
@@ -57,10 +57,6 @@ class Ui_DataRange(object):
         self.dataUnitLabel.setObjectName(u"dataUnitLabel")
 
         self.horizontalLayout.addWidget(self.dataUnitLabel)
-
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.horizontalLayout.addItem(self.horizontalSpacer)
 
 
         self.retranslateUi(DataRange)

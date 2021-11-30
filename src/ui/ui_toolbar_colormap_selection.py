@@ -31,10 +31,10 @@ class Ui_ColormapSelection(object):
 
         self.horizontalLayout.addWidget(self.label)
 
-        self.comboBox = QComboBox(ColormapSelection)
-        self.comboBox.setObjectName(u"comboBox")
+        self.colormapComboBox = QComboBox(ColormapSelection)
+        self.colormapComboBox.setObjectName(u"colormapComboBox")
 
-        self.horizontalLayout.addWidget(self.comboBox)
+        self.horizontalLayout.addWidget(self.colormapComboBox)
 
 
         self.retranslateUi(ColormapSelection)

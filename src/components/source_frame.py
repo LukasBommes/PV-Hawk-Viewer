@@ -28,11 +28,8 @@ class SourceFrameView(QWidget):
         self.model.dataset_opened.connect(self.enable)
         self.model.dataset_closed.connect(self.disable)
         self.model.track_id_changed.connect(lambda _: self.controller.source_frame_controller.update_source_frame())
-
-        #self.ui.minTempSpinBox.valueChanged.connect(lambda value: setattr(self.model.source_frame_model, 'min_temp', value))
         self.ui.minTempSpinBox.editingFinished.connect(self.set_min_temp)
         self.model.source_frame_model.min_temp_changed.connect(self.ui.minTempSpinBox.setValue)
-        #self.ui.maxTempSpinBox.valueChanged.connect(lambda value: setattr(self.model.source_frame_model, 'max_temp', value))
         self.ui.maxTempSpinBox.editingFinished.connect(self.set_max_temp)
         self.model.source_frame_model.max_temp_changed.connect(self.ui.maxTempSpinBox.setValue)
         self.ui.colormapComboBox.currentIndexChanged.connect(lambda value: setattr(self.model.source_frame_model, 'colormap', value))

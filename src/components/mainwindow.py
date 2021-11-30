@@ -15,7 +15,8 @@ from PySide6.QtGui import QIcon
 from src.common import get_immediate_subdirectories
 
 from src.ui.ui_mainwindow import Ui_MainWindow
-from src.components.map import MapView, ColorbarView, DataColumnSelectionView, DataRangeView
+from src.components.map import MapView, ColorbarView, DataColumnSelectionView, \
+    DataRangeView, ColormapSelectionView
 from src.components.annotation_editor import AnnotationEditorView
 from src.components.data_sources import DataSourcesView
 from src.components.source_frame import SourceFrameView
@@ -57,12 +58,6 @@ class MainView(QMainWindow):
         self.colorbarView = ColorbarView(self.model, self.controller)
         self.ui.gridLayout.addWidget(self.colorbarView.widget, 1, 0, 1, 1)
 
-        # self.toolBarColormapSelection = QToolBar(self)
-        # self.addToolBar(Qt.TopToolBarArea, self.toolBarColormapSelection)
-        # self.toolBarColormapSelection.setEnabled(False)
-        # self.colormapWidget = ColormapSelectionWidget(self.model, self.controller, parent=self)
-        # self.toolBarColormapSelection.addWidget(self.colormapWidget)
-
         # setup toolbars
         self.toolBarDataColumnSelection = QToolBar(u"Data Selection Toolbar", self)
         self.addToolBar(Qt.TopToolBarArea, self.toolBarDataColumnSelection)
@@ -73,6 +68,11 @@ class MainView(QMainWindow):
         self.addToolBar(Qt.TopToolBarArea, self.toolBarDataRange)
         self.dataRangeWidget = DataRangeView(self.model, self.controller, parent=self)
         self.toolBarDataRange.addWidget(self.dataRangeWidget)
+
+        self.toolBarColormapSelection = QToolBar(u"Colormap Selection Toolbar", self)
+        self.addToolBar(Qt.TopToolBarArea, self.toolBarColormapSelection)
+        self.colormapSelectionWidget = ColormapSelectionView(self.model, self.controller, parent=self)
+        self.toolBarColormapSelection.addWidget(self.colormapSelectionWidget)
 
         # setup widgets
         self.annotationEditorWidget = QDockWidget(u"Annotation Editor", self)
