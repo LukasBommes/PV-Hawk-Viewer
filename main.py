@@ -2,6 +2,7 @@ import sys
 import numpy as np
 
 from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QScreen
 
 from src.components.mainwindow import MainController, MainView, MainModel
 from src.components.analysis_module_temperatures import AnalysisModuleTemperaturesController, AnalysisModuleTemperaturesModel
@@ -32,6 +33,8 @@ class App(QApplication):
         self.main_controller.string_editor_controller = StringEditorController(self.main_model)
         
         self.main_view = MainView(self.main_model, self.main_controller)
+        screen = self.main_view.screen()
+        self.main_view.resize(screen.availableSize() * 0.7)
         self.main_view.show()
 
 

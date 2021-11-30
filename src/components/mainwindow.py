@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QMainWindow, QToolBar, QDockWidget, \
     QMessageBox, QFileDialog, QLabel
 from PySide6.QtCore import Qt, Slot, QUrl, QDir, Signal, QObject
 from PySide6.QtWebChannel import QWebChannel
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QPixmap
 
 from src.common import get_immediate_subdirectories
 
@@ -32,6 +32,10 @@ class MainView(QMainWindow):
         self.ui.setupUi(self)
         self.model = model
         self.controller = controller
+
+        # set window icon
+        app_icon = QIcon(QPixmap("src/resources/app_icon.png"))
+        self.setWindowIcon(app_icon)
 
         # add icons QStyle.SP_MessageBoxCritical
         self.ui.actionOpen_Dataset.setIcon(QIcon.fromTheme("document-open"))

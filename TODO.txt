@@ -1,9 +1,6 @@
 general:
-- set application icon
-- set initial window size as half of screen size
 - show patches of selected module
 - make a settings for which patch to select (e.g. max temp patch, first patch, user selected patch, ...)
-
 
 string annotation:
 - on/off button for string annotation layer
@@ -16,9 +13,6 @@ defect anotation:
 
 analysis:
 - use pretrained ResNet for defect analysis
-
-map controls:
-- colormap selection
 
 status bar
 - show track ID, plant ID of selected module
