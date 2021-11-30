@@ -9,16 +9,11 @@ string annotation:
 - only enable "conform string" button after user has finished drawing the string
 - make a "lifting pen" function to allow drawing strings that are spatially seperated
 
-
-analysis list:
-- button + window with analysis details
-
 analysis:
 - use pretrained ResNet for defect analysis
 
 map controls:
 - colormap selection
-
 
 status bar
 - show track ID, plant ID of selected module

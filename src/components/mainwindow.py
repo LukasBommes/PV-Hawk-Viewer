@@ -20,6 +20,7 @@ from src.components.annotation_editor import AnnotationEditorView
 from src.components.data_sources import DataSourcesView
 from src.components.source_frame import SourceFrameView
 from src.components.analysis_module_temperatures import AnalysisModuleTemperaturesView
+from src.components.analysis_details import AnalysisDetailsView
 from src.components.string_editor import StringEditorView
 
 
@@ -122,7 +123,7 @@ class MainView(QMainWindow):
         self.ui.actionAnnotate_Strings.triggered.connect(self.annotate_strings)
         self.ui.actionClose_String_Annotation.triggered.connect(self.close_string_annotation)
         self.ui.actionExport_String_Annotation.triggered.connect(self.export_string_annotation)
-        self.ui.actionModule_Temperatures.triggered.connect(self.show_analysis_module_temperatures)
+        self.ui.actionModule_Temperatures.triggered.connect(lambda: self.show_child_window("analysis_module_temperatures"))
         self.ui.menuView.addAction(self.dataSourcesWidget.toggleViewAction())
         self.ui.menuView.addAction(self.stringEditorWidget.toggleViewAction())
         self.ui.menuView.addAction(self.annotationEditorWidget.toggleViewAction())
@@ -289,13 +290,21 @@ class MainView(QMainWindow):
         self.model.app_mode = "data_visualization"
 
     @Slot()
-    def show_analysis_module_temperatures(self):
-        if not self.model.dataset_is_open:
-            return
-        if "analysis_module_temperatures" not in self.child_windows:
-            self.child_windows["analysis_module_temperatures"] = AnalysisModuleTemperaturesView(self.model, self.controller, self)
-        self.controller.analysis_module_temperatures_controller.reset()
-        self.child_windows["analysis_module_temperatures"].show()
+    def show_child_window(self, which):
+        if which == "analysis_module_temperatures":
+            if not self.model.dataset_is_open:
+                return
+            if which not in self.child_windows:
+                self.child_windows[which] = AnalysisModuleTemperaturesView(self.model, self.controller, self)
+            self.controller.analysis_module_temperatures_controller.reset()
+            self.child_windows[which].show()
+
+        elif which == "analysis_details":
+            if self.model.meta is None:
+                return
+            if which not in self.child_windows:
+                self.child_windows[which] = AnalysisDetailsView(self.model, self.controller, self)
+            self.child_windows[which].show()
 
     def about(self):
         gh = "LukasBommes/Dataset-Viewer"
@@ -523,6 +532,7 @@ class MainModel(QObject):
     selected_column_changed = Signal(int)
     track_id_changed = Signal(str, str)
     patch_idx_changed = Signal(int)
+    meta_changed = Signal()
     dataset_stats_changed = Signal(object)
     app_mode_changed = Signal(str)
 
@@ -533,7 +543,7 @@ class MainModel(QObject):
     def reset(self):
         self.dataset_dir = None
         self.data = None
-        self.meta = None
+        self._meta = None
         self.patch_meta = None
         self.track_ids = None
         self._app_mode = None # "None", "data_visualization", "defect_annotation", "string_annotation"
@@ -544,6 +554,15 @@ class MainModel(QObject):
         self._track_id = None
         self._patch_idx = None
         self._dataset_stats = None
+
+    @property
+    def meta(self):
+        return self._meta
+
+    @meta.setter
+    def meta(self, value):
+        self._meta = value
+        self.meta_changed.emit()
 
     @property
     def app_mode(self):
