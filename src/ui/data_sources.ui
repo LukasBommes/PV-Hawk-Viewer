@@ -27,6 +27,16 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="pushButtonDetails">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>Details</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="pushButtonDelete">
        <property name="enabled">
         <bool>false</bool>

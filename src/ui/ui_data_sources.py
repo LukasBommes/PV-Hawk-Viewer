@@ -34,6 +34,12 @@ class Ui_DataSources(object):
 
         self.horizontalLayout.addWidget(self.pushButtonNewAnalysis)
 
+        self.pushButtonDetails = QPushButton(DataSources)
+        self.pushButtonDetails.setObjectName(u"pushButtonDetails")
+        self.pushButtonDetails.setEnabled(False)
+
+        self.horizontalLayout.addWidget(self.pushButtonDetails)
+
         self.pushButtonDelete = QPushButton(DataSources)
         self.pushButtonDelete.setObjectName(u"pushButtonDelete")
         self.pushButtonDelete.setEnabled(False)
@@ -61,6 +67,7 @@ class Ui_DataSources(object):
     def retranslateUi(self, DataSources):
         DataSources.setWindowTitle(QCoreApplication.translate("DataSources", u"Data Sources", None))
         self.pushButtonNewAnalysis.setText(QCoreApplication.translate("DataSources", u"New Analysis...", None))
+        self.pushButtonDetails.setText(QCoreApplication.translate("DataSources", u"Details", None))
         self.pushButtonDelete.setText(QCoreApplication.translate("DataSources", u"Delete", None))
     # retranslateUi
 

@@ -108,7 +108,7 @@ class MainView(QMainWindow):
         self.update_status_bar(stats=None)
 
         # child windows
-        self.module_temperatures_window = None
+        self.child_windows = {}
 
         # connect signals and slots
         self.ui.actionQuit.triggered.connect(self.close)
@@ -131,13 +131,10 @@ class MainView(QMainWindow):
         self.ui.menuView.addAction(self.toolBarDataRange.toggleViewAction())
         self.model.dataset_opened.connect(self.dataset_opened)
         self.model.dataset_closed.connect(self.dataset_closed)
-
         self.model.dataset_stats_changed.connect(self.update_status_bar)
-
         self.model.app_mode_changed.connect(self.app_mode_changed)
         self.model.annotation_editor_model.has_changes_changed.connect(self.defect_annotation_has_changes)
         self.model.annotation_editor_model.current_file_name_changed.connect(self.defect_annotation_has_changes)
-
         self.controller.annotation_editor_controller.close_dataset.connect(self.controller.close_dataset)
         
         # load HTML document for map view
@@ -295,10 +292,10 @@ class MainView(QMainWindow):
     def show_analysis_module_temperatures(self):
         if not self.model.dataset_is_open:
             return
-        if self.module_temperatures_window is None:
-            self.module_temperatures_window = AnalysisModuleTemperaturesView(self.model, self.controller, self)
+        if "analysis_module_temperatures" not in self.child_windows:
+            self.child_windows["analysis_module_temperatures"] = AnalysisModuleTemperaturesView(self.model, self.controller, self)
         self.controller.analysis_module_temperatures_controller.reset()
-        self.module_temperatures_window.show()
+        self.child_windows["analysis_module_temperatures"].show()
 
     def about(self):
         gh = "LukasBommes/Dataset-Viewer"

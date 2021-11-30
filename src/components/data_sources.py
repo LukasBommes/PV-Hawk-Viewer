@@ -21,14 +21,35 @@ class DataSourcesView(QWidget):
         # connect signals and slots
         self.ui.pushButtonDelete.clicked.connect(self.delete_source)
         self.ui.pushButtonNewAnalysis.clicked.connect(self.parent.show_analysis_module_temperatures)
-        self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.controller.load_source(name.text()))
-        self.ui.dataSourcesListWidget.itemClicked.connect(lambda name: self.ui.pushButtonDelete.setEnabled(name.text() != "Module Layout"))
+        #self.ui.pushButtonDetails.clicked.connect()
+        self.ui.dataSourcesListWidget.itemClicked.connect(self.item_clicked)
         self.model.source_names_changed.connect(self.update)
         self.model.dataset_opened.connect(self.update)
-        self.model.dataset_opened.connect(lambda: self.ui.pushButtonNewAnalysis.setEnabled(True))
+        self.model.dataset_opened.connect(self.enable)
         self.model.dataset_closed.connect(self.update)
-        self.model.dataset_closed.connect(lambda: self.ui.pushButtonNewAnalysis.setEnabled(False))
+        self.model.dataset_closed.connect(self.disable)
 
+    @Slot()
+    def enable(self):
+        self.ui.pushButtonNewAnalysis.setEnabled(True)
+
+    @Slot()
+    def disable(self):
+        self.ui.pushButtonNewAnalysis.setEnabled(False)
+        self.ui.pushButtonDelete.setEnabled(False)
+        self.ui.pushButtonDetails.setEnabled(False)
+
+    @Slot()
+    def item_clicked(self, item):
+        self.controller.load_source(item.text())
+        if item.text() != "Module Layout":
+            self.ui.pushButtonDelete.setEnabled(True)
+            self.ui.pushButtonDetails.setEnabled(True)
+        else:
+            self.ui.pushButtonDelete.setEnabled(False)
+            self.ui.pushButtonDetails.setEnabled(False)
+
+    @Slot()
     def delete_source(self):
         selected_name = self.ui.dataSourcesListWidget.currentItem()
         if selected_name is None:

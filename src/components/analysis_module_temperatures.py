@@ -30,7 +30,6 @@ class AnalysisModuleTemperaturesView(QWidget):
         self.ui.neighborRadiusSpinBox.valueChanged.connect(lambda value: setattr(self.model.analysis_module_temperatures_model, 'neighbor_radius', value))
         self.model.analysis_module_temperatures_model.progress_changed.connect(self.ui.progressBar.setValue)
         self.model.analysis_module_temperatures_model.progress_text_changed.connect(self.ui.progressLabel.setText)
-
         self.controller.analysis_module_temperatures_controller.name_exists.connect(self.show_name_exist_dialog)
         self.model.analysis_module_temperatures_model.status_changed.connect(self.status_changed)
 
