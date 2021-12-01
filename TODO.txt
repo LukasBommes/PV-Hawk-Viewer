@@ -4,8 +4,6 @@ general:
 
 string annotation:
 - on/off button for string annotation layer
-- improve enabling/disabling of buttons to ensure a better user guidance through the string annotation process
-- only enable "conform string" button after user has finished drawing the string
 - make a "lifting pen" function to allow drawing strings that are spatially seperated
 
 defect anotation:

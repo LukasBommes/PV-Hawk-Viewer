@@ -7,7 +7,7 @@ import datetime
 import numpy as np
 
 from PySide6.QtWidgets import QMainWindow, QToolBar, QDockWidget, \
-    QMessageBox, QFileDialog, QLabel
+    QMessageBox, QFileDialog, QLabel, QMenu
 from PySide6.QtCore import Qt, Slot, QUrl, QDir, Signal, QObject
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtGui import QIcon, QPixmap
@@ -110,30 +110,38 @@ class MainView(QMainWindow):
         self.trajectoryLengthLabel = QLabel()
         self.ui.statusBar.addPermanentWidget(self.trajectoryLengthLabel)
 
-        self.update_status_bar(stats=None)
-
-        # child windows
-        self.child_windows = {}
-
-        # connect signals and slots
-        self.ui.actionQuit.triggered.connect(self.close)
-        self.ui.actionAbout.triggered.connect(self.about)
+        # file menu
         self.ui.actionOpen_Dataset.triggered.connect(self.open_dataset)
         self.ui.actionClose_Dataset.triggered.connect(self.controller.close_dataset_request)
+        self.ui.actionQuit.triggered.connect(self.close)
+
+        # annotation menu
         self.ui.actionNew_Defect_Annotation.triggered.connect(self.new_defect_annotation)
         self.ui.actionLoad_Defect_Annotation.triggered.connect(self.load_defect_annotation)
         self.ui.actionSave_Defect_Annotation.triggered.connect(self.save_defect_annotation)
         self.ui.actionClose_Defect_Annotation.triggered.connect(self.close_defect_annotation)
         self.ui.actionAnnotate_Strings.triggered.connect(self.annotate_strings)
-        self.ui.actionClose_String_Annotation.triggered.connect(self.close_string_annotation)
         self.ui.actionExport_String_Annotation.triggered.connect(self.export_string_annotation)
+        self.ui.actionClose_String_Annotation.triggered.connect(self.close_string_annotation)
+
+        # analysis menu
         self.ui.actionModule_Temperatures.triggered.connect(lambda: self.show_child_window("analysis_module_temperatures"))
+
+        # view menu
         self.ui.menuView.addAction(self.dataSourcesWidget.toggleViewAction())
         self.ui.menuView.addAction(self.stringEditorWidget.toggleViewAction())
         self.ui.menuView.addAction(self.annotationEditorWidget.toggleViewAction())
         self.ui.menuView.addAction(self.sourceFrameWidget.toggleViewAction())
-        self.ui.menuView.addAction(self.toolBarDataColumnSelection.toggleViewAction())
-        self.ui.menuView.addAction(self.toolBarDataRange.toggleViewAction())
+        self.toolbar_view_menu = QMenu(u"Toolbars")
+        self.toolbar_view_menu.addAction(self.toolBarDataColumnSelection.toggleViewAction())
+        self.toolbar_view_menu.addAction(self.toolBarDataRange.toggleViewAction())
+        self.toolbar_view_menu.addAction(self.toolBarColormapSelection.toggleViewAction())
+        self.ui.menuView.addMenu(self.toolbar_view_menu)
+
+        # about menu
+        self.ui.actionAbout.triggered.connect(self.about)
+
+        # connect signals and slots
         self.model.dataset_opened.connect(self.dataset_opened)
         self.model.dataset_closed.connect(self.dataset_closed)
         self.model.dataset_stats_changed.connect(self.update_status_bar)
@@ -146,6 +154,9 @@ class MainView(QMainWindow):
         index_file = QDir.current().filePath("src/index.html")
         index_url = QUrl.fromLocalFile(index_file)
         self.ui.widget.load(index_url)
+
+        self.update_status_bar(stats=None)
+        self.child_windows = {}
 
         # set defaults
         self.model.app_mode = None
