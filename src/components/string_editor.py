@@ -20,7 +20,6 @@ class StringEditorView(QWidget):
         # setup icons
         self.ui.pushButtonNewString.setIcon(QIcon.fromTheme("list-add"))
         self.ui.pushButtonDeleteString.setIcon(QIcon.fromTheme("list-remove"))
-
         self.disable()
 
         # connect signals and slots
@@ -42,12 +41,11 @@ class StringEditorView(QWidget):
         self.controller.string_editor_controller.confirm_string.connect(self.disable)
         self.controller.export_string_annotation.connect(self.controller.string_editor_controller.export_string_annotation)
         self.model.string_editor_model.selected_string_id_changed.connect(self.selected_string_id_changed)
-
+        self.model.string_editor_model.temporary_string_data_changed.connect(self.temporary_string_data_changed)
         self.model.dataset_opened.connect(self.controller.string_editor_controller.set_default_values)
         self.model.dataset_opened.connect(lambda: self.ui.pushButtonNewString.setEnabled(True))
-        self.model.dataset_closed.connect(self.controller.string_editor_controller.reset_temp_string_data)
-        self.model.dataset_closed.connect(self.controller.string_editor_controller.reset_string_annotation_data)
-        self.model.dataset_closed.connect(self.disable)
+        self.model.dataset_closed.connect(self.close_string_annotation)
+        self.controller.close_string_annotation.connect(self.close_string_annotation)
 
     def disable(self):
         self.ui.pushButtonStartDrawing.setEnabled(False)
@@ -60,32 +58,21 @@ class StringEditorView(QWidget):
         self.ui.lineEditInverterID.setEnabled(False)
         self.ui.lineEditStringID.setEnabled(False)
 
-    def enable(self):
-        self.ui.pushButtonStartDrawing.setEnabled(True)
-        self.ui.pushButtonEndDrawing.setEnabled(False)
-        self.ui.pushButtonCancelString.setEnabled(True)
-        self.ui.pushButtonConfirmString.setEnabled(True)
-        self.ui.pushButtonDeleteString.setEnabled(False)
-        self.ui.lineEditTrackerID.setEnabled(True)
-        self.ui.lineEditArrayID.setEnabled(True)
-        self.ui.lineEditInverterID.setEnabled(True)
-        self.ui.lineEditStringID.setEnabled(True)
-
     def start_drawing(self):
-        self.model.string_editor_model.drawing_string = True
+        self.controller.string_editor_controller.drawing_started.emit()
         self.ui.pushButtonStartDrawing.setEnabled(False)
         self.ui.pushButtonEndDrawing.setEnabled(True)
 
     def end_drawing(self):
-        self.model.string_editor_model.drawing_string = False
-        self.ui.pushButtonStartDrawing.setEnabled(True)
-        self.ui.pushButtonEndDrawing.setEnabled(False)
+        self.controller.string_editor_controller.drawing_ended.emit()
 
     def new_string(self):
         self.ui.pushButtonNewString.setEnabled(False)
         self.controller.string_editor_controller.reset_temp_string_data()
         self.controller.string_editor_controller.new_string.emit()
-        self.enable()
+        self.ui.pushButtonStartDrawing.setEnabled(True)
+        self.ui.pushButtonEndDrawing.setEnabled(False)
+        self.ui.pushButtonCancelString.setEnabled(True)
     
     def cancel_string(self):
         self.controller.string_editor_controller.reset_temp_string_data()
@@ -95,7 +82,30 @@ class StringEditorView(QWidget):
 
     def confirm_string(self):
         self.controller.string_editor_controller.update_string_annotation_data()
-        self.ui.pushButtonNewString.setEnabled(True)                
+
+    @Slot()
+    def temporary_string_data_changed(self):
+        temporary_string_data = self.model.string_editor_model.temporary_string_data
+        if temporary_string_data is None:
+            self.disable()
+            self.ui.pushButtonNewString.setEnabled(True)
+            return
+        if len(temporary_string_data["modules"]) == 0:
+            self.disable()
+            self.ui.pushButtonNewString.setEnabled(True)
+            msg = QMessageBox()
+            msg.setWindowTitle("Error")
+            msg.setText("No modules selected. Please click on the map to select modules after clicking \"Start Drawing\"")
+            msg.setIcon(QMessageBox.Critical)
+            msg.exec()
+            return
+        self.ui.pushButtonStartDrawing.setEnabled(False)
+        self.ui.pushButtonEndDrawing.setEnabled(False)
+        self.ui.pushButtonConfirmString.setEnabled(True)
+        self.ui.lineEditTrackerID.setEnabled(True)
+        self.ui.lineEditArrayID.setEnabled(True)
+        self.ui.lineEditInverterID.setEnabled(True)
+        self.ui.lineEditStringID.setEnabled(True)
 
     @Slot()
     def selected_string_id_changed(self):
@@ -112,7 +122,13 @@ class StringEditorView(QWidget):
         msg.setText(text)
         msg.setIcon(QMessageBox.Critical)
         msg.exec()
-    
+
+    @Slot()
+    def close_string_annotation(self):
+        self.controller.string_editor_controller.reset_temp_string_data()
+        self.controller.string_editor_controller.reset_string_annotation_data
+        self.disable()
+
 
 
 class StringEditorController(QObject):
@@ -121,7 +137,8 @@ class StringEditorController(QObject):
     cancel_string = Signal()
     show_validation_error = Signal(str)
     selected_string_id_changed = Signal(str, str)
-    drawing_string_changed = Signal(bool)
+    drawing_started = Signal()
+    drawing_ended = Signal()
     string_annotation_data_changed = Signal()
 
     def __init__(self, model):
@@ -130,7 +147,6 @@ class StringEditorController(QObject):
         # connect signals and slots
         self.model.dataset_opened.connect(self.load_annotation_file)
         self.model.string_editor_model.selected_string_id_changed.connect(self.selected_string_id_changed)
-        self.model.string_editor_model.drawing_string_changed.connect(self.drawing_string_changed)
         self.model.string_editor_model.string_annotation_data_changed.connect(self.string_annotation_data_changed)
 
     def set_default_values(self):
@@ -141,8 +157,9 @@ class StringEditorController(QObject):
 
     @Slot()
     def reset_temp_string_data(self):
-        self.model.string_editor_model.drawing_string = False
+        self.cancel_string.emit()
         self.model.string_editor_model.selected_string_id = None
+        self.model.string_editor_model.temporary_string_data = None
 
     @Slot()
     def reset_string_annotation_data(self):
@@ -182,12 +199,6 @@ class StringEditorController(QObject):
             return False
 
         return True
-
-    def update_string_annotation_data(self):
-        ret = self.validate_string_id()
-        if ret:
-            self.confirm_string.emit()
-            self.reset_temp_string_data()
 
     def delete_string(self):
         selected_string_id = self.model.string_editor_model.selected_string_id
@@ -272,38 +283,47 @@ class StringEditorController(QObject):
         return json.dumps(string_annotation_data)
 
     @Slot(str)
-    def send_string_annotation_data(self, current_string_data):
+    def set_temporary_string_annotation_data(self, temporary_string_data):
         """Insert current string annotation into string annotation data."""
-        current_string_data = json.loads(current_string_data)
-        modules = current_string_data["modules"]
-        polyline = current_string_data["polyline"]
-        string_id = "{}_{}_{}_{}".format(
-            self.model.string_editor_model.tracker_id,
-            self.model.string_editor_model.array_id,
-            self.model.string_editor_model.inverter_id,
-            self.model.string_editor_model.string_id,
-        )
+        temporary_string_data = json.loads(temporary_string_data)
+        self.model.string_editor_model.temporary_string_data = temporary_string_data
 
-        data = copy.deepcopy(self.model.string_editor_model.string_annotation_data)
-        if data is None:
-            data = {
-                "string_data": {},
-                "plant_id_track_id_mapping": []
+    def update_string_annotation_data(self):
+        ret = self.validate_string_id()
+        if ret:
+            temporary_string_data = self.model.string_editor_model.temporary_string_data
+            modules = temporary_string_data["modules"]
+            polyline = temporary_string_data["polyline"]
+            string_id = "{}_{}_{}_{}".format(
+                self.model.string_editor_model.tracker_id,
+                self.model.string_editor_model.array_id,
+                self.model.string_editor_model.inverter_id,
+                self.model.string_editor_model.string_id,
+            )
+
+            data = copy.deepcopy(self.model.string_editor_model.string_annotation_data)
+            if data is None:
+                data = {
+                    "string_data": {},
+                    "plant_id_track_id_mapping": []
+                }
+
+            # insert data of current string (e.g. polyline, contained modules)
+            data["string_data"][string_id] = {
+                "track_ids": [module["track_id"] for module in modules],
+                "polyline": polyline
             }
 
-        # insert data of current string (e.g. polyline, contained modules)
-        data["string_data"][string_id] = {
-            "track_ids": [module["track_id"] for module in modules],
-            "polyline": polyline
-        }
+            # update plant_id / track_id mapping
+            for module_id, module in enumerate(modules):
+                plant_id = "{}_{:02d}".format(string_id, module_id)
+                data["plant_id_track_id_mapping"].append((plant_id, module["track_id"]))
 
-        # update plant_id / track_id mapping
-        for module_id, module in enumerate(modules):
-            plant_id = "{}_{:02d}".format(string_id, module_id)
-            data["plant_id_track_id_mapping"].append((plant_id, module["track_id"]))
-
-        self.model.string_editor_model.string_annotation_data = data
-        self.save_annotation_file()
+            self.model.string_editor_model.string_annotation_data = data
+            self.model.string_editor_model.temporary_string_data = None
+            self.reset_temp_string_data()
+            self.save_annotation_file()
+            self.confirm_string.emit()
 
 
 
@@ -313,7 +333,7 @@ class StringEditorModel(QObject):
     inverter_id_changed = Signal(str)
     string_id_changed = Signal(str)
     selected_string_id_changed = Signal(str, str)
-    drawing_string_changed = Signal(bool)
+    temporary_string_data_changed = Signal()
     string_annotation_data_changed = Signal()
 
     def __init__(self):
@@ -322,9 +342,9 @@ class StringEditorModel(QObject):
         self._array_id = ""
         self._inverter_id = ""
         self._string_id = ""
-        self._drawing_string = False
         self._selected_string_id = None
         # string data of entire plant
+        self._temporary_string_data = None
         self._string_annotation_data = None
 
     @property
@@ -364,15 +384,6 @@ class StringEditorModel(QObject):
         self.string_id_changed.emit(value)
 
     @property
-    def drawing_string(self):
-        return self._drawing_string
-
-    @drawing_string.setter
-    def drawing_string(self, value):
-        self._drawing_string = value
-        self.drawing_string_changed.emit(value)
-
-    @property
     def selected_string_id(self):
         return self._selected_string_id
 
@@ -390,6 +401,15 @@ class StringEditorModel(QObject):
     def string_annotation_data(self, value):
         self._string_annotation_data = value
         self.string_annotation_data_changed.emit()
+
+    @property
+    def temporary_string_data(self):
+        return self._temporary_string_data
+
+    @temporary_string_data.setter
+    def temporary_string_data(self, value):
+        self._temporary_string_data = value
+        self.temporary_string_data_changed.emit()
         
        
         

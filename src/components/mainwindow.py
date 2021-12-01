@@ -291,6 +291,7 @@ class MainView(QMainWindow):
 
     @Slot()
     def close_string_annotation(self):
+        self.controller.close_string_annotation.emit()
         self.model.app_mode = "data_visualization"
 
     @Slot()
@@ -336,6 +337,7 @@ class MainController(QObject):
     load_defect_annotation = Signal()
     close_defect_annotation = Signal()
     export_string_annotation = Signal()
+    close_string_annotation = Signal()
     mainwindow_close_requested = Signal(object)
     dataset_close_requested = Signal()
     redraw_map = Signal()
