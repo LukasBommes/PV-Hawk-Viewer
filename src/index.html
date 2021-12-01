@@ -208,8 +208,23 @@
         var lines = [];
         var labels = [];
         for (const [string_id, data] of Object.entries(string_annotation_data.string_data)) {
-          // polyline
-          var line = new L.geoJSON(data.polyline, {style: {weight: 2, opacity: 1, color: '#636363'}});
+          if (data.points.length < 2) { return; }
+          // draw string line segments
+          var line_segments = [];
+          for (var i = 1; i < data.points.length; i++) {
+            var style;
+            if (data.paused[i]) {
+              style = {weight: 2, opacity: 1, color: '#ff0000'}; // red
+            }
+            else {            
+              style = {weight: 2, opacity: 1, color: '#636363'}; // blue
+            }
+            line_segments.push(new L.polyline(
+              [data.points[i-1], data.points[i]], 
+              style
+            ));
+          }
+          var line = new L.featureGroup(line_segments);
           line.string_id = string_id;
           line.on('click', handle_string_clicked);
           lines.push(line);
@@ -226,8 +241,8 @@
           label.on('click', handle_string_clicked);
           labels.push(label);
         }
-        string_annotation_lines = L.layerGroup(lines).addTo(map);
-        string_annotation_labels = L.layerGroup(labels).addTo(map);
+        string_annotation_lines = L.featureGroup(lines).addTo(map);
+        string_annotation_labels = L.featureGroup(labels).addTo(map);
       }
 
       // string annotation data changed
@@ -269,10 +284,36 @@
       //  Handle string annotation
       //*****************************************************************
 
-      var current_line_string;
-      var intersecting_modules;
+      var current_string_layer;  // contains the lines of the current string on the leaflet map
+      var intersecting_modules;  // list of modules interesected by current (non-paused) string lines
+      var current_string_points; // points defining the lines of the current string
+      var current_string_paused_states; // paused state of each line segments of the current string
+      var paused;
 
-      // perform string annotation
+      // draw line segments that make up the current string
+      function draw_current_string() {
+        if (current_string_layer) {
+          map.removeLayer(current_string_layer);
+        }
+        if (current_string_points.length < 2) { return; }
+        var line_segments = [];
+        for (var i = 1; i < current_string_points.length; i++) {
+          var style;
+          if (current_string_paused_states[i]) {
+            style = {weight: 2, opacity: 1, color: '#ff0000'}; // red
+          }
+          else {            
+            style = {weight: 2, opacity: 1, color: '#425df5'}; // blue
+          }
+          line_segments.push(new L.polyline(
+            [current_string_points[i-1], current_string_points[i]], 
+            style
+          ));
+        }
+        current_string_layer = new L.featureGroup(line_segments).addTo(map);
+      }
+
+      // handle mouse click on map in string annotation mode
       function handle_line_drawing(event) {
         if (modules_geojson === null) { return; }
         intersecting_modules = [];
@@ -289,22 +330,35 @@
         });
         if (clicked_module_center === null) { return; }
         clicked_module_center = turf.getCoord(clicked_module_center);
-        current_line_string.addLatLng(L.latLng(clicked_module_center[1], clicked_module_center[0]));
+        current_string_points.push(L.latLng(clicked_module_center[1], clicked_module_center[0]));
+        current_string_paused_states.push(paused);
 
-        if (current_line_string.getLatLngs().length < 2) { return; }
+        if (current_string_points.length < 2) { return; }
+        draw_current_string();
 
-        // get intersecting modules
-        var line = turf.lineString(current_line_string.toGeoJSON().geometry.coordinates);
-
+        // get modules intersected by the (non-paused) line segments
+        var lines = []; 
+        for (var i = 1; i < current_string_points.length; i++) {
+          var line = new L.polyline([current_string_points[i-1], current_string_points[i]]);
+          lines.push(turf.lineString(line.toGeoJSON().geometry.coordinates));
+        }
         modules_geojson.eachLayer(function (layer) {
           var track_id = layer.feature.properties.track_id;
           var module = turf.polygon(layer.feature.geometry.coordinates);
-          if (turf.booleanIntersects(module, line)) {
-            intersecting_modules.push({"track_id": track_id, "module": module});
+          for (var i = 0; i < lines.length; i++) {
+            if (!current_string_paused_states[i+1]) {  // skip paused lines
+              if (turf.booleanIntersects(module, lines[i])) {
+                if (intersecting_modules.filter(e => e.track_id === track_id).length === 0 ) {  // prevent duplicates
+                  intersecting_modules.push({"track_id": track_id, "module": module});
+                }
+              }
+            }
           }
         });
 
-        // determine order of modules (yielding lowest level module IDs)
+        // determine order of modules along current string line (gives lowest level module IDs)
+        var current_string_polyline = new L.polyline(current_string_points);
+        var line = turf.lineString(current_string_polyline.toGeoJSON().geometry.coordinates);
         var distance_along_line = {};
         for (var i = 0; i < intersecting_modules.length; i++) {
           var track_id = intersecting_modules[i].track_id
@@ -319,7 +373,8 @@
 
       // "new string" clicked
       string_editor_controller.new_string.connect(function() {
-        current_line_string = new L.Polyline([], {weight: 1, opacity: 1, color: '#425df5'}).addTo(map);
+        current_string_points = [];
+        current_string_paused_states = [];
         intersecting_modules = [];
       });
       
@@ -335,20 +390,30 @@
         // store current string annotation in temporary string data of model
         string_editor_controller.set_temporary_string_annotation_data(JSON.stringify({
           "modules": intersecting_modules,
-          "polyline": current_line_string.toGeoJSON()
+          "points": current_string_points,
+          "paused": current_string_paused_states
         }));
+      });
+
+      // "pause drawing" / "continue drawing" clicked
+      string_editor_controller.drawing_paused_changed.connect(function(value) {
+        paused = value;
       });
 
       // "cancel string" clicked
       string_editor_controller.cancel_string.connect(function() {
-        map.removeLayer(current_line_string);
+        current_string_points = [];
+        current_string_paused_states = [];
         intersecting_modules = [];
+        draw_current_string();
       });
 
       // string confirmed
       string_editor_controller.confirm_string.connect(function() {
-        map.removeLayer(current_line_string);
+        current_string_points = [];
+        current_string_paused_states = [];
         intersecting_modules = [];
+        draw_current_string();
       });
   });
  </script>

@@ -27,6 +27,7 @@ class StringEditorView(QWidget):
         self.ui.pushButtonCancelString.clicked.connect(self.cancel_string)
         self.ui.pushButtonConfirmString.clicked.connect(self.confirm_string)
         self.ui.pushButtonStartDrawing.clicked.connect(self.start_drawing)
+        self.ui.pushButtonPauseDrawing.clicked.connect(self.pause_drawing)
         self.ui.pushButtonEndDrawing.clicked.connect(self.end_drawing)
         self.ui.pushButtonDeleteString.clicked.connect(self.controller.string_editor_controller.delete_string)
         self.ui.lineEditTrackerID.textChanged.connect(lambda value: setattr(self.model.string_editor_model, 'tracker_id', value))
@@ -37,6 +38,7 @@ class StringEditorView(QWidget):
         self.model.string_editor_model.inverter_id_changed.connect(self.ui.lineEditInverterID.setText)
         self.ui.lineEditStringID.textChanged.connect(lambda value: setattr(self.model.string_editor_model, 'string_id', value))
         self.model.string_editor_model.string_id_changed.connect(self.ui.lineEditStringID.setText)
+        self.model.string_editor_model.drawing_paused_changed.connect(self.drawing_paused_changed)
         self.controller.string_editor_controller.show_validation_error.connect(self.show_validation_error)
         self.controller.string_editor_controller.confirm_string.connect(self.disable)
         self.controller.export_string_annotation.connect(self.controller.string_editor_controller.export_string_annotation)
@@ -49,6 +51,7 @@ class StringEditorView(QWidget):
 
     def disable(self):
         self.ui.pushButtonStartDrawing.setEnabled(False)
+        self.ui.pushButtonPauseDrawing.setEnabled(False)
         self.ui.pushButtonEndDrawing.setEnabled(False)
         self.ui.pushButtonCancelString.setEnabled(False)
         self.ui.pushButtonConfirmString.setEnabled(False)
@@ -61,7 +64,11 @@ class StringEditorView(QWidget):
     def start_drawing(self):
         self.controller.string_editor_controller.drawing_started.emit()
         self.ui.pushButtonStartDrawing.setEnabled(False)
+        self.ui.pushButtonPauseDrawing.setEnabled(True)
         self.ui.pushButtonEndDrawing.setEnabled(True)
+
+    def pause_drawing(self):
+        self.model.string_editor_model.drawing_paused = not self.model.string_editor_model.drawing_paused
 
     def end_drawing(self):
         self.controller.string_editor_controller.drawing_ended.emit()
@@ -71,6 +78,7 @@ class StringEditorView(QWidget):
         self.controller.string_editor_controller.reset_temp_string_data()
         self.controller.string_editor_controller.new_string.emit()
         self.ui.pushButtonStartDrawing.setEnabled(True)
+        self.ui.pushButtonPauseDrawing.setEnabled(False)
         self.ui.pushButtonEndDrawing.setEnabled(False)
         self.ui.pushButtonCancelString.setEnabled(True)
     
@@ -95,11 +103,12 @@ class StringEditorView(QWidget):
             self.ui.pushButtonNewString.setEnabled(True)
             msg = QMessageBox()
             msg.setWindowTitle("Error")
-            msg.setText("No modules selected. Please click on the map to select modules after clicking \"Start Drawing\"")
+            msg.setText("No modules selected. Please click on the map to select modules after clicking \"Start Drawing\".")
             msg.setIcon(QMessageBox.Critical)
             msg.exec()
             return
         self.ui.pushButtonStartDrawing.setEnabled(False)
+        self.ui.pushButtonPauseDrawing.setEnabled(False)
         self.ui.pushButtonEndDrawing.setEnabled(False)
         self.ui.pushButtonConfirmString.setEnabled(True)
         self.ui.lineEditTrackerID.setEnabled(True)
@@ -113,6 +122,13 @@ class StringEditorView(QWidget):
             self.ui.pushButtonDeleteString.setEnabled(True)
         else:
             self.ui.pushButtonDeleteString.setEnabled(False)
+
+    @Slot()
+    def drawing_paused_changed(self):
+        if self.model.string_editor_model.drawing_paused:
+            self.ui.pushButtonPauseDrawing.setText("Continue")
+        else:
+            self.ui.pushButtonPauseDrawing.setText("Pause")
 
     @Slot(str)
     def show_validation_error(self, text):
@@ -138,6 +154,7 @@ class StringEditorController(QObject):
     show_validation_error = Signal(str)
     selected_string_id_changed = Signal(str, str)
     drawing_started = Signal()
+    drawing_paused_changed = Signal(bool)
     drawing_ended = Signal()
     string_annotation_data_changed = Signal()
 
@@ -148,6 +165,7 @@ class StringEditorController(QObject):
         self.model.dataset_opened.connect(self.load_annotation_file)
         self.model.string_editor_model.selected_string_id_changed.connect(self.selected_string_id_changed)
         self.model.string_editor_model.string_annotation_data_changed.connect(self.string_annotation_data_changed)
+        self.model.string_editor_model.drawing_paused_changed.connect(self.drawing_paused_changed)
 
     def set_default_values(self):
         self.model.string_editor_model.tracker_id = "00"
@@ -160,6 +178,7 @@ class StringEditorController(QObject):
         self.cancel_string.emit()
         self.model.string_editor_model.selected_string_id = None
         self.model.string_editor_model.temporary_string_data = None
+        self.model.string_editor_model.drawing_paused = False
 
     @Slot()
     def reset_string_annotation_data(self):
@@ -293,7 +312,8 @@ class StringEditorController(QObject):
         if ret:
             temporary_string_data = self.model.string_editor_model.temporary_string_data
             modules = temporary_string_data["modules"]
-            polyline = temporary_string_data["polyline"]
+            points = temporary_string_data["points"]
+            paused = temporary_string_data["paused"]
             string_id = "{}_{}_{}_{}".format(
                 self.model.string_editor_model.tracker_id,
                 self.model.string_editor_model.array_id,
@@ -308,10 +328,11 @@ class StringEditorController(QObject):
                     "plant_id_track_id_mapping": []
                 }
 
-            # insert data of current string (e.g. polyline, contained modules)
+            # insert data of current string (e.g. points, contained modules)
             data["string_data"][string_id] = {
                 "track_ids": [module["track_id"] for module in modules],
-                "polyline": polyline
+                "points": points,
+                "paused": paused
             }
 
             # update plant_id / track_id mapping
@@ -333,6 +354,7 @@ class StringEditorModel(QObject):
     inverter_id_changed = Signal(str)
     string_id_changed = Signal(str)
     selected_string_id_changed = Signal(str, str)
+    drawing_paused_changed = Signal(bool)
     temporary_string_data_changed = Signal()
     string_annotation_data_changed = Signal()
 
@@ -343,9 +365,9 @@ class StringEditorModel(QObject):
         self._inverter_id = ""
         self._string_id = ""
         self._selected_string_id = None
-        # string data of entire plant
+        self._drawing_paused = False
         self._temporary_string_data = None
-        self._string_annotation_data = None
+        self._string_annotation_data = None  # string data of entire plant
 
     @property
     def tracker_id(self):
@@ -392,6 +414,15 @@ class StringEditorModel(QObject):
         selected_string_id_prev = self._selected_string_id
         self._selected_string_id = value
         self.selected_string_id_changed.emit(selected_string_id_prev, value)
+
+    @property
+    def drawing_paused(self):
+        return self._drawing_paused
+
+    @drawing_paused.setter
+    def drawing_paused(self, value):
+        self._drawing_paused = value
+        self.drawing_paused_changed.emit(value)
 
     @property
     def string_annotation_data(self):
