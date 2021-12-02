@@ -2,13 +2,14 @@ import os
 import glob
 import cv2
 
-from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QGridLayout, \
-    QScrollArea, QFrame
+from PySide6.QtWidgets import QWidget, QLabel, QGridLayout, \
+    QScrollArea
 from PySide6.QtCore import Qt, Slot, Signal, QObject, QRect
 from PySide6.QtGui import QPixmap, QImage
 
-#from src.ui.ui_patches import Ui_Patches
 from src.common import to_celsius, normalize
+from src.flow_layout import FlowLayout
+
 
 
 class PatchesView(QWidget):
@@ -17,12 +18,8 @@ class PatchesView(QWidget):
         self.model = model
         self.controller = controller
         self.parent = parent
-        #self.ui = Ui_Patches()
-        #self.ui.setupUi(self)
         self.build_ui()
         # connect signals and slots
-        #self.model.dataset_opened.connect(self.enable)
-        #self.model.dataset_closed.connect(self.disable)
         self.model.track_id_changed.connect(lambda _: self.controller.patches_controller.update_patches())
         self.model.patches_model.patches_changed.connect(self.update_patches_labels)
         self.model.source_frame_model.min_temp_changed.connect(lambda _: self.controller.patches_controller.update_patches())
@@ -42,22 +39,14 @@ class PatchesView(QWidget):
 
     def build_ui(self):
         self.grid_layout = QGridLayout(self)
-
         self.scrollArea = QScrollArea(self)
-        self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.scrollArea.setWidgetResizable(True)
-
-        self.inner = QFrame(self.scrollArea)
-        self.inner.setGeometry(QRect(0, 0, 594, 350))
-        self.inner.setLayout(QHBoxLayout())
-
-        #self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
-
+        self.inner = QWidget(self.scrollArea)
+        self.inner.setLayout(FlowLayout())
         self.scrollArea.setWidget(self.inner)
-
-        self.grid_layout.addWidget(self.scrollArea, 0, 0, 1, 1)
-        
+        self.grid_layout.addWidget(self.scrollArea, 0, 0, 1, 1)        
 
     # def resizeEvent(self, event):
     #     self.update_source_frame_label(self.model.source_frame_model.frame)
@@ -71,19 +60,16 @@ class PatchesView(QWidget):
     @Slot(object)
     def update_patches_labels(self, patches):
         self.clear_patches()
-
         if patches is None:
             self.clear_patches()
             return        
         for patch in patches:
             label = QLabel(self)
-            label.setGeometry(QRect(20, 10, 371, 311))
-            label.setPixmap(patch)
+            w = 100
+            h = 160
+            label.setPixmap(patch.scaled(w, h))
+            #label.setPixmap(patch)
             self.inner.layout().addWidget(label)
-
-        #w = self.ui.sourceFrameLabel.width()
-        #h = self.ui.sourceFrameLabel.height()
-        #self.ui.sourceFrameLabel.setPixmap(frame.scaled(w, h, Qt.KeepAspectRatio))
 
 
 

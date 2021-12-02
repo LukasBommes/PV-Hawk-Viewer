@@ -88,10 +88,6 @@ class SourceFrameView(QWidget):
         else:
             self.ui.maxTempSpinBox.setValue(self.model.source_frame_model.min_temp)
 
-    # def updatePatches(self, track_id):
-    #
-    #     return max_temp_patch_idx
-
 
 
 class SourceFrameController(QObject):
