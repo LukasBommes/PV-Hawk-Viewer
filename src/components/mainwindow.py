@@ -53,6 +53,7 @@ class MainView(QMainWindow):
         self.map_view = MapView(model, controller, parent=self)
         self.channel = QWebChannel(self.ui.widget.page())
         self.ui.widget.page().setWebChannel(self.channel)
+        self.ui.widget.setContextMenuPolicy(Qt.NoContextMenu)
         self.channel.registerObject("map_view", self.map_view)
 
         # register string editor controller with web engine
