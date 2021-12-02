@@ -20,6 +20,7 @@ from src.components.map import MapView, ColorbarView, DataColumnSelectionView, \
 from src.components.annotation_editor import AnnotationEditorView
 from src.components.data_sources import DataSourcesView
 from src.components.source_frame import SourceFrameView
+from src.components.patches import PatchesView
 from src.components.analysis_module_temperatures import AnalysisModuleTemperaturesView
 from src.components.analysis_details import AnalysisDetailsView
 from src.components.string_editor import StringEditorView
@@ -91,6 +92,10 @@ class MainView(QMainWindow):
         self.sourceFrameWidget = QDockWidget(u"Source Frame", self)
         self.source_frame = SourceFrameView(self.model, self.controller, parent=self)
         self.sourceFrameWidget.setWidget(self.source_frame)
+
+        self.patchesWidget = QDockWidget(u"Patches", self)
+        self.patches = PatchesView(self.model, self.controller, parent=self)
+        self.patchesWidget.setWidget(self.patches)
         
         self.dataSourcesWidget = QDockWidget(u"Data Sources", self)
         self.data_sources = DataSourcesView(self.model, self.controller, parent=self)
@@ -100,6 +105,7 @@ class MainView(QMainWindow):
         self.addDockWidget(Qt.LeftDockWidgetArea, self.dataSourcesWidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.annotationEditorWidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.sourceFrameWidget)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.patchesWidget)
 
         # setup status bar        
         self.numModulesLabel = QLabel()
@@ -133,6 +139,7 @@ class MainView(QMainWindow):
         self.ui.menuView.addAction(self.stringEditorWidget.toggleViewAction())
         self.ui.menuView.addAction(self.annotationEditorWidget.toggleViewAction())
         self.ui.menuView.addAction(self.sourceFrameWidget.toggleViewAction())
+        self.ui.menuView.addAction(self.patchesWidget.toggleViewAction())
         self.toolbar_view_menu = QMenu(u"Toolbars")
         self.toolbar_view_menu.addAction(self.toolBarDataColumnSelection.toggleViewAction())
         self.toolbar_view_menu.addAction(self.toolBarDataRange.toggleViewAction())
@@ -558,6 +565,7 @@ class MainModel(QObject):
         super().__init__()
         self.reset()
 
+    #TODO: move into controller so that signals are fired on reset (allows to simplify e.g. source frame and patches reset)
     def reset(self):
         self.dataset_dir = None
         self.data = None

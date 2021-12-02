@@ -1,6 +1,7 @@
 general:
 - show patches of selected module
 - make a settings for which patch to select (e.g. max temp patch, first patch, user selected patch, ...)
+- reset mainmodel in main controller so that signals are fired, e.g. when closing the dataset; modify source frame and patches to call reset if track_id is None
 
 string annotation:
 - on/off button for string annotation layer
@@ -20,6 +21,7 @@ status bar
 
 
 sun reflection filter:
-- move from vision pipeline into dataset viewer as an analysis method
+- move from vision pipeline into dataset viewer as an analysis method (highlight patches in patch overview with a frame depending on result of sun reflection filter)
+- make a checkbox in module temperature analysis to ignore patches with sun reflections (if sun reflections are available)
 
 
