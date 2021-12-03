@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt, Slot, Signal, QObject, QRect
 from PySide6.QtGui import QPixmap, QImage
 
 from src.common import to_celsius, normalize
+from src.analysis.temperatures import truncate_patch
 from src.flow_layout import FlowLayout
 
 
@@ -52,12 +53,23 @@ class PatchesView(QWidget):
         self.clear_patches()
         if patches is None:
             self.clear_patches()
-            return        
-        for patch in patches:
+            return
+        images, statistics = patches     
+        for patch, stats in zip(images, statistics):
+            # convert to QPixmap
+            height, width, _ = patch.shape
+            bytesPerLine = 3 * width
+            patch = QPixmap(QImage(
+                patch.data, width, height, bytesPerLine, QImage.Format_RGB888))
+            display_width = 100
+            display_height = 160
             label = QLabel(self)
-            w = 100
-            h = 160
-            label.setPixmap(patch.scaled(w, h))
+            label.setPixmap(patch.scaled(display_width, display_height))
+            label.setToolTip(                
+                "Mean Temp: {:0.2f} °C<br>".format(stats["mean_temp"]) + 
+                "Max Temp: {:0.2f} °C<br>".format(stats["max_temp"]) +
+                "Size: {} x {} px".format(*stats["shape"])
+                )
             self.inner.layout().addWidget(label)
 
 
@@ -82,9 +94,16 @@ class PatchesController(QObject):
             self.model.dataset_dir, "patches_final", "radiometric", self.model.track_id, "*")))
         
         images = []
+        statistics = []
         for image_file in image_files:
             image = cv2.imread(image_file, cv2.IMREAD_ANYDEPTH)
             image = to_celsius(image)
+            image_cropped = truncate_patch(image, margin=0.05)
+            stats = {
+                "max_temp": image_cropped.max(),
+                "mean_temp": image_cropped.mean(),
+                "shape": image.shape[:2]
+            }
             image = normalize(image, vmin=self.model.source_frame_model.min_temp, vmax=self.model.source_frame_model.max_temp)
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
             if self.model.source_frame_model.colormap > 0:
@@ -94,18 +113,11 @@ class PatchesController(QObject):
                 }
                 colormap = colormaps[self.model.source_frame_model.colormap]
                 image = cv2.applyColorMap(image, colormap)
-            images.append(image)
-
-        # place patches into QPixmap
-        patches = []
-        for image in images:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            height, width, _ = image.shape
-            bytesPerLine = 3 * width
-            patches.append(QPixmap(QImage(
-                image.data, width, height, bytesPerLine, QImage.Format_RGB888)))
-
-        self.model.patches_model.patches = patches
+            images.append(image)
+            statistics.append(stats)
+        
+        self.model.patches_model.patches = (images, statistics)
 
 
 

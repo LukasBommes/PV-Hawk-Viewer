@@ -106,6 +106,7 @@ class MainView(QMainWindow):
         self.addDockWidget(Qt.LeftDockWidgetArea, self.annotationEditorWidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.sourceFrameWidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.patchesWidget)
+        self.tabifyDockWidget(self.patchesWidget, self.sourceFrameWidget)
 
         # setup status bar        
         self.numModulesLabel = QLabel()
