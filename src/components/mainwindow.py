@@ -150,6 +150,7 @@ class MainView(QMainWindow):
         self.toolbar_view_menu.addAction(self.toolBarDataColumnSelection.toggleViewAction())
         self.toolbar_view_menu.addAction(self.toolBarDataRange.toggleViewAction())
         self.toolbar_view_menu.addAction(self.toolBarColormapSelection.toggleViewAction())
+        self.toolbar_view_menu.addAction(self.toolBarLayerSelection.toggleViewAction())        
         self.ui.menuView.addMenu(self.toolbar_view_menu)
 
         # about menu
@@ -383,7 +384,6 @@ class MainController(QObject):
         self.model.selected_source = None
         self.model.selected_column = None
         self.model.track_id = None
-        self.model.patch_idx = None
         self.model.dataset_stats = None
 
     @Slot(str)
@@ -578,7 +578,6 @@ class MainModel(QObject):
     selected_source_changed = Signal(str)
     selected_column_changed = Signal(int)
     track_id_changed = Signal(str, str)
-    patch_idx_changed = Signal(int)
     meta_changed = Signal()
     dataset_stats_changed = Signal(object)
     app_mode_changed = Signal(str)
@@ -596,7 +595,6 @@ class MainModel(QObject):
         self._selected_source = None
         self._selected_column = None
         self._track_id = None
-        self._patch_idx = None
         self._dataset_stats = None
 
     @property
@@ -634,18 +632,7 @@ class MainModel(QObject):
     def track_id(self, value):
         track_id_prev = self._track_id
         self._track_id = value
-        self._patch_idx = 0
         self.track_id_changed.emit(track_id_prev, value)
-        self.patch_idx_changed.emit(value)
-
-    @property
-    def patch_idx(self):
-        return self._patch_idx
-
-    @patch_idx.setter
-    def patch_idx(self, value):
-        self._patch_idx = value
-        self.patch_idx_changed.emit(value)
 
     @property
     def dataset_is_open(self):

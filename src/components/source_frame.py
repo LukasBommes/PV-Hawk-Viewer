@@ -100,7 +100,7 @@ class SourceFrameController(QObject):
 
         image_files = sorted(glob.glob(os.path.join(
             self.model.dataset_dir, "patches_final", "radiometric", self.model.track_id, "*")))
-        image_file = image_files[self.model.patch_idx]
+        image_file = image_files[0]  # TODO: set based on heuristic, e.g. select patch with maximum temperature (make setting for this in preferences)
         source_frame_idx = int(re.findall(r'\d+', os.path.basename(image_file))[0])
         source_frame_file = os.path.join(
             self.model.dataset_dir, "splitted", "radiometric", "frame_{:06d}.tiff".format(source_frame_idx))
