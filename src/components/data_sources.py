@@ -71,7 +71,7 @@ class DataSourcesView(QWidget):
     @Slot()
     def update(self):
         self.ui.dataSourcesListWidget.clear()
-        if self.model.dataset_is_open:
+        if self.model.dataset_is_open and self.model.source_names is not None:
             self.ui.dataSourcesListWidget.addItems(self.model.source_names)
             if self.model.selected_source == "Module Layout":
                 self.ui.dataSourcesListWidget.setCurrentRow(0)

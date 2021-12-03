@@ -38,14 +38,7 @@ class SourceFrameView(QWidget):
         self.model.source_frame_model.max_temp_changed.connect(lambda _: self.controller.source_frame_controller.update_source_frame())
         self.model.source_frame_model.colormap_changed.connect(lambda _: self.controller.source_frame_controller.update_source_frame())
         self.model.source_frame_model.frame_changed.connect(self.update_source_frame_label)
-
-        self.model.dataset_closed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
         self.controller.source_deleted.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
-        self.model.selected_source_changed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
-        self.model.selected_column_changed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
-        self.model.map_model.min_val_changed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
-        self.model.map_model.max_val_changed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
-        self.model.map_model.colormap_changed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
 
         # set default values
         self.model.source_frame_model.min_temp = 30
@@ -98,9 +91,11 @@ class SourceFrameController(QObject):
     @Slot()
     def update_source_frame(self):
         if not self.model.dataset_is_open:
+            self.model.source_frame_model.frame = None
             return None
 
         if self.model.track_id is None:
+            self.model.source_frame_model.frame = None
             return None
 
         image_files = sorted(glob.glob(os.path.join(

@@ -365,6 +365,21 @@ class MainController(QObject):
         super().__init__()
         self.model = model
 
+    def reset(self):
+        self.model.dataset_dir = None
+        self.model.data = None
+        self.model.meta = None
+        self.model.patch_meta = None
+        self.model.track_ids = None
+        self.model.app_mode = None
+        self.model.source_names = None
+        self.model.dataset_is_open = False
+        self.model.selected_source = None
+        self.model.selected_column = None
+        self.model.track_id = None
+        self.model.patch_idx = None
+        self.model.dataset_stats = None
+
     @Slot(str)
     def open_dataset(self, dataset_dir):
         self.model.dataset_dir = dataset_dir
@@ -387,11 +402,8 @@ class MainController(QObject):
             self.close_dataset()
 
     @Slot()
-    def close_dataset(self):  # TODO: if there are unsaved changes ask if they should be changed and only then execute the event
-        self.model.reset()
-        self.model.dataset_is_open = False
-        self.model.dataset_stats = None
-        self.model.app_mode = None
+    def close_dataset(self):
+        self.reset()
 
     @Slot()
     def update_source_names(self):
@@ -563,10 +575,6 @@ class MainModel(QObject):
 
     def __init__(self):
         super().__init__()
-        self.reset()
-
-    #TODO: move into controller so that signals are fired on reset (allows to simplify e.g. source frame and patches reset)
-    def reset(self):
         self.dataset_dir = None
         self.data = None
         self._meta = None

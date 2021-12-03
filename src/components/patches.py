@@ -25,14 +25,7 @@ class PatchesView(QWidget):
         self.model.source_frame_model.min_temp_changed.connect(lambda _: self.controller.patches_controller.update_patches())
         self.model.source_frame_model.max_temp_changed.connect(lambda _: self.controller.patches_controller.update_patches())
         self.model.source_frame_model.colormap_changed.connect(lambda _: self.controller.patches_controller.update_patches())
-
-        # self.model.dataset_closed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
-        # self.controller.source_deleted.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
-        # self.model.selected_source_changed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
-        # self.model.selected_column_changed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
-        #self.model.map_model.min_val_changed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
-        #self.model.map_model.max_val_changed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
-        #self.model.map_model.colormap_changed.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
+        self.controller.source_deleted.connect(lambda: setattr(self.model.patches_model, 'patches', None))
 
         # set default values
         self.model.patches_model.patches = None
@@ -47,9 +40,6 @@ class PatchesView(QWidget):
         self.inner.setLayout(FlowLayout())
         self.scrollArea.setWidget(self.inner)
         self.grid_layout.addWidget(self.scrollArea, 0, 0, 1, 1)        
-
-    # def resizeEvent(self, event):
-    #     self.update_source_frame_label(self.model.source_frame_model.frame)
 
     def clear_patches(self):
         while self.inner.layout().count():
@@ -68,7 +58,6 @@ class PatchesView(QWidget):
             w = 100
             h = 160
             label.setPixmap(patch.scaled(w, h))
-            #label.setPixmap(patch)
             self.inner.layout().addWidget(label)
 
 
@@ -81,13 +70,12 @@ class PatchesController(QObject):
     @Slot()
     def update_patches(self):
         if not self.model.dataset_is_open:
+            self.model.patches_model.patches = None
             return
 
         if self.model.track_id is None:
             self.model.patches_model.patches = None
             return
-        
-        # TODO: if the patches view is not visible return here (to save time)
 
         # load patches from directory
         image_files = sorted(glob.glob(os.path.join(
