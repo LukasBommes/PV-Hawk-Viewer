@@ -1,5 +1,9 @@
 general:
-- make a settings for which patch to select (e.g. max temp patch, first patch, user selected patch, ...)
+- show error traceback in GUI window
+- remove patch_idx from main model
+
+string editor:
+- add a explanatory label for the drawing (e.g. tell the user to click onto a module in the map after clicking "start drawing")
 
 defect anotation:
 - show tooltip with module defects on hover

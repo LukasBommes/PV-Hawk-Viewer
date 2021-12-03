@@ -22,6 +22,7 @@ from src.components.data_sources import DataSourcesView
 from src.components.source_frame import SourceFrameView
 from src.components.patches import PatchesView
 from src.components.analysis_module_temperatures import AnalysisModuleTemperaturesView
+from src.components.analysis_sun_filter import AnalysisSunFilterView
 from src.components.analysis_details import AnalysisDetailsView
 from src.components.string_editor import StringEditorView
 
@@ -327,6 +328,14 @@ class MainView(QMainWindow):
             if which not in self.child_windows:
                 self.child_windows[which] = AnalysisModuleTemperaturesView(self.model, self.controller, self)
             self.controller.analysis_module_temperatures_controller.reset()
+            self.child_windows[which].show()
+
+        elif which == "analysis_sun_filter":
+            if not self.model.dataset_is_open:
+                return
+            if which not in self.child_windows:
+                self.child_windows[which] = AnalysisSunFilterView(self.model, self.controller, self)
+            self.controller.analysis_sun_filter_controller.reset()
             self.child_windows[which].show()
 
         elif which == "analysis_details":
