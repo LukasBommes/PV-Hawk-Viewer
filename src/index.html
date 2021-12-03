@@ -18,11 +18,20 @@
   new QWebChannel(qt.webChannelTransport, function (channel) {
       var map_view = channel.objects.map_view;
       var string_editor_controller = channel.objects.string_editor_controller;
+
+      // modules layout
       var modules_geojson = null;
+
+      // defect annotations
       var annotation_data = null;
+
+      // string annotations
       var string_annotation_data = null;
       var string_annotation_lines = null;
       var string_annotation_labels = null;
+
+      // show/hide map layers
+      var show_strings = null;
 
       var map = L.map('map');
       L.tileLayer(
@@ -138,6 +147,12 @@
         draw_defect_annotations();
       });
 
+      // "show strings" checked/unchecked
+      map_view.show_strings_changed.connect(function(value) {
+        show_strings = value;
+        draw_string_annotations();
+      });
+
       //*****************************************************************
       //  Draw defect annotation data
       //*****************************************************************
@@ -204,6 +219,7 @@
       function draw_string_annotations() {
         reset_string_annotations();
         if (string_annotation_data === null) { return; }
+        if (!show_strings) { return; }
         map_view.printObj(JSON.stringify("Drawing string annotations."));
         var lines = [];
         var labels = [];

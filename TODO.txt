@@ -1,10 +1,5 @@
 general:
-- show patches of selected module
 - make a settings for which patch to select (e.g. max temp patch, first patch, user selected patch, ...)
-- reset mainmodel in main controller so that signals are fired, e.g. when closing the dataset; modify source frame and patches to call reset if track_id is None
-
-string annotation:
-- on/off button for string annotation layer
 
 defect anotation:
 - show tooltip with module defects on hover

@@ -16,7 +16,7 @@ from src.common import get_immediate_subdirectories
 
 from src.ui.ui_mainwindow import Ui_MainWindow
 from src.components.map import MapView, ColorbarView, DataColumnSelectionView, \
-    DataRangeView, ColormapSelectionView
+    DataRangeView, ColormapSelectionView, LayerSelectionView
 from src.components.annotation_editor import AnnotationEditorView
 from src.components.data_sources import DataSourcesView
 from src.components.source_frame import SourceFrameView
@@ -79,6 +79,11 @@ class MainView(QMainWindow):
         self.addToolBar(Qt.TopToolBarArea, self.toolBarColormapSelection)
         self.colormapSelectionWidget = ColormapSelectionView(self.model, self.controller, parent=self)
         self.toolBarColormapSelection.addWidget(self.colormapSelectionWidget)
+
+        self.toolBarLayerSelection = QToolBar(u"Layer Selection Toolbar", self)
+        self.addToolBar(Qt.TopToolBarArea, self.toolBarLayerSelection)
+        self.layerSelectionWidget = LayerSelectionView(self.model, self.controller, parent=self)
+        self.toolBarLayerSelection.addWidget(self.layerSelectionWidget)
 
         # setup widgets
         self.annotationEditorWidget = QDockWidget(u"Annotation Editor", self)

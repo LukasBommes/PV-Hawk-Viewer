@@ -5,8 +5,10 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
-from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QComboBox
+from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QComboBox, \
+    QMenu, QPushButton
 from PySide6.QtCore import Slot, Signal, QObject
+from PySide6.QtGui import QAction
 
 from src.colormap import get_colors
 from src.ui.ui_toolbar_data_range import Ui_DataRange
@@ -18,6 +20,7 @@ class MapView(QObject):
     dataset_closed = Signal()
     annotation_data_changed = Signal()
     track_id_changed = Signal(str, str)
+    show_strings_changed = Signal(bool)
 
     def __init__(self, model, controller, parent=None):
         super(MapView, self).__init__()
@@ -32,12 +35,15 @@ class MapView(QObject):
         self.model.selected_column_changed.connect(lambda: self.dataset_changed.emit(False))
         self.model.map_model.colormap_changed.connect(lambda: self.dataset_changed.emit(False))
 
-        # signal for explicitly redrawing themap
+        # signal for explicitly redrawing the map
         self.controller.redraw_map.connect(lambda: self.dataset_changed.emit(False))
 
         # defect annotation editor
         self.model.annotation_editor_model.annotation_data_changed.connect(self.annotation_data_changed)
         self.model.track_id_changed.connect(self.track_id_changed)
+
+        # show/hide layers
+        self.model.map_model.show_strings_changed.connect(self.show_strings_changed)
 
         self.current_map_data = None
 
@@ -285,10 +291,62 @@ class DataColumnSelectionView(QWidget):
 
 
 
+class LayerSelectionView(QWidget):
+    def __init__(self, model, controller, parent=None):
+        super().__init__(parent)
+        self.model = model
+        self.controller = controller
+        self.parent = parent        
+        self.build_ui()
+        # connect signals and slots
+        self.model.dataset_opened.connect(lambda: self.button.setEnabled(True))
+        self.model.dataset_opened.connect(lambda: setattr(self.model.map_model, "show_strings", True))
+        self.model.dataset_closed.connect(lambda: self.button.setEnabled(False))
+        self.model.selected_source_changed.connect(self.enable_disable)
+        self.model.map_model.show_strings_changed.connect(self.show_strings.setChecked)
+        self.show_strings.triggered.connect(lambda value: setattr(self.model.map_model, "show_strings", value))
+        self.model.app_mode_changed.connect(self.app_mode_changed)
+
+        self.enable_disable()
+
+        # set defaults
+        self.model.map_model.show_strings = True    
+
+    def build_ui(self):
+        self.horizontalLayout = QHBoxLayout(self)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.label = QLabel("Map Layers")
+        self.horizontalLayout.addWidget(self.label)
+        self.menu = QMenu(self)
+        self.show_strings = QAction("Strings", self.menu)
+        self.show_strings.setCheckable(True)
+        self.menu.addAction(self.show_strings)
+        self.button = QPushButton()
+        self.button.setMenu(self.menu)        
+        self.horizontalLayout.addWidget(self.button)
+
+    @Slot()
+    def enable_disable(self):
+        if self.model.selected_source is None:
+            self.button.setEnabled(False)
+        else:
+            self.button.setEnabled(True)
+
+    @Slot()
+    def app_mode_changed(self):
+        if self.model.app_mode == "string_annotation":
+            self.model.map_model.show_strings = True
+            self.show_strings.setEnabled(False)
+        else:
+            self.show_strings.setEnabled(True)
+
+
+
 class MapModel(QObject):
     min_val_changed = Signal(int)
     max_val_changed = Signal(int)
     colormap_changed = Signal(int)
+    show_strings_changed = Signal(bool)
 
     def __init__(self):
         super().__init__()
@@ -296,6 +354,7 @@ class MapModel(QObject):
         self._max_val = None
         self._colormap = None
         self._colormaps = sorted(plt.colormaps(), key=lambda x: str.lower(x))
+        self._show_strings = None
     
     @property
     def min_val(self):
@@ -321,7 +380,6 @@ class MapModel(QObject):
 
     @colormap.setter
     def colormap(self, value):
-        #cmap = list(self._colormaps.values())[value]
         cmap = self._colormaps[value]
         self._colormap = cmap
         self.colormap_changed.emit(value)
@@ -329,3 +387,12 @@ class MapModel(QObject):
     @property
     def colormaps(self):
         return self._colormaps
+
+    @property
+    def show_strings(self):
+        return self._show_strings
+
+    @show_strings.setter
+    def show_strings(self, value):
+        self._show_strings = value
+        self.show_strings_changed.emit(value)
