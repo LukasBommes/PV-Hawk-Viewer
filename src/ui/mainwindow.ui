@@ -68,7 +68,7 @@
     <property name="title">
      <string>Analysis</string>
     </property>
-    <addaction name="actionModule_Temperatures"/>
+    <addaction name="actionNew_Analysis"/>
    </widget>
    <widget class="QMenu" name="menuAnnotation">
     <property name="title">
@@ -142,12 +142,12 @@
     <string>Load Defect Annotation...</string>
    </property>
   </action>
-  <action name="actionModule_Temperatures">
+  <action name="actionNew_Analysis">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Module Temperatures</string>
+    <string>New Analysis...</string>
    </property>
   </action>
   <action name="actionAnnotate_Strings">

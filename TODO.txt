@@ -1,5 +1,6 @@
 general:
 - show error traceback in GUI window
+- add map layer to view -> toolbar
 - remove patch_idx from main model
 
 string editor:
@@ -9,6 +10,9 @@ defect anotation:
 - show tooltip with module defects on hover
 
 analysis:
+- disable "name" field when sun filter tab is active
+- change output format of sun filter to json
+- consider sun filter in module temperatures analysis
 - use pretrained ResNet for defect analysis
 
 status bar

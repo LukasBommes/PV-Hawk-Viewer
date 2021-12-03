@@ -20,7 +20,7 @@ class DataSourcesView(QWidget):
         self.update()
         # connect signals and slots
         self.ui.pushButtonDelete.clicked.connect(self.delete_source)
-        self.ui.pushButtonNewAnalysis.clicked.connect(lambda: self.parent.show_child_window("analysis_module_temperatures"))
+        self.ui.pushButtonNewAnalysis.clicked.connect(lambda: self.parent.show_child_window("analysis"))
         self.ui.pushButtonDetails.clicked.connect(lambda: self.parent.show_child_window("analysis_details"))
         self.ui.dataSourcesListWidget.itemClicked.connect(self.item_clicked)
         self.model.source_names_changed.connect(self.update)

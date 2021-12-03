@@ -21,8 +21,7 @@ from src.components.annotation_editor import AnnotationEditorView
 from src.components.data_sources import DataSourcesView
 from src.components.source_frame import SourceFrameView
 from src.components.patches import PatchesView
-from src.components.analysis_module_temperatures import AnalysisModuleTemperaturesView
-from src.components.analysis_sun_filter import AnalysisSunFilterView
+from src.components.analysis import AnalysisView
 from src.components.analysis_details import AnalysisDetailsView
 from src.components.string_editor import StringEditorView
 
@@ -139,7 +138,7 @@ class MainView(QMainWindow):
         self.ui.actionClose_String_Annotation.triggered.connect(self.close_string_annotation)
 
         # analysis menu
-        self.ui.actionModule_Temperatures.triggered.connect(lambda: self.show_child_window("analysis_module_temperatures"))
+        self.ui.actionNew_Analysis.triggered.connect(lambda: self.show_child_window("analysis"))
 
         # view menu
         self.ui.menuView.addAction(self.dataSourcesWidget.toggleViewAction())
@@ -210,7 +209,7 @@ class MainView(QMainWindow):
     def dataset_opened(self):
         self.ui.actionClose_Dataset.setEnabled(True)
         self.ui.actionOpen_Dataset.setEnabled(False)
-        self.ui.actionModule_Temperatures.setEnabled(True)
+        self.ui.actionNew_Analysis.setEnabled(True)
         self.ui.actionNew_Defect_Annotation.setEnabled(True)
         self.ui.actionLoad_Defect_Annotation.setEnabled(True)
         self.ui.actionAnnotate_Strings.setEnabled(True)
@@ -221,7 +220,7 @@ class MainView(QMainWindow):
     def dataset_closed(self):
         self.ui.actionClose_Dataset.setEnabled(False)
         self.ui.actionOpen_Dataset.setEnabled(True)        
-        self.ui.actionModule_Temperatures.setEnabled(False)
+        self.ui.actionNew_Analysis.setEnabled(False)
         self.ui.actionNew_Defect_Annotation.setEnabled(False)
         self.ui.actionLoad_Defect_Annotation.setEnabled(False)
         self.ui.actionSave_Defect_Annotation.setEnabled(False)
@@ -322,20 +321,12 @@ class MainView(QMainWindow):
 
     @Slot()
     def show_child_window(self, which):
-        if which == "analysis_module_temperatures":
+        if which == "analysis":
             if not self.model.dataset_is_open:
                 return
             if which not in self.child_windows:
-                self.child_windows[which] = AnalysisModuleTemperaturesView(self.model, self.controller, self)
-            self.controller.analysis_module_temperatures_controller.reset()
-            self.child_windows[which].show()
-
-        elif which == "analysis_sun_filter":
-            if not self.model.dataset_is_open:
-                return
-            if which not in self.child_windows:
-                self.child_windows[which] = AnalysisSunFilterView(self.model, self.controller, self)
-            self.controller.analysis_sun_filter_controller.reset()
+                self.child_windows[which] = AnalysisView(self.model, self.controller, self)
+            self.controller.analysis_controller.reset()
             self.child_windows[which].show()
 
         elif which == "analysis_details":
@@ -430,6 +421,10 @@ class MainController(QObject):
             except FileNotFoundError:
                 pass
         source_names.insert(0, "Module Layout")
+        try:
+            source_names.remove("Sun Filter")  # ignore sun_filter output in analysis
+        except ValueError:
+            pass
         self.model.source_names = source_names
 
     @Slot()

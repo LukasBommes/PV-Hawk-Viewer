@@ -4,7 +4,7 @@ Depending on the camera angle some of the patches of a PV module may contain
 severe sun relfections which disturb downstream tasks, such as fault
 classification. Sun reflections differ from thermal anomalies in that they are
 non-stationary, but instead change position over subsequent patches. This filter
-exploits this fact to differentiate modules with reflections from thoss without.
+exploits this fact to differentiate modules with reflections from those without.
 
 It works as follows:
 1) Compute the maximum temperature and the x, y coordinate of the maximum
@@ -85,7 +85,7 @@ def min_temp_var_segment(max_locs_peaks, max_temps,
 
 
 def predict_sun_reflections(patch_files, threshold_temp=5.0, threshold_loc=10.0,
-    threshold_changepoint=10.0):
+    threshold_changepoint=10.0, segment_length_threshold=0.3):
     if len(patch_files) < 2:
         return (
             np.array([], dtype=np.int32), np.array([], dtype=np.float64),
@@ -119,7 +119,8 @@ def predict_sun_reflections(patch_files, threshold_temp=5.0, threshold_loc=10.0,
 
     # find start and stop index of the segment of zeros which
     # is sufficiently long and has smallest temperature variance
-    start_idx, stop_idx = min_temp_var_segment(max_locs_peaks, max_temps)
+    start_idx, stop_idx = min_temp_var_segment(
+        max_locs_peaks, max_temps, segment_length_threshold)
 
     # compute median location point and median temperature of this segment
     center_loc = np.median(max_locs[start_idx:stop_idx+1, :], axis=0)
@@ -147,15 +148,17 @@ class AnalysisSunFilterWorker(QObject):
     finished = Signal()
     progress = Signal(float, bool, str)
 
-    def __init__(self, dataset_dir, name, threshold_temp, threshold_loc, threshold_changepoint):
+    def __init__(self, dataset_dir, name, threshold_temp, threshold_loc, 
+            threshold_changepoint, segment_length_threshold):
         super().__init__()
         self.is_cancelled = False
         self.timestamp = datetime.datetime.utcnow().isoformat()
         self.dataset_dir = dataset_dir
-        self.name = "sun_filter"
+        self.name = name
         self.threshold_temp = threshold_temp
         self.threshold_loc = threshold_loc
         self.threshold_changepoint = threshold_changepoint
+        self.segment_length_threshold = segment_length_threshold
 
     def run(self):
         save_path = os.path.join(self.dataset_dir, "analyses", self.name)
@@ -179,8 +182,11 @@ class AnalysisSunFilterWorker(QObject):
                 patch_files = sorted(glob.glob(
                     os.path.join(patch_dir, plant_id, "*")))
                 patch_idxs_sun_reflections, _, _, _, _ = predict_sun_reflections(
-                    patch_files, self.threshold_temp, self.threshold_loc,
-                    self.threshold_changepoint)
+                    patch_files, 
+                    self.threshold_temp, 
+                    self.threshold_loc,
+                    self.threshold_changepoint,
+                    self.segment_length_threshold)
                 if len(patch_idxs_sun_reflections) > 0:
                     for patch_idx in patch_idxs_sun_reflections:
                         csvwriter.writerow([plant_id, patch_idx])
@@ -197,7 +203,8 @@ class AnalysisSunFilterWorker(QObject):
             "hyperparameters": {
                 "threshold_temp": self.threshold_temp,
                 "threshold_loc": self.threshold_loc,
-                "threshold_changepoint": self.threshold_changepoint
+                "threshold_changepoint": self.threshold_changepoint,
+                "segment_length_threshold": self.segment_length_threshold
             }
         }
         json.dump(meta, open(os.path.join(save_path, "meta.json"), "w"))
