@@ -1,6 +1,5 @@
 general:
 - show error traceback in GUI window
-- remove patch_idx from main model
 - fix key error when clicking 7th module in 3rd row
 
 string editor:
@@ -10,8 +9,6 @@ defect anotation:
 - show tooltip with module defects on hover
 
 analysis:
-- change output format of sun filter to json
-- consider sun filter in module temperatures analysis
 - use pretrained ResNet for defect analysis
 
 status bar
@@ -24,6 +21,5 @@ status bar
 
 sun reflection filter:
 - move from vision pipeline into dataset viewer as an analysis method (highlight patches in patch overview with a frame depending on result of sun reflection filter)
-- make a checkbox in module temperature analysis to ignore patches with sun reflections (if sun reflections are available)
 
 

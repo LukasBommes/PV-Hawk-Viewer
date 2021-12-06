@@ -377,6 +377,7 @@ class MainController(QObject):
         self.model.data = None
         self.model.meta = None
         self.model.patch_meta = None
+        self.model.sun_reflections = None
         self.model.track_ids = None
         self.model.app_mode = None
         self.model.source_names = None
@@ -391,6 +392,7 @@ class MainController(QObject):
         self.model.dataset_dir = dataset_dir
         self.model.patch_meta = pickle.load(open(os.path.join(
             self.model.dataset_dir, "patches", "meta.pkl"), "rb"))
+        self.load_sun_reflections()
         self.update_source_names()
         self.load_source("Module Layout")
         self.update_track_ids()
@@ -430,6 +432,15 @@ class MainController(QObject):
     @Slot()
     def update_track_ids(self):
         self.model.track_ids = list(self.get_column("track_id").values())
+
+    def load_sun_reflections(self):
+        if self.model.dataset_dir is None:
+            return
+        try:
+            self.model.sun_reflections = json.load(open(os.path.join(
+                self.model.dataset_dir, "analyses", "Sun Filter", "sun_filter.json"), "r"))
+        except FileNotFoundError:
+            pass
 
     @Slot(str)
     def load_source(self, selected_source):
@@ -587,6 +598,7 @@ class MainModel(QObject):
         self.dataset_dir = None
         self.data = None
         self._meta = None
+        self.sun_reflections = None
         self.patch_meta = None
         self.track_ids = None
         self._app_mode = None # "None", "data_visualization", "defect_annotation", "string_annotation"

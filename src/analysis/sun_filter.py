@@ -26,7 +26,6 @@ It works as follows:
 
 import os
 import glob
-import csv
 import json
 import itertools
 import operator
@@ -143,7 +142,6 @@ def predict_sun_reflections(patch_files, threshold_temp=5.0, threshold_loc=10.0,
 
 
 
-# TODO: format output as json instead of csv
 class AnalysisSunFilterWorker(QObject):
     finished = Signal()
     progress = Signal(float, bool, str)
@@ -161,39 +159,43 @@ class AnalysisSunFilterWorker(QObject):
         self.segment_length_threshold = segment_length_threshold
 
     def run(self):
-        save_path = os.path.join(self.dataset_dir, "analyses", self.name)
-        os.makedirs(save_path, exist_ok=True)
-
         patch_dir = os.path.join(self.dataset_dir, "patches_final", "radiometric")
         if not os.path.isdir(patch_dir):
             return None
 
-        with open(os.path.join(save_path, "sun_filter.csv"), 'w', newline='') as csvfile:
-            csvwriter = csv.writer(csvfile, delimiter=',')
-            plant_ids = sorted(get_immediate_subdirectories(patch_dir))
-            for i, plant_id in enumerate(plant_ids):
+        sun_reflections = {}
+        plant_ids = sorted(get_immediate_subdirectories(patch_dir))
+        for i, plant_id in enumerate(plant_ids):
 
-                progress = i / len(plant_ids)
-                if self.is_cancelled:
-                    self.progress.emit(progress, True, "Cancelled")
-                    self.finished.emit()
-                    return
+            progress = i / len(plant_ids)
+            if self.is_cancelled:
+                self.progress.emit(progress, True, "Cancelled")
+                self.finished.emit()
+                return
 
-                patch_files = sorted(glob.glob(
-                    os.path.join(patch_dir, plant_id, "*")))
-                patch_idxs_sun_reflections, _, _, _, _ = predict_sun_reflections(
-                    patch_files, 
-                    self.threshold_temp, 
-                    self.threshold_loc,
-                    self.threshold_changepoint,
-                    self.segment_length_threshold)
-                if len(patch_idxs_sun_reflections) > 0:
-                    for patch_idx in patch_idxs_sun_reflections:
-                        csvwriter.writerow([plant_id, patch_idx])
-                else:
-                    csvwriter.writerow([plant_id, -1])
+            patch_files = sorted(glob.glob(
+                os.path.join(patch_dir, plant_id, "*")))
+            patch_idxs_sun_reflections, _, _, _, _ = predict_sun_reflections(
+                patch_files, 
+                self.threshold_temp, 
+                self.threshold_loc,
+                self.threshold_changepoint,
+                self.segment_length_threshold)
+            
+            sun_reflections[plant_id] = [
+                os.path.splitext(os.path.basename(patch_file))[0] 
+                for i, patch_file 
+                in enumerate(patch_files) 
+                if i in patch_idxs_sun_reflections
+            ]
 
-                self.progress.emit(progress, False, "Filtering module images with sun reflections...")
+            self.progress.emit(progress, False, "Filtering module images with sun reflections...")
+        
+        save_path = os.path.join(self.dataset_dir, "analyses", self.name)
+        save_file = os.path.join(save_path, "sun_filter.json")
+        print("Saving sun filter results in {}".format(save_file))
+        os.makedirs(save_path, exist_ok=True)
+        json.dump(sun_reflections, open(save_file, "w"))        
 
         print("Saving meta json in {}".format(os.path.join(save_path, "meta.json")))
         meta = {

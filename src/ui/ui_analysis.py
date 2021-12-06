@@ -160,10 +160,10 @@ class Ui_Analysis(object):
 
         self.formLayout.setWidget(1, QFormLayout.FieldRole, self.spinBoxNeighborRadius)
 
-        self.checkBoxIgnoreSunReflections = QCheckBox(self.tabModuleTemperatures)
-        self.checkBoxIgnoreSunReflections.setObjectName(u"checkBoxIgnoreSunReflections")
+        self.checkBoxModuleTemperaturesIgnoreSunReflections = QCheckBox(self.tabModuleTemperatures)
+        self.checkBoxModuleTemperaturesIgnoreSunReflections.setObjectName(u"checkBoxModuleTemperaturesIgnoreSunReflections")
 
-        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.checkBoxIgnoreSunReflections)
+        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.checkBoxModuleTemperaturesIgnoreSunReflections)
 
         self.tabWidget.addTab(self.tabModuleTemperatures, "")
 
@@ -203,7 +203,7 @@ class Ui_Analysis(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabSunFilter), QCoreApplication.translate("Analysis", u"Sun  Reflection Filter", None))
         self.label.setText(QCoreApplication.translate("Analysis", u"Truncate image borders (percent of image width)", None))
         self.label_3.setText(QCoreApplication.translate("Analysis", u"Local neighborhood radius (meters)", None))
-        self.checkBoxIgnoreSunReflections.setText(QCoreApplication.translate("Analysis", u"Ignore images with sun reflections", None))
+        self.checkBoxModuleTemperaturesIgnoreSunReflections.setText(QCoreApplication.translate("Analysis", u"Ignore images with sun reflections", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabModuleTemperatures), QCoreApplication.translate("Analysis", u"Module Temperatures", None))
         self.nameLineEdit.setPlaceholderText("")
     # retranslateUi

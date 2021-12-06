@@ -203,7 +203,7 @@
         </widget>
        </item>
        <item row="2" column="0">
-        <widget class="QCheckBox" name="checkBoxIgnoreSunReflections">
+        <widget class="QCheckBox" name="checkBoxModuleTemperaturesIgnoreSunReflections">
          <property name="text">
           <string>Ignore images with sun reflections</string>
          </property>

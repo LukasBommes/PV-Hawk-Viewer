@@ -32,13 +32,15 @@ class AnalysisView(QWidget):
         self.model.analysis_model.status_changed.connect(self.status_changed)
         self.ui.tabWidget.currentChanged.connect(self.tabChanged)
         self.model.analysis_model.active_tab_widget_changed.connect(self.ui.tabWidget.setCurrentWidget)
-        self.model.analysis_model.active_tab_widget_changed.connect(self.active_tab_widget_changed)      
+        self.model.analysis_model.active_tab_widget_changed.connect(self.active_tab_widget_changed)
 
         # module temperatures
         self.model.analysis_model.border_margin_changed.connect(self.ui.spinBoxTruncateWidth.setValue)
         self.ui.spinBoxTruncateWidth.valueChanged.connect(lambda value: setattr(self.model.analysis_model, 'border_margin', value))
         self.model.analysis_model.neighbor_radius_changed.connect(self.ui.spinBoxNeighborRadius.setValue)
         self.ui.spinBoxNeighborRadius.valueChanged.connect(lambda value: setattr(self.model.analysis_model, 'neighbor_radius', value))
+        self.model.analysis_model.module_temperatures_ignore_sun_reflections_changed.connect(self.ui.checkBoxModuleTemperaturesIgnoreSunReflections.setChecked)
+        self.ui.checkBoxModuleTemperaturesIgnoreSunReflections.stateChanged.connect(lambda value: setattr(self.model.analysis_model, 'module_temperatures_ignore_sun_reflections', bool(value)))
         # sun filter
         self.model.analysis_model.threshold_temp_changed.connect(self.ui.spinBoxThresholdTemp.setValue)
         self.ui.spinBoxThresholdTemp.valueChanged.connect(lambda value: setattr(self.model.analysis_model, 'threshold_temp', value))
@@ -64,6 +66,7 @@ class AnalysisView(QWidget):
         self.ui.spinBoxThresholdLoc.setEnabled(True)
         self.ui.spinBoxThresholdChangepoint.setEnabled(True)
         self.ui.spinBoxSegmentLengthThreshold.setEnabled(True)
+        self.enable_disable_sun_reflections()
 
     @Slot(int)
     def tabChanged(self, idx):
@@ -79,6 +82,12 @@ class AnalysisView(QWidget):
             self.model.analysis_model.name = "Analysis {}".format(time)
             self.ui.nameLineEdit.setEnabled(True)
 
+    def enable_disable_sun_reflections(self):
+        if self.model.sun_reflections is None:
+            self.ui.checkBoxModuleTemperaturesIgnoreSunReflections.setEnabled(False)
+        else:
+            self.ui.checkBoxModuleTemperaturesIgnoreSunReflections.setEnabled(True)
+
     @Slot(object)
     def status_changed(self, status):
         if status is None:
@@ -88,6 +97,7 @@ class AnalysisView(QWidget):
             self.ui.pushButtonCompute.setEnabled(False)
             self.ui.spinBoxTruncateWidth.setEnabled(False)
             self.ui.spinBoxNeighborRadius.setEnabled(False)
+            self.ui.checkBoxModuleTemperaturesIgnoreSunReflections.setEnabled(False)
             self.ui.spinBoxThresholdTemp.setEnabled(False)
             self.ui.spinBoxThresholdLoc.setEnabled(False)
             self.ui.spinBoxThresholdChangepoint.setEnabled(False)
@@ -101,6 +111,7 @@ class AnalysisView(QWidget):
             self.ui.pushButtonOk.show()
             self.ui.pushButtonCancel.setEnabled(False)
             self.controller.update_source_names()
+            self.controller.load_sun_reflections()
 
     @Slot()
     def show_name_exist_dialog(self):
@@ -133,6 +144,7 @@ class AnalysisController(QObject):
         # module temperatures
         self.model.analysis_model.border_margin = 5
         self.model.analysis_model.neighbor_radius = 7
+        self.model.analysis_model.module_temperatures_ignore_sun_reflections = False
         # sun filter
         self.model.analysis_model.threshold_temp = 5.0
         self.model.analysis_model.threshold_loc = 10.0
@@ -166,7 +178,9 @@ class AnalysisController(QObject):
                 self.model.dataset_dir, 
                 self.model.analysis_model.name,
                 self.model.analysis_model.border_margin, 
-                self.model.analysis_model.neighbor_radius)
+                self.model.analysis_model.neighbor_radius,
+                self.model.analysis_model.module_temperatures_ignore_sun_reflections,
+                self.model.sun_reflections)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.worker.finished.connect(self.thread.quit)
@@ -201,6 +215,7 @@ class AnalysisModel(QObject):
     # module temperatures
     border_margin_changed = Signal(int)
     neighbor_radius_changed = Signal(int)
+    module_temperatures_ignore_sun_reflections_changed = Signal(bool)
     # sun filter
     threshold_temp_changed = Signal(float)
     threshold_loc_changed = Signal(float)
@@ -217,6 +232,7 @@ class AnalysisModel(QObject):
         # module temperatures
         self._border_margin = None
         self._neighbor_radius = None
+        self._module_temperatures_ignore_sun_reflections = None
         # sun filter
         self._threshold_temp = None
         self._threshold_loc = None
@@ -287,6 +303,15 @@ class AnalysisModel(QObject):
     def neighbor_radius(self, value):
         self._neighbor_radius = value
         self.neighbor_radius_changed.emit(value)
+
+    @property
+    def module_temperatures_ignore_sun_reflections(self):
+        return self._module_temperatures_ignore_sun_reflections
+
+    @module_temperatures_ignore_sun_reflections.setter
+    def module_temperatures_ignore_sun_reflections(self, value):
+        self._module_temperatures_ignore_sun_reflections = value
+        self.module_temperatures_ignore_sun_reflections_changed.emit(value)
 
     # sun filter
 
