@@ -11,7 +11,6 @@ defect anotation:
 analysis:
 - use pretrained ResNet for defect analysis
 - add explanatory texts for each analysis
-- clean up analysis model (subclass models for each analysis type)
 
 status bar
 - show track ID, plant ID of selected module

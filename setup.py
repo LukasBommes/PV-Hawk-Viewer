@@ -8,7 +8,7 @@ from cx_Freeze import setup, Executable
 build_exe_options = {
     "include_files": [
         ("src/resources/no_image.png", "src/resources/no_image.png"), 
-        ("src/resources/app_icon.png", "src/resources/app_icon.png"),   
+        ("src/resources/app_icon.png", "src/resources/app_icon.png"),  
         ("src/resources/sun_icon.png", "src/resources/sun_icon.png"),    
         ("src/resources/no_sun_icon.png", "src/resources/no_sun_icon.png"),  
         ("src/resources/defect_schema.json", "src/resources/defect_schema.json"),

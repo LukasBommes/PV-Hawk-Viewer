@@ -117,10 +117,7 @@ class AnalysisModuleTemperaturesWorker(QObject):
 
             patch_files = sorted(glob.glob(os.path.join(self.dataset_dir, "patches_final", "radiometric", track_id, "*")))
             if self.ignore_sun_reflections and self.sun_reflections is not None:
-                print(f"Filtering sun reflections for {track_id}")
-                print(f"len before: {len(patch_files)}")
                 patch_files = remove_patches_with_sun_reflection(patch_files, self.sun_reflections[track_id])
-                print(f"len after: {len(patch_files)}")
             temps[track_id] = get_patch_temps(patch_files, self.border_margin)
 
             self.progress.emit(progress, False, "Computing temperature distribution...")
@@ -158,10 +155,11 @@ class AnalysisModuleTemperaturesWorker(QObject):
             "hyperparameters": {
                 "border_margin": self.border_margin,
                 "neighbour_radius": self.neighbour_radius,
-                "ignore_sun_reflections": self.ignore_sun_reflections,
-                "sun_reflections": self.sun_reflections
+                "ignore_sun_reflections": self.ignore_sun_reflections
             }
         }
+        if self.ignore_sun_reflections and self.sun_reflections is not None:
+            meta["hyperparameters"]["sun_reflections"] = self.sun_reflections
         json.dump(meta, open(os.path.join(save_path, "meta.json"), "w"))
 
         self.progress.emit(1, False, "Done")
