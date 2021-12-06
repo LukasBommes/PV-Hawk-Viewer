@@ -4,8 +4,8 @@ import cv2
 
 from PySide6.QtWidgets import QWidget, QLabel, QGridLayout, \
     QScrollArea
-from PySide6.QtCore import Qt, Slot, Signal, QObject, QRect
-from PySide6.QtGui import QPixmap, QImage
+from PySide6.QtCore import Qt, Slot, Signal, QObject, QPoint
+from PySide6.QtGui import QPixmap, QImage, QPainter
 
 from src.common import to_celsius, normalize
 from src.analysis.temperatures import truncate_patch
@@ -27,6 +27,7 @@ class PatchesView(QWidget):
         self.model.source_frame_model.max_temp_changed.connect(lambda _: self.controller.patches_controller.update_patches())
         self.model.source_frame_model.colormap_changed.connect(lambda _: self.controller.patches_controller.update_patches())
         self.controller.source_deleted.connect(lambda: setattr(self.model.patches_model, 'patches', None))
+        self.model.sun_reflections_changed.connect(self.controller.patches_controller.update_patches)
 
         # set default values
         self.model.patches_model.patches = None
@@ -48,13 +49,25 @@ class PatchesView(QWidget):
             if child.widget():
                 child.widget().deleteLater()
 
+    def overlay_pixmaps(self, p1, p2, padding=3):
+        s = p1.size().expandedTo(p2.size())
+        result =  QPixmap(s)
+        result.fill(Qt.transparent)
+        painter = QPainter(result)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.drawPixmap(QPoint(), p1)
+        painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
+        painter.drawPixmap(QPoint(padding, padding), p2)
+        painter.end()
+        return result
+
     @Slot(object)
     def update_patches_labels(self, patches):
         self.clear_patches()
         if patches is None:
             self.clear_patches()
             return
-        images, statistics = patches     
+        images, statistics = patches
         for patch, stats in zip(images, statistics):
             # convert to QPixmap
             height, width, _ = patch.shape
@@ -64,12 +77,28 @@ class PatchesView(QWidget):
             display_width = 100
             display_height = 160
             label = QLabel(self)
-            label.setPixmap(patch.scaled(display_width, display_height))
-            label.setToolTip(                
-                "Mean Temp: {:0.2f} °C<br>".format(stats["mean_temp"]) + 
+            patch = patch.scaled(display_width, display_height)
+
+            tooltip = ("Mean Temp: {:0.2f} °C<br>".format(stats["mean_temp"]) + 
                 "Max Temp: {:0.2f} °C<br>".format(stats["max_temp"]) +
-                "Size: {} x {} px".format(*stats["shape"])
-                )
+                "Size: {} x {} px<br>".format(*stats["shape"]))
+
+            if "sun_reflection" in stats:
+                if stats["sun_reflection"]:
+                    tooltip += "Sun Reflection: yes"
+                    has_sun_reflection_icon = QPixmap(u"src/resources/sun_icon.png")
+                else:
+                    tooltip += "Sun Reflection: no"
+                    has_sun_reflection_icon = QPixmap(u"src/resources/no_sun_icon.png")
+
+                # draw sun icon to indicate whether patch has sun reflection
+                has_sun_reflection_icon = has_sun_reflection_icon.scaled(16, 16)
+                label.setPixmap(self.overlay_pixmaps(patch, has_sun_reflection_icon))
+            else:
+                tooltip += "Sun Reflection: n.A."
+                label.setPixmap(patch)
+
+            label.setToolTip(tooltip)
             self.inner.layout().addWidget(label)
 
 
@@ -85,13 +114,14 @@ class PatchesController(QObject):
             self.model.patches_model.patches = None
             return
 
-        if self.model.track_id is None:
+        track_id = self.model.track_id
+        if track_id is None:
             self.model.patches_model.patches = None
             return
 
         # load patches from directory
         image_files = sorted(glob.glob(os.path.join(
-            self.model.dataset_dir, "patches_final", "radiometric", self.model.track_id, "*")))
+            self.model.dataset_dir, "patches_final", "radiometric", track_id, "*")))
         
         images = []
         statistics = []
@@ -104,6 +134,11 @@ class PatchesController(QObject):
                 "mean_temp": image_cropped.mean(),
                 "shape": image.shape[:2]
             }
+
+            if self.model.sun_reflections is not None:
+                patch_name = os.path.splitext(os.path.basename(image_file))[0]
+                stats["sun_reflection"] = (patch_name in self.model.sun_reflections[track_id])
+
             image = normalize(image, vmin=self.model.source_frame_model.min_temp, vmax=self.model.source_frame_model.max_temp)
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
             if self.model.source_frame_model.colormap > 0:

@@ -10,6 +10,8 @@ defect anotation:
 
 analysis:
 - use pretrained ResNet for defect analysis
+- add explanatory texts for each analysis
+- clean up analysis model (subclass models for each analysis type)
 
 status bar
 - show track ID, plant ID of selected module
@@ -17,9 +19,3 @@ status bar
 - display currently opened dataset path
 - display number of patches of the selected module
 - display string info: number of modules, number of defects, etc.
-
-
-sun reflection filter:
-- move from vision pipeline into dataset viewer as an analysis method (highlight patches in patch overview with a frame depending on result of sun reflection filter)
-
-

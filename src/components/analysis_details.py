@@ -22,6 +22,12 @@ class AnalysisDetailsView(QWidget):
         """Converts a string of the form 'my_setting' to 'My Setting'."""
         return " ".join([str.capitalize(s) for s in str.split(text, "_")])
 
+    def truncate_string(self, value, max_len=100):
+        value = str(value)
+        if len(value) > max_len:
+            value = value[:max_len] + "..."
+        return value
+
     @Slot()
     def update(self):  
         meta = self.model.meta
@@ -36,7 +42,7 @@ class AnalysisDetailsView(QWidget):
         self.ui.lineEditTimestamp.setText(meta["timestamp"])
         self.ui.lineEditDatasetPath.setText(meta["dataset_dir"])
         hyperparameters = [
-            "{}: {}".format(self.to_display(name), value) 
+            "{}: {}".format(self.to_display(name), self.truncate_string(value)) 
             for name, value 
             in meta["hyperparameters"].items()
         ]

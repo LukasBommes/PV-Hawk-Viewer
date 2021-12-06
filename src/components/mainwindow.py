@@ -590,6 +590,7 @@ class MainModel(QObject):
     selected_column_changed = Signal(int)
     track_id_changed = Signal(str, str)
     meta_changed = Signal()
+    sun_reflections_changed = Signal(object)
     dataset_stats_changed = Signal(object)
     app_mode_changed = Signal(str)
 
@@ -598,7 +599,7 @@ class MainModel(QObject):
         self.dataset_dir = None
         self.data = None
         self._meta = None
-        self.sun_reflections = None
+        self._sun_reflections = None
         self.patch_meta = None
         self.track_ids = None
         self._app_mode = None # "None", "data_visualization", "defect_annotation", "string_annotation"
@@ -684,3 +685,12 @@ class MainModel(QObject):
     def dataset_stats(self, value):
         self._dataset_stats = value
         self.dataset_stats_changed.emit(value)
+
+    @property
+    def sun_reflections(self):
+        return self._sun_reflections
+
+    @sun_reflections.setter
+    def sun_reflections(self, value):
+        self._sun_reflections = value
+        self.sun_reflections_changed.emit(value)
