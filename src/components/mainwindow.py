@@ -113,15 +113,11 @@ class MainView(QMainWindow):
         self.addDockWidget(Qt.LeftDockWidgetArea, self.patchesWidget)
         self.tabifyDockWidget(self.patchesWidget, self.sourceFrameWidget)
 
-        # setup status bar        
-        self.numModulesLabel = QLabel()
-        self.ui.statusBar.addPermanentWidget(self.numModulesLabel)
-        self.numPatchesLabel = QLabel()        
-        self.ui.statusBar.addPermanentWidget(self.numPatchesLabel)
-        self.flightDurationLabel = QLabel()
-        self.ui.statusBar.addPermanentWidget(self.flightDurationLabel)
-        self.trajectoryLengthLabel = QLabel()
-        self.ui.statusBar.addPermanentWidget(self.trajectoryLengthLabel)
+        # setup status bar
+        self.moduleIdLabel = QLabel()
+        self.ui.statusBar.addPermanentWidget(self.moduleIdLabel)
+        self.datasetInfoLabel = QLabel()
+        self.ui.statusBar.addPermanentWidget(self.datasetInfoLabel)
 
         # file menu
         self.ui.actionOpen_Dataset.triggered.connect(self.open_dataset)
@@ -159,18 +155,20 @@ class MainView(QMainWindow):
         # connect signals and slots
         self.model.dataset_opened.connect(self.dataset_opened)
         self.model.dataset_closed.connect(self.dataset_closed)
-        self.model.dataset_stats_changed.connect(self.update_status_bar)
         self.model.app_mode_changed.connect(self.app_mode_changed)
         self.model.annotation_editor_model.has_changes_changed.connect(self.defect_annotation_has_changes)
         self.model.annotation_editor_model.current_file_name_changed.connect(self.defect_annotation_has_changes)
         self.controller.annotation_editor_controller.close_dataset.connect(self.controller.close_dataset)
+        self.model.dataset_stats_changed.connect(self.update_status_bar)
+        self.model.track_id_changed.connect(self.update_status_bar)
+        self.model.string_editor_model.string_annotation_data_changed.connect(self.update_status_bar)
         
         # load HTML document for map view
         index_file = QDir.current().filePath("src/index.html")
         index_url = QUrl.fromLocalFile(index_file)
         self.ui.widget.load(index_url)
 
-        self.update_status_bar(stats=None)
+        self.update_status_bar()
         self.child_windows = {}
 
         # set defaults
@@ -231,20 +229,49 @@ class MainView(QMainWindow):
         self.ui.actionClose_String_Annotation.setEnabled(False)
         self.ui.statusBar.showMessage("Dataset closed", 5000)
 
-    @Slot(object)
-    def update_status_bar(self, stats):
-        if stats is None:
-            stats = {
-                "num_modules": 0,
-                "num_patches": 0,
-                "flight_duration": "00:00:00.000",
-                "trajectory_length": 0,
-            }
+    @Slot()
+    def update_status_bar(self):
+        dataset_dir = self.model.dataset_dir
+        dataset_info = ""
+        dataset_info_text = ""
+        if dataset_dir is not None:
 
-        self.numModulesLabel.setText("Modules: {}".format(stats["num_modules"]))
-        self.numPatchesLabel.setText("Patches: {}".format(stats["num_patches"]))
-        self.flightDurationLabel.setText("Flight duration: {}".format(stats["flight_duration"]))
-        self.trajectoryLengthLabel.setText("Trajectory length: {} m".format(int(stats["trajectory_length"])))
+            dataset_info_text = "Dataset Info"
+            stats = self.model.dataset_stats
+            if stats is None:
+                stats = {
+                    "num_modules": 0,
+                    "num_patches": 0,
+                    "flight_duration": "00:00:00.000",
+                    "trajectory_length": 0,
+                }
+
+            dataset_info = (
+                "Dataset Path: {}<br>".format(dataset_dir) + 
+                "Num. Modules: {}<br>".format(stats["num_modules"]) +
+                "Num. Patches: {}<br>".format(stats["num_patches"]) + 
+                "Flight duration: {}<br>".format(stats["flight_duration"]) +
+                "Trajectory length: {} m".format(int(stats["trajectory_length"]))
+            )
+
+        self.datasetInfoLabel.setText(dataset_info_text)
+        self.datasetInfoLabel.setToolTip(dataset_info)
+        
+        # set module ID label
+        track_id = self.model.track_id
+        module_id_text = ""
+        if track_id is not None:
+            module_id_text = "{}".format(track_id)
+            # search for plant ID
+            id_mapping = self.model.string_editor_model.string_annotation_data["plant_id_track_id_mapping"]
+            id_mapping = {track_id: plant_id for plant_id, track_id in id_mapping}
+            try:
+                plant_id = id_mapping[track_id]                
+            except KeyError:
+                pass
+            else:
+                module_id_text = "{} ({})".format(module_id_text, plant_id)
+        self.moduleIdLabel.setText(module_id_text)
 
     @Slot(str)
     def app_mode_changed(self, app_mode):
@@ -591,7 +618,7 @@ class MainModel(QObject):
     track_id_changed = Signal(str, str)
     meta_changed = Signal()
     sun_reflections_changed = Signal(object)
-    dataset_stats_changed = Signal(object)
+    dataset_stats_changed = Signal()
     app_mode_changed = Signal(str)
 
     def __init__(self):
@@ -684,7 +711,7 @@ class MainModel(QObject):
     @dataset_stats.setter
     def dataset_stats(self, value):
         self._dataset_stats = value
-        self.dataset_stats_changed.emit(value)
+        self.dataset_stats_changed.emit()
 
     @property
     def sun_reflections(self):

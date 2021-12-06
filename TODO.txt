@@ -13,8 +13,5 @@ analysis:
 - add explanatory texts for each analysis
 
 status bar
-- show track ID, plant ID of selected module
-- show string ID of selected string
-- display currently opened dataset path
 - display number of patches of the selected module
 - display string info: number of modules, number of defects, etc.
