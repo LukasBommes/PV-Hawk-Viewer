@@ -1,0 +1,4 @@
+include README.md
+include LICENSE
+recursive-include docs *.png
+recursive-include src *.html *.js *.css *.py *.png *.ui

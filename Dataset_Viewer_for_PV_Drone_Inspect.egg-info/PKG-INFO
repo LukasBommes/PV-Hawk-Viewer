@@ -1,0 +1,13 @@
+Metadata-Version: 2.1
+Name: Dataset-Viewer-for-PV-Drone-Inspect
+Version: 1.0
+Summary: Viewer for PV Drone Inspect datasets.
+Home-page: https://github.com/LukasBommes/PV-Drone-Inspect-Viewer
+Maintainer: Lukas Bommes
+License: MIT
+Platform: ALL
+Requires-Python: >=3.8, <4
+License-File: LICENSE
+
+UNKNOWN
+
