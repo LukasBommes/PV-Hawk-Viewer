@@ -2,7 +2,7 @@
 
 This is an open-source desktop app for viewing and analyzing maps of large-scale photovoltaic (PV) plants created with [PV Drone Inspect](https://github.com/LukasBommes/PV-Drone-Inspect).
 
-The following functionality is provided in this app:
+The app provides the following functionality:
 - View the reconstruction of your PV plant created with PV Drone Inspect
 - Browse individual PV modules and video frames
 - Perform analyses (e.g. PV module defect detection)
@@ -36,7 +36,7 @@ First, you have to open a PV Drone Inspect dataset by clicking *File -> Open Dat
 
 ### Performing an analysis on the data
 
-The app provides some analyses that can be performed on the dataset. To this end, click *Analysis -> New Analysis...* The window below will open. Here, you can select which analysis to perform. You can set the hyper parameters and run the analysis by clicking *Compute*. See [below](#details-on-analyses) for details on the available analyses.
+The app provides some analyses that can be performed on the dataset. To this end, click *Analysis -> New Analysis...* The window below will open. Here, you can select which analysis to perform. You can set the hyper parameters and run the analysis by clicking *Compute*. See [below](#available-analyses) for details on the available analyses.
 
 ![screenshot analysis](docs/screenshots/screenshot_analysis.png)
 
@@ -71,7 +71,6 @@ After hitting the *End* button provide the Tracker ID, Array ID, Inverter ID and
 You can export the string annotation for further use by clicking *Annotation -> Export String Annotation...*
 
 ![screenshot string annotation](docs/screenshots/screenshot_string_annotation.png)
-
 
 ## Installation from Source
 
@@ -109,19 +108,33 @@ This will create a `build` directory containing the binary for your platform, wh
 ```
 Important: You have to perform this procedure on the platform you want to build the binary for, e.g. run this on Windows to make a Windows executable.
 
-## Details on analyses
+## Available analyses
 
 As mentioned above the dataset viewer allows you to perform some analyses on the PV Drone Inspect dataset. We will explain those in more detail here.
 
 ### Sun reflection filter
 
-reference paper for further details
-[...]
+Depending on the camera angle during filming the sun may be reflected in the inspected PV modules. This disturbs downstream defect detection. The sun reflection filter identifies which of the images extracted of a PV module contains a sun reflection so that they can be ignored during other analyses. 
+
+To this end, the filter eploits the non-stationarity of the sun reflection in the module images extracted from subsequent video frames. The filter works as follows:
+
+First, the filter finds the maximum temperature $(T_i)_{i=1,...,N}$ and its coordinates $(x_i, y_i)$ in all $N$ subsequent patches of a module. Patches in which $T_i$ and $(x_i, y_i)$ deviate significantly from a reference value most likely contain a sun reflection and are filtered out. More specifically, patch $i$ is filtered out if $|T_i − \bar{T}| > 5 K$ (`Temperature Threshold`) and $||(x_i − \bar{x}, y_i − \bar{y})||_2 > 10$ px (`Location threshold`). The reference values $\bar{T}$ and $(\bar{x}, \bar{y})$ are median values computed from a subsequence of the patches which is obtained as follows. First, the discrete difference $p_{i+1} − p_i$ of the Euclidean norm $p_i = ||(xi, yi)||_2$ is binarized at a threshold of $10$ px (`Changepoint Threshold`). All zero-subsequences of $p_i$ which are longer than $0.3N$ ($0.3$: `Segment Length Threshold`) are obtained (the longest is used if none exceeds $0.3N$). Finally, the zero-subsequence with the smallest variance of the maximum temperature $T_i$ is selected for computation of the reference values.
+
+The four highlighted threshold values can be specified in the app before running the sun reflection filter.
+
+Please see section IV.H in our [paper](https://arxiv.org/abs/2106.07314) for further information about the sun reflection filter.
 
 ### Module temperatures
 
-reference paper for further details
-[...]
+The module temperature analysis computes various module temperatures from the extracted infrared image patches allowing to quickly identify defective modules.
+
+Specifically, for each image patch the minimum, maximum, median and mean temperature are computed over the entire image area. The mean is taken over all patches of the same PV module to obtain a single scalar temperature value for each module. In the *Data Column* combo box in the toolbar you can select which of the temperatures to visualize on the map.
+
+Prior to computing the temperatures, the border of each patch is cropped to reduce the effect of mounting brackets and the module frame. You can specify the amount to crop with the `Truncate image borders` hyper parameter.
+
+To remove the global trend in the temperature distribution over the entire PV plant, additional 'corrected' temperatures are computed. To compute, for example, the corrected maximum temperature of a module, the algorithm subtracts the median value of the maximum temperatures of all neighbouring modules from the maximum temperature of that particular module. All modules within a circle of the radius specified by the `Local neighborhood radius` hyper parameter are considered neighbors.
+
+You can also choose to ignore all patches with sun reflections by checking the *Ignore patches with sun reflections* checkbox. This option is only available if you run the sun reflection filter beforehand.
 
 ## About
 
