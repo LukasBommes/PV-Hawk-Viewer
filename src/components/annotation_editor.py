@@ -1,11 +1,12 @@
 import os
 import json
+import pkg_resources
 
 from PySide6.QtWidgets import QWidget, QCheckBox, QSpacerItem, QSizePolicy, \
     QMessageBox, QFileDialog
 from PySide6.QtCore import Slot, Signal, QObject
 
-from src.ui.ui_annotation_editor import Ui_AnnotationEditor
+from ..ui.ui_annotation_editor import Ui_AnnotationEditor
 
 
 class AnnotationEditorView(QWidget):
@@ -31,7 +32,7 @@ class AnnotationEditorView(QWidget):
 
     def loadDefectsScheme(self):
         try:
-            defects_scheme = json.load(open(os.path.join("src", "resources", "defect_schema.json"), "r"))
+            defects_scheme = json.load(open(pkg_resources.resource_filename("src.resources", "defect_schema.json"), "r"))
         except FileNotFoundError:
             pass
         else:

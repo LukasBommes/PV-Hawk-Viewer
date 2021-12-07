@@ -10,9 +10,9 @@ from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QComboBox, \
 from PySide6.QtCore import Slot, Signal, QObject
 from PySide6.QtGui import QAction
 
-from src.colormap import get_colors
-from src.ui.ui_toolbar_data_range import Ui_DataRange
-from src.ui.ui_toolbar_colormap_selection import Ui_ColormapSelection
+from ..utils.colormap import get_colors
+from ..ui.ui_toolbar_data_range import Ui_DataRange
+from ..ui.ui_toolbar_colormap_selection import Ui_ColormapSelection
 
 
 class MapView(QObject):

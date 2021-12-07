@@ -4,9 +4,9 @@ import datetime
 from PySide6.QtWidgets import QWidget, QMessageBox
 from PySide6.QtCore import Qt, Slot, QThread, Slot, Signal, QObject
 
-from src.ui.ui_analysis import Ui_Analysis
-from src.analysis.temperatures import AnalysisModuleTemperaturesWorker
-from src.analysis.sun_filter import AnalysisSunFilterWorker
+from ..ui.ui_analysis import Ui_Analysis
+from ..analysis.temperatures import AnalysisModuleTemperaturesWorker
+from ..analysis.sun_filter import AnalysisSunFilterWorker
 
 
 class AnalysisView(QWidget):

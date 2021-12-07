@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QWidget, QMessageBox, QFileDialog
 from PySide6.QtCore import Slot, Signal, QObject
 from PySide6.QtGui import QIcon
 
-from src.ui.ui_string_editor import Ui_StringEditor
+from ..ui.ui_string_editor import Ui_StringEditor
 
 
 class StringEditorView(QWidget):

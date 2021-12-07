@@ -1,6 +1,7 @@
 import os
 import glob
 import re
+import pkg_resources
 import cv2
 import numpy as np
 
@@ -8,8 +9,8 @@ from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, Slot, Signal, QObject
 from PySide6.QtGui import QPixmap, QImage
 
-from src.ui.ui_source_frame import Ui_SourceFrame
-from src.common import to_celsius, normalize
+from ..ui.ui_source_frame import Ui_SourceFrame
+from ..utils.common import to_celsius, normalize
 
 
 class SourceFrameView(QWidget):
@@ -183,6 +184,6 @@ class SourceFrameModel(QObject):
     @frame.setter
     def frame(self, value):
         if value is None:
-            value = QPixmap(u"src/resources/no_image.png")
+            value = QPixmap(pkg_resources.resource_filename("src.resources", "no_image.png"))
         self._frame = value
         self.frame_changed.emit(value)

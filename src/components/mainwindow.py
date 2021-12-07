@@ -4,6 +4,7 @@ import csv
 import shutil
 import pickle
 import datetime
+import pkg_resources
 import numpy as np
 
 from PySide6.QtWidgets import QMainWindow, QToolBar, QDockWidget, \
@@ -12,18 +13,18 @@ from PySide6.QtCore import Qt, Slot, QUrl, QDir, Signal, QObject
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtGui import QIcon, QPixmap
 
-from src.common import get_immediate_subdirectories
+from ..utils.common import get_immediate_subdirectories
 
-from src.ui.ui_mainwindow import Ui_MainWindow
-from src.components.map import MapView, ColorbarView, DataColumnSelectionView, \
+from ..ui.ui_mainwindow import Ui_MainWindow
+from .map import MapView, ColorbarView, DataColumnSelectionView, \
     DataRangeView, ColormapSelectionView, LayerSelectionView
-from src.components.annotation_editor import AnnotationEditorView
-from src.components.data_sources import DataSourcesView
-from src.components.source_frame import SourceFrameView
-from src.components.patches import PatchesView
-from src.components.analysis import AnalysisView
-from src.components.analysis_details import AnalysisDetailsView
-from src.components.string_editor import StringEditorView
+from .annotation_editor import AnnotationEditorView
+from .data_sources import DataSourcesView
+from .source_frame import SourceFrameView
+from .patches import PatchesView
+from .analysis import AnalysisView
+from .analysis_details import AnalysisDetailsView
+from .string_editor import StringEditorView
 
 
 class MainView(QMainWindow):
@@ -35,7 +36,7 @@ class MainView(QMainWindow):
         self.controller = controller
 
         # set window icon
-        app_icon = QIcon(QPixmap("src/resources/app_icon.png"))
+        app_icon = QIcon(QPixmap(pkg_resources.resource_filename("src.resources", "app_icon.png")))
         self.setWindowIcon(app_icon)
 
         # add icons QStyle.SP_MessageBoxCritical
@@ -164,7 +165,7 @@ class MainView(QMainWindow):
         self.model.string_editor_model.string_annotation_data_changed.connect(self.update_status_bar)
         
         # load HTML document for map view
-        index_file = QDir.current().filePath("src/index.html")
+        index_file = QDir.current().filePath(pkg_resources.resource_filename("src", "index.html"))
         index_url = QUrl.fromLocalFile(index_file)
         self.ui.widget.load(index_url)
 

@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, Slot
 
-from src.ui.ui_analysis_details import Ui_AnalysisDetails
+from ..ui.ui_analysis_details import Ui_AnalysisDetails
 
 
 class AnalysisDetailsView(QWidget):

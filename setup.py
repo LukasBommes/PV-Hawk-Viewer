@@ -1,46 +1,35 @@
-#import sys
+import sys
+from os.path import dirname, realpath
 from setuptools import setup, find_packages
 
-# Dependencies are automatically detected, but it might need fine tuning
-# build_exe_options = {
-#     "include_files": [
-#         ("src/resources/no_image.png", "src/resources/no_image.png"), 
-#         ("src/resources/app_icon.png", "src/resources/app_icon.png"),  
-#         ("src/resources/sun_icon.png", "src/resources/sun_icon.png"),    
-#         ("src/resources/no_sun_icon.png", "src/resources/no_sun_icon.png"),  
-#         ("src/resources/defect_schema.json", "src/resources/defect_schema.json"),
-#         ("src/index.html", "src/index.html"), 
-#         ("src/resources/web/style.css", "src/resources/web/style.css"), 
-#         ("src/resources/web/leaflet-1.7.1.js", "src/resources/web/leaflet-1.7.1.js"), 
-#         ("src/resources/web/leaflet-1.7.1.css", "src/resources/web/leaflet-1.7.1.css"), 
-#         ("src/resources/web/turf.js", "src/resources/web/turf.js"),
-#     ]
-# }
+name = "src"
 
-# base="Win32GUI" should be used only for Windows GUI app
+sys.path.insert(0, realpath(dirname(__file__))+"/"+name)
 
 setup(
-    name="Dataset Viewer for PV Drone Inspect",
+    name="PV-Drone-Inspect-Viewer-LukasBommes",
     maintainer="Lukas Bommes",
     url='https://github.com/LukasBommes/PV-Drone-Inspect-Viewer',
-    version="1.0",
-    packages=find_packages(),
-    package_dir={"src": "src"},
+    version="1.0", 
+    packages=find_packages(),   
+    package_dir={name: name},    
     include_package_data=True,
     license="MIT",
     description="Viewer for PV Drone Inspect datasets.",
     install_requires=[
-        "PySide6>=6.2.2",
+        "numpy>=1.19.1",
+        "matplotlib>=3.5.0rc1",
+        "geopandas>=0.9.0",
+        "scikit-learn>=0.23.1",
+        "opencv-python>=4.2.0.34",
+        "networkx>=2.4",
+        "PySide6>=6.2.1",
     ],
     python_requires='>=3.8, <4',
-    entry_points={"gui_scripts": ['pvinspect = main.__main__:main']},
-    #keywords=[],
-    #classifiers=['Operating System :: OS Independent',
-    #             'Programming Language :: Python :: 3',
-    #             'Intended Audience :: Science/Research',
-    #             ],
+    entry_points={"gui_scripts": ['pvinspect = src.__main__:main']},
+    keywords=["PV Drone Inspect", "Photovoltaic", "Defects", "Mapping", "PV Plant", "Drone", "Thermography"],
+    classifiers=['Operating System :: OS Independent',
+                'Programming Language :: Python :: 3',
+                ],
     platforms=['ALL']
-
-    #options = {"build_exe": build_exe_options},
-    #executables = [Executable("main.py", base=base)]
 )

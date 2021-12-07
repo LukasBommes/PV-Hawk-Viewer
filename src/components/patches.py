@@ -1,5 +1,6 @@
 import os
 import glob
+import pkg_resources
 import cv2
 
 from PySide6.QtWidgets import QWidget, QLabel, QGridLayout, \
@@ -7,9 +8,9 @@ from PySide6.QtWidgets import QWidget, QLabel, QGridLayout, \
 from PySide6.QtCore import Qt, Slot, Signal, QObject, QPoint
 from PySide6.QtGui import QPixmap, QImage, QPainter
 
-from src.common import to_celsius, normalize
-from src.analysis.temperatures import truncate_patch
-from src.flow_layout import FlowLayout
+from ..utils.common import to_celsius, normalize
+from ..utils.flow_layout import FlowLayout
+from ..analysis.temperatures import truncate_patch
 
 
 
@@ -86,10 +87,10 @@ class PatchesView(QWidget):
             if "sun_reflection" in stats:
                 if stats["sun_reflection"]:
                     tooltip += "Sun Reflection: yes"
-                    has_sun_reflection_icon = QPixmap(u"src/resources/sun_icon.png")
+                    has_sun_reflection_icon = QPixmap(pkg_resources.resource_filename("src.resources", "sun_icon.png"))
                 else:
                     tooltip += "Sun Reflection: no"
-                    has_sun_reflection_icon = QPixmap(u"src/resources/no_sun_icon.png")
+                    has_sun_reflection_icon = QPixmap(pkg_resources.resource_filename("src.resources", "no_sun_icon.png"))
 
                 # draw sun icon to indicate whether patch has sun reflection
                 has_sun_reflection_icon = has_sun_reflection_icon.scaled(16, 16)

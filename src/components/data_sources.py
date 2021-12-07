@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QWidget, QMessageBox
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QIcon
 
-from src.ui.ui_data_sources import Ui_DataSources
+from ..ui.ui_data_sources import Ui_DataSources
 
 
 class DataSourcesView(QWidget):

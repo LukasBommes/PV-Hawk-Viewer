@@ -11,7 +11,7 @@ from sklearn.neighbors import KDTree
 
 from PySide6.QtCore import QObject, Signal
 
-from src.common import get_immediate_subdirectories, to_celsius
+from ..utils.common import get_immediate_subdirectories, to_celsius
 
 
 def truncate_patch(patch, margin=0.05):
