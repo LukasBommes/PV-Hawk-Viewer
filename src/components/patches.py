@@ -128,7 +128,7 @@ class PatchesController(QObject):
         statistics = []
         for image_file in image_files:
             image = cv2.imread(image_file, cv2.IMREAD_ANYDEPTH)
-            image = to_celsius(image)
+            image = to_celsius(image, self.model.dataset_settings_model.gain, self.model.dataset_settings_model.offset)
             image_cropped = truncate_patch(image, margin=0.05)
             stats = {
                 "max_temp": image_cropped.max(),

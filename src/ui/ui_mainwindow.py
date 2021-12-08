@@ -70,6 +70,9 @@ class Ui_MainWindow(object):
         self.actionExport_String_Annotation = QAction(MainWindow)
         self.actionExport_String_Annotation.setObjectName(u"actionExport_String_Annotation")
         self.actionExport_String_Annotation.setEnabled(False)
+        self.actionDataset_Settings = QAction(MainWindow)
+        self.actionDataset_Settings.setObjectName(u"actionDataset_Settings")
+        self.actionDataset_Settings.setEnabled(False)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.gridLayout = QGridLayout(self.centralwidget)
@@ -105,6 +108,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuView.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
         self.menuFile.addAction(self.actionOpen_Dataset)
+        self.menuFile.addAction(self.actionDataset_Settings)
         self.menuFile.addAction(self.actionClose_Dataset)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
@@ -125,7 +129,7 @@ class Ui_MainWindow(object):
     # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"PV Mapper", None))
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"PV Drone Inspect Viewer", None))
         self.actionOpen_Dataset.setText(QCoreApplication.translate("MainWindow", u"Open Dataset...", None))
         self.actionClose_Dataset.setText(QCoreApplication.translate("MainWindow", u"Close Dataset", None))
         self.actionQuit.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
@@ -142,6 +146,7 @@ class Ui_MainWindow(object):
         self.actionDiscard_String_Annotation.setText(QCoreApplication.translate("MainWindow", u"Discard String Annotation", None))
         self.actionClose_Defect_Annotation.setText(QCoreApplication.translate("MainWindow", u"Close Defect Annotation", None))
         self.actionExport_String_Annotation.setText(QCoreApplication.translate("MainWindow", u"Export String Annotation...", None))
+        self.actionDataset_Settings.setText(QCoreApplication.translate("MainWindow", u"Dataset Settings", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuView.setTitle(QCoreApplication.translate("MainWindow", u"View", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))

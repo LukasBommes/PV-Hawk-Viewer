@@ -166,18 +166,24 @@ class AnalysisController(QObject):
 
         self.model.analysis_model.status = "started"
         self.thread = QThread()
+
         if self.model.analysis_model.active_tab_widget.objectName() == "tabSunFilter":
             self.worker = AnalysisSunFilterWorker(
                 self.model.dataset_dir, 
                 self.model.analysis_model.name,
+                self.model.dataset_settings_model.gain,
+                self.model.dataset_settings_model.offset,
                 self.model.analysis_model.sun_filter.threshold_temp, 
                 self.model.analysis_model.sun_filter.threshold_loc,
                 self.model.analysis_model.sun_filter.threshold_changepoint,
                 self.model.analysis_model.sun_filter.segment_length_threshold)
+                
         elif self.model.analysis_model.active_tab_widget.objectName() == "tabModuleTemperatures":
             self.worker = AnalysisModuleTemperaturesWorker(
                 self.model.dataset_dir, 
                 self.model.analysis_model.name,
+                self.model.dataset_settings_model.gain,
+                self.model.dataset_settings_model.offset,
                 self.model.analysis_model.module_temperatures.border_margin, 
                 self.model.analysis_model.module_temperatures.neighbor_radius,
                 self.model.analysis_model.module_temperatures.ignore_sun_reflections,

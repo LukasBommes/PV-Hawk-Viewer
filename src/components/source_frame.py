@@ -108,7 +108,7 @@ class SourceFrameController(QObject):
 
         # load frame
         source_frame = cv2.imread(source_frame_file, cv2.IMREAD_ANYDEPTH)
-        source_frame = to_celsius(source_frame)
+        source_frame = to_celsius(source_frame, self.model.dataset_settings_model.gain, self.model.dataset_settings_model.offset)
         source_frame = normalize(source_frame, vmin=self.model.source_frame_model.min_temp, vmax=self.model.source_frame_model.max_temp)
         source_frame = cv2.cvtColor(source_frame, cv2.COLOR_GRAY2BGR)
         if self.model.source_frame_model.colormap > 0:

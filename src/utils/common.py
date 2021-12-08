@@ -7,9 +7,9 @@ def get_immediate_subdirectories(a_dir):
     return [name for name in os.listdir(a_dir) if os.path.isdir(os.path.join(a_dir, name))]
 
 
-def to_celsius(image):
+def to_celsius(image, gain, offset):
     """Convert raw intensity values of radiometric image to Celsius scale."""
-    return image*0.04-273.15
+    return image*gain + offset
 
 
 def normalize(image, vmin, vmax):

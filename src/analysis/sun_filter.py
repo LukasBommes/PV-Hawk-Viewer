@@ -83,8 +83,9 @@ def min_temp_var_segment(max_locs_peaks, max_temps,
     return start_idx, stop_idx
 
 
-def predict_sun_reflections(patch_files, threshold_temp=5.0, threshold_loc=10.0,
-    threshold_changepoint=10.0, segment_length_threshold=0.3):
+def predict_sun_reflections(patch_files, to_celsius_gain, to_celsius_offset, 
+    threshold_temp=5.0, threshold_loc=10.0, threshold_changepoint=10.0, 
+    segment_length_threshold=0.3):
     if len(patch_files) < 2:
         return (
             np.array([], dtype=np.int32), np.array([], dtype=np.float64),
@@ -99,7 +100,7 @@ def predict_sun_reflections(patch_files, threshold_temp=5.0, threshold_loc=10.0,
         # the maximum location
         patch = cv2.blur(patch, ksize=(3, 3))
 
-        max_temp = np.max(to_celsius(patch))
+        max_temp = np.max(to_celsius(patch, to_celsius_gain, to_celsius_offset))
         max_loc = np.unravel_index(np.argmax(patch, axis=None), patch.shape)
 
         max_locs.append(max_loc)
@@ -146,13 +147,16 @@ class AnalysisSunFilterWorker(QObject):
     finished = Signal()
     progress = Signal(float, bool, str)
 
-    def __init__(self, dataset_dir, name, threshold_temp, threshold_loc, 
-            threshold_changepoint, segment_length_threshold):
+    def __init__(self, dataset_dir, name, to_celsius_gain, to_celsius_offset, 
+            threshold_temp, threshold_loc, threshold_changepoint, 
+            segment_length_threshold):
         super().__init__()
         self.is_cancelled = False
         self.timestamp = datetime.datetime.utcnow().isoformat()
         self.dataset_dir = dataset_dir
         self.name = name
+        self.to_celsius_gain = to_celsius_gain
+        self.to_celsius_offset = to_celsius_offset
         self.threshold_temp = threshold_temp
         self.threshold_loc = threshold_loc
         self.threshold_changepoint = threshold_changepoint
@@ -177,6 +181,8 @@ class AnalysisSunFilterWorker(QObject):
                 os.path.join(patch_dir, plant_id, "*")))
             patch_idxs_sun_reflections, _, _, _, _ = predict_sun_reflections(
                 patch_files, 
+                self.to_celsius_gain,
+                self.to_celsius_offset,
                 self.threshold_temp, 
                 self.threshold_loc,
                 self.threshold_changepoint,

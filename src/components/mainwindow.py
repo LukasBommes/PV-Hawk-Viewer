@@ -25,6 +25,7 @@ from .patches import PatchesView
 from .analysis import AnalysisView
 from .analysis_details import AnalysisDetailsView
 from .string_editor import StringEditorView
+from .dataset_settings import DatasetSettingsView
 
 
 class MainView(QMainWindow):
@@ -39,9 +40,10 @@ class MainView(QMainWindow):
         app_icon = QIcon(QPixmap(pkg_resources.resource_filename("src.resources", "app_icon.png")))
         self.setWindowIcon(app_icon)
 
-        # add icons QStyle.SP_MessageBoxCritical
+        # add icons
         self.ui.actionOpen_Dataset.setIcon(QIcon.fromTheme("document-open"))
         self.ui.actionClose_Dataset.setIcon(QIcon.fromTheme("window-close"))
+        self.ui.actionDataset_Settings.setIcon(QIcon.fromTheme("document-properties"))        
         self.ui.actionQuit.setIcon(QIcon.fromTheme("application-exit"))
         self.ui.actionNew_Defect_Annotation.setIcon(QIcon.fromTheme("document-new"))
         self.ui.actionLoad_Defect_Annotation.setIcon(QIcon.fromTheme("document-open"))
@@ -123,6 +125,7 @@ class MainView(QMainWindow):
         # file menu
         self.ui.actionOpen_Dataset.triggered.connect(self.open_dataset)
         self.ui.actionClose_Dataset.triggered.connect(self.controller.close_dataset_request)
+        self.ui.actionDataset_Settings.triggered.connect(lambda: self.show_child_window("dataset_settings"))
         self.ui.actionQuit.triggered.connect(self.close)
 
         # annotation menu
@@ -197,18 +200,20 @@ class MainView(QMainWindow):
             self, caption="Open Dataset", options=QFileDialog.ShowDirsOnly)
         if dir == "":
             return
-        if self.valid_dataset(dir):
-            self.controller.open_dataset(dir)
-        else:
+        if not self.valid_dataset(dir):
             msg = QMessageBox()
             msg.setWindowTitle("Error")
             msg.setText("Not a valid PV Drone Inspect Dataset.")
             msg.setIcon(QMessageBox.Critical)
             msg.exec()
+            return
+        self.controller.open_dataset(dir)
+            
 
     def dataset_opened(self):
         self.ui.actionClose_Dataset.setEnabled(True)
         self.ui.actionOpen_Dataset.setEnabled(False)
+        self.ui.actionDataset_Settings.setEnabled(True)
         self.ui.actionNew_Analysis.setEnabled(True)
         self.ui.actionNew_Defect_Annotation.setEnabled(True)
         self.ui.actionLoad_Defect_Annotation.setEnabled(True)
@@ -219,7 +224,8 @@ class MainView(QMainWindow):
 
     def dataset_closed(self):
         self.ui.actionClose_Dataset.setEnabled(False)
-        self.ui.actionOpen_Dataset.setEnabled(True)        
+        self.ui.actionOpen_Dataset.setEnabled(True)
+        self.ui.actionDataset_Settings.setEnabled(False)
         self.ui.actionNew_Analysis.setEnabled(False)
         self.ui.actionNew_Defect_Annotation.setEnabled(False)
         self.ui.actionLoad_Defect_Annotation.setEnabled(False)
@@ -362,6 +368,14 @@ class MainView(QMainWindow):
             self.controller.analysis_controller.reset()
             self.child_windows[which].show()
 
+        elif which == "dataset_settings":
+            if not self.model.dataset_is_open:
+                return
+            if which not in self.child_windows:
+                self.child_windows[which] = DatasetSettingsView(self.model, self.controller, self)
+            self.controller.analysis_controller.reset()
+            self.child_windows[which].show()
+
         elif which == "analysis_details":
             if self.model.meta is None:
                 return
@@ -371,16 +385,16 @@ class MainView(QMainWindow):
 
     def about(self):
         gh1 = "LukasBommes/PV-Drone-Inspect"
-        gh1 = "LukasBommes/PV-Drone-Inspect-Viewer"
-        about_text = "Dataset Viewer for PV Drone Inspect<br><br>" \
+        gh2 = "LukasBommes/PV-Drone-Inspect-Viewer"
+        about_text = "PV Drone Inspect Viewer<br><br>" \
             + "Author: Lukas Bommes<br>" \
             + "Organization: Helmholtz Institute Erlangen-Nürnberg for Renewable Energy (HI ERN)<br>" \
-            + "GitHub: " \
+            + "GitHub:<br>" \
             + "PV Drone Inspect: <a href='https://github.com/{gh1}'>{gh1}</a><br>".format(gh1=gh1) \
-            + "Viewer for PV Drone Inspect: <a href='https://github.com/{gh2}'>{gh2}</a><br>".format(gh2=gh2)
+            + "PV Drone Inspect Viewer: <a href='https://github.com/{gh2}'>{gh2}</a><br>".format(gh2=gh2)
         QMessageBox.about(
             self,
-            "About Dateset Viewer for PV-Mapper",
+            "About PV Drone Inspect Viewer",
             about_text
         )
 
@@ -426,6 +440,7 @@ class MainController(QObject):
         self.model.dataset_dir = dataset_dir
         self.model.patch_meta = pickle.load(open(os.path.join(
             self.model.dataset_dir, "patches", "meta.pkl"), "rb"))
+        self.load_dataset_settings()
         self.load_sun_reflections()
         self.update_source_names()
         self.load_source("Module Layout")
@@ -475,6 +490,33 @@ class MainController(QObject):
                 self.model.dataset_dir, "analyses", "Sun Filter", "sun_filter.json"), "r"))
         except FileNotFoundError:
             pass
+    
+    @Slot()
+    def load_dataset_settings(self):
+        if self.model.dataset_dir is None:
+            return
+        try:
+            settings = json.load(open(os.path.join(self.model.dataset_dir, "settings.json"), "r"))
+        except FileNotFoundError:
+            # create settings file with defaults
+            self.model.dataset_settings_model.gain = 0.04
+            self.model.dataset_settings_model.offset = -273.15
+            self.save_dataset_settings()
+        else:
+            self.model.dataset_settings_model.gain = settings["raw_image_to_celsius"]["gain"]
+            self.model.dataset_settings_model.offset = settings["raw_image_to_celsius"]["offset"]
+
+    @Slot()
+    def save_dataset_settings(self):
+        if self.model.dataset_dir is None:
+            return
+        settings = {
+            "raw_image_to_celsius": {
+                "gain": self.model.dataset_settings_model.gain,
+                "offset": self.model.dataset_settings_model.offset
+            }
+        }
+        json.dump(settings, open(os.path.join(self.model.dataset_dir, "settings.json"), "w"))
 
     @Slot(str)
     def load_source(self, selected_source):

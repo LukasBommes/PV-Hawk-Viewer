@@ -14,7 +14,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>PV Mapper</string>
+   <string>PV Drone Inspect Viewer</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -49,6 +49,7 @@
      <string>File</string>
     </property>
     <addaction name="actionOpen_Dataset"/>
+    <addaction name="actionDataset_Settings"/>
     <addaction name="actionClose_Dataset"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
@@ -204,6 +205,14 @@
    </property>
    <property name="text">
     <string>Export String Annotation...</string>
+   </property>
+  </action>
+  <action name="actionDataset_Settings">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Dataset Settings</string>
    </property>
   </action>
  </widget>

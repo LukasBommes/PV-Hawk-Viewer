@@ -10,6 +10,7 @@ def main():
     from .components.map import MapModel
     from .components.annotation_editor import AnnotationEditorController, AnnotationEditorModel
     from .components.string_editor import StringEditorController, StringEditorModel
+    from .components.dataset_settings import DatasetSettingsModel
 
 
 
@@ -25,6 +26,7 @@ def main():
             self.main_model.map_model = MapModel()
             self.main_model.annotation_editor_model = AnnotationEditorModel()
             self.main_model.string_editor_model = StringEditorModel()
+            self.main_model.dataset_settings_model = DatasetSettingsModel()
 
             # controllers
             self.main_controller = MainController(self.main_model)

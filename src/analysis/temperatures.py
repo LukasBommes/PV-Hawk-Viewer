@@ -41,17 +41,17 @@ def remove_patches_with_sun_reflection(patch_files, sun_reflections):
     return patch_files_filtered
 
 
-def get_patch_temps(patch_files, margin):
+def get_patch_temps(patch_files, margin, to_celsius_gain, to_celsius_offset):
     """Returns min, max, mean and median temperatures for each patch of a module."""
     temps = defaultdict(list)
     for patch_file in patch_files:
         patch = cv2.imread(patch_file, cv2.IMREAD_ANYDEPTH)
         if patch is not None:
             patch = truncate_patch(patch, margin)
-            temps["min"].append(to_celsius(np.min(patch)))
-            temps["max"].append(to_celsius(np.max(patch)))
-            temps["mean"].append(to_celsius(np.mean(patch)))
-            temps["median"].append(to_celsius(np.median(patch)))
+            temps["min"].append(to_celsius(np.min(patch), to_celsius_gain, to_celsius_offset))
+            temps["max"].append(to_celsius(np.max(patch), to_celsius_gain, to_celsius_offset))
+            temps["mean"].append(to_celsius(np.mean(patch), to_celsius_gain, to_celsius_offset))
+            temps["median"].append(to_celsius(np.median(patch), to_celsius_gain, to_celsius_offset))
     return temps
 
 
@@ -65,12 +65,15 @@ class AnalysisModuleTemperaturesWorker(QObject):
     finished = Signal()
     progress = Signal(float, bool, str)
 
-    def __init__(self, dataset_dir, name, border_margin, neighbour_radius, ignore_sun_reflections, sun_reflections):
+    def __init__(self, dataset_dir, name, to_celsius_gain, to_celsius_offset, 
+            border_margin, neighbour_radius, ignore_sun_reflections, sun_reflections):
         super().__init__()
         self.is_cancelled = False
         self.timestamp = datetime.datetime.utcnow().isoformat()
         self.dataset_dir = dataset_dir
         self.name = name
+        self.to_celsius_gain = to_celsius_gain
+        self.to_celsius_offset = to_celsius_offset
         self.border_margin = 0.01 * border_margin
         self.neighbour_radius = neighbour_radius
         self.ignore_sun_reflections = ignore_sun_reflections
@@ -118,7 +121,7 @@ class AnalysisModuleTemperaturesWorker(QObject):
             patch_files = sorted(glob.glob(os.path.join(self.dataset_dir, "patches_final", "radiometric", track_id, "*")))
             if self.ignore_sun_reflections and self.sun_reflections is not None:
                 patch_files = remove_patches_with_sun_reflection(patch_files, self.sun_reflections[track_id])
-            temps[track_id] = get_patch_temps(patch_files, self.border_margin)
+            temps[track_id] = get_patch_temps(patch_files, self.border_margin, self.to_celsius_gain, self.to_celsius_offset)
 
             self.progress.emit(progress, False, "Computing temperature distribution...")
         self.progress_last_step = progress
@@ -164,5 +167,4 @@ class AnalysisModuleTemperaturesWorker(QObject):
 
         self.progress.emit(1, False, "Done")
         self.finished.emit()
-
 
