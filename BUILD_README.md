@@ -17,7 +17,7 @@ Upload to PyPI
 python3 -m twine upload dist/*
 ```
 
-### Run locally (for development)
+### Run locally without installation (for development)
 ```
 python3 -m src.__main__
 ```

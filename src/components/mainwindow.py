@@ -202,7 +202,7 @@ class MainView(QMainWindow):
         else:
             msg = QMessageBox()
             msg.setWindowTitle("Error")
-            msg.setText("Not a valid PV Mapper Dataset.")
+            msg.setText("Not a valid PV Drone Inspect Dataset.")
             msg.setIcon(QMessageBox.Critical)
             msg.exec()
 
@@ -298,7 +298,7 @@ class MainView(QMainWindow):
             self.ui.actionClose_String_Annotation.setEnabled(False)
 
         if app_mode is None or app_mode == "data_visualization":
-            self.setWindowTitle("PV Mapper")
+            self.setWindowTitle("PV Drone Inspect Viewer")
         
 
     @Slot(bool)
@@ -308,10 +308,10 @@ class MainView(QMainWindow):
         file_name = os.path.basename(self.model.annotation_editor_model.current_file_name)
         if has_changes:
             self.ui.actionSave_Defect_Annotation.setEnabled(True)            
-            self.setWindowTitle("PV Mapper - {}*".format(file_name))
+            self.setWindowTitle("PV Drone Inspect Viewer - {}*".format(file_name))
         else:
             self.ui.actionSave_Defect_Annotation.setEnabled(False)
-            self.setWindowTitle("PV Mapper - {}".format(file_name))
+            self.setWindowTitle("PV Drone Inspect Viewer - {}".format(file_name))
 
     @Slot()
     def new_defect_annotation(self):
@@ -366,12 +366,14 @@ class MainView(QMainWindow):
             self.child_windows[which].show()
 
     def about(self):
-        gh = "LukasBommes/Dataset-Viewer"
-        about_text = "Dataset Viewer for PV-Mapper<br><br>" \
+        gh1 = "LukasBommes/PV-Drone-Inspect"
+        gh1 = "LukasBommes/PV-Drone-Inspect-Viewer"
+        about_text = "Dataset Viewer for PV Drone Inspect<br><br>" \
             + "Author: Lukas Bommes<br>" \
             + "Organization: Helmholtz Institute Erlangen-Nürnberg for Renewable Energy (HI ERN)<br>" \
             + "GitHub: " \
-            + "<a href='https://github.com/{gh}'>{gh}</a><br>".format(gh=gh)
+            + "PV Drone Inspect: <a href='https://github.com/{gh1}'>{gh1}</a><br>".format(gh1=gh1) \
+            + "Viewer for PV Drone Inspect: <a href='https://github.com/{gh2}'>{gh2}</a><br>".format(gh2=gh2)
         QMessageBox.about(
             self,
             "About Dateset Viewer for PV-Mapper",
