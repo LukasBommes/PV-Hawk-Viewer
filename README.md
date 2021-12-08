@@ -58,6 +58,8 @@ First, you have to open a PV Drone Inspect dataset by clicking *File -> Open Dat
 
 ![screenshot dataset opened](docs/screenshots/screenshot_dataset_opened.png)
 
+Note, that you may have to set the gain and offset for conversion of raw image values into Celsius scala. If the values are wrong, you may not be able to see the infrared video frame when clicking onto a PV module. You can modify the gain and offset values under *File -> Dataset Settings* Please refer to the manual of your thermal camera for the respective values.
+
 ### Performing an analysis on the data
 
 The app provides some analyses that can be performed on the dataset. To this end, click *Analysis -> New Analysis...* The window below will open. Here, you can select which analysis to perform. You can set the hyper parameters and run the analysis by clicking *Compute*. See [below](#available-analyses) for details on the available analyses.
