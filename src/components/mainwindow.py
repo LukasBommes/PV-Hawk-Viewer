@@ -235,8 +235,9 @@ class MainView(QMainWindow):
         dataset_dir = self.model.dataset_dir
         dataset_info = ""
         dataset_info_text = ""
+        module_id_text = ""
         if dataset_dir is not None:
-
+            
             dataset_info_text = "Dataset Info"
             stats = self.model.dataset_stats
             if stats is None:
@@ -254,24 +255,27 @@ class MainView(QMainWindow):
                 "Flight duration: {}<br>".format(stats["flight_duration"]) +
                 "Trajectory length: {} m".format(int(stats["trajectory_length"]))
             )
-
+	
+            # set module ID label
+            track_id = self.model.track_id
+            module_id_text = ""
+            if track_id is not None:
+                module_id_text = "{}".format(track_id)
+            
+                # search for plant ID
+                string_annotation_data = self.model.string_editor_model.string_annotation_data
+                if string_annotation_data is not None:
+                    id_mapping = self.model.string_editor_model.string_annotation_data["plant_id_track_id_mapping"]
+                    id_mapping = {track_id_: plant_id_ for plant_id_, track_id_ in id_mapping}
+                    try:
+                        plant_id = id_mapping[track_id]                
+                    except KeyError:
+                        pass
+                    else:
+                        module_id_text = "{} ({})".format(module_id_text, plant_id)
+                        
         self.datasetInfoLabel.setText(dataset_info_text)
         self.datasetInfoLabel.setToolTip(dataset_info)
-        
-        # set module ID label
-        track_id = self.model.track_id
-        module_id_text = ""
-        if track_id is not None:
-            module_id_text = "{}".format(track_id)
-            # search for plant ID
-            id_mapping = self.model.string_editor_model.string_annotation_data["plant_id_track_id_mapping"]
-            id_mapping = {track_id: plant_id for plant_id, track_id in id_mapping}
-            try:
-                plant_id = id_mapping[track_id]                
-            except KeyError:
-                pass
-            else:
-                module_id_text = "{} ({})".format(module_id_text, plant_id)
         self.moduleIdLabel.setText(module_id_text)
 
     @Slot(str)

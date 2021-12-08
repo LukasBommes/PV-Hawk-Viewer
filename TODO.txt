@@ -1,4 +1,5 @@
 general:
+- ensure write permission to directories are available, otherwise show error message on startup
 - provide example dataset in Readme
 - change app name in window title and about
 - show error traceback in GUI window
