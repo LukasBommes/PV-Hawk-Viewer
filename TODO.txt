@@ -1,5 +1,4 @@
 general:
-- make a dataset preferences window were one can enter gain and offset for conversion to celsius
 - ensure write permission to directories are available, otherwise show error message on startup
 - provide example dataset in Readme
 - change app name in window title and about
