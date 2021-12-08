@@ -7,7 +7,7 @@ name = "src"
 sys.path.insert(0, realpath(dirname(__file__))+"/"+name)
 
 setup(
-    name="PV-Drone-Inspect-Viewer-LukasBommes",
+    name="PV-Drone-Inspect-Viewer",
     maintainer="Lukas Bommes",
     url='https://github.com/LukasBommes/PV-Drone-Inspect-Viewer',
     version="1.0", 

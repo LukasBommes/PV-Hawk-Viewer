@@ -15,14 +15,38 @@ The app provides the following functionality:
 
 ## Installation
 
-We provide prebuild binaries for Ubuntu (x86_64). Download the zip archive from [here]() and extract it to the desired location. Start the terminal in the extracted archive and run the dataset viewer with
+This app requires [Python 3](https://www.python.org/downloads/) to be installed on your machine.
+
+We recommend installing the Dataset Viewer for PV Drone Inspect in a Python virtual environment, which you can create with the following command in a new terminal
 ```
-./main
+python3 -m venv env
+```
+On Linux and macOS, you can activate the enviroment with
+```
+source env/bin/activate
+```
+on Windows type
+```
+.\env\Scripts\activate
 ```
 
-If you want to use the dataset viewer on Windows or you have a different Linux distribution, please see the [instructions below](#build-from-source) on how to build the app from source code.
+Inside the activated environment upgrade pip
+```
+python3 -m pip install --upgrade pip
+```
+and then install the dataset viewer via pip
+```
+python3 -m pip install --upgrade PV-Drone-Inspect-Viewer
+```
+Note, that depending on your platform you will have to replace `python3` with `python` or `py` in the commands above.
 
-## Quickstart
+After successful installation you can start the dataset viewer simply by typing in the terminal
+```
+pvinspect
+```
+Note, that to start the dataset viewer, you will always have to activate the Python virtual environment first.
+
+## Usage
 
 After startup the app shows an empty map.
 
@@ -30,7 +54,7 @@ After startup the app shows an empty map.
 
 ### Opening a dataset
 
-First, you have to open a PV Drone Inspect dataset by clicking *File -> Open Dataset...* (An example dataset can be dowbloaded from [here]()). When the dataset is loaded correctly the map updates and shows a map of the PV plant. You can click individual PV modules and the app will retrieve all image patches of that module as well as the video frame of which the first patch was extracted.
+First, you have to open a PV Drone Inspect dataset by clicking *File -> Open Dataset...* (An example dataset can be downloaded from [here]()). When the dataset is loaded correctly the map updates and shows a map of the PV plant. You can click individual PV modules and the app will retrieve all image patches of that module as well as the video frame of which the first patch was extracted.
 
 ![screenshot dataset opened](docs/screenshots/screenshot_dataset_opened.png)
 
@@ -72,41 +96,6 @@ You can export the string annotation for further use by clicking *Annotation -> 
 
 ![screenshot string annotation](docs/screenshots/screenshot_string_annotation.png)
 
-## Installation from Source
-
-Install prerequisites
-- [Python 3.x](https://www.python.org/downloads/)
-- [QT](https://www.qt.io/download-qt-installer)
-
-Use Python pip to install the following packages
-
-- [PySide6](https://pypi.org/project/PySide6/)
-- ...
-
-Clone the repository by running
-
-```
-git clone https://github.com/LukasBommes/PV-Drone-Inspect
-```
-
-Now, start a terminal in the root directory of the repository and run the dataset viewer
-```
-python main.py
-```
-
-## Build binaries for other platforms
-
-If you want to provide binaries for other platforms, such as Windows make sure the dataset viewer can be run on your target platform as described in [Installtion from Source](#installation-from-source).
-
-Install [cx_Freeze](https://pypi.org/project/cx-Freeze/) with Python pip and freeze the dataset viewer by running
-```
-python setup.py build
-```
-This will create a `build` directory containing the binary for your platform, which you can run as
-```
-./main
-```
-Important: You have to perform this procedure on the platform you want to build the binary for, e.g. run this on Windows to make a Windows executable.
 
 ## Available analyses
 

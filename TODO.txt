@@ -1,6 +1,9 @@
 general:
+- provide example dataset in Readme
+- change app name in window title and about
 - show error traceback in GUI window
 - fix key error when clicking 7th module in 3rd row
+- make conversion from raw TIFF values to Celsius dynamic (encode this info somehow in the images or dataset)
 
 string editor:
 - add a explanatory label for the drawing (e.g. tell the user to click onto a module in the map after clicking "start drawing")
@@ -14,8 +17,5 @@ analysis:
 
 status bar
 - display number of patches of the selected module
+- display number of strings
 - display string info: number of modules, number of defects, etc.
-
-deployment:
-- make it easily installable via python distutils
-- build for windows
