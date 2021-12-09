@@ -6,13 +6,21 @@ from collections import defaultdict
 import cv2
 import numpy as np
 import pandas as pd
-import geopandas as gpd
 from sklearn.neighbors import KDTree
 
 from PySide6.QtCore import QObject, Signal
 
 from ..utils.common import get_immediate_subdirectories, to_celsius
+from ..utils.geojson import load_geojson, save_geojson, coords_wgs84_to_ltp
 
+
+def load_modules(file):
+    df = load_geojson(open(file, "r"))
+    df = df.set_index("track_id")
+    df_ltp = coords_wgs84_to_ltp(df)
+    df_corners = df_ltp.loc[df_ltp["geometry_type"] == "Polygon"]
+    df_centers = df_ltp.loc[df_ltp["geometry_type"] == "Point"]
+    return df, df_corners, df_centers
 
 def truncate_patch(patch, margin=0.05):
     """Truncates module edges by margin (percent of width) to remove module frame."""
@@ -20,15 +28,6 @@ def truncate_patch(patch, margin=0.05):
     margin_px = int(margin*width)
     patch = patch[margin_px:-margin_px, margin_px:-margin_px]
     return patch
-
-
-def load_modules_gdf(file):
-    gdf = gpd.read_file(file)
-    gdf = gdf.set_index("track_id")
-    gdf = gdf.to_crs(epsg=3857)
-    gdf_corners = gdf.loc[gdf.geom_type == "Polygon"]
-    gdf_centers = gdf.loc[gdf.geom_type == "Point"]
-    return gdf_corners, gdf_centers
 
 
 def remove_patches_with_sun_reflection(patch_files, sun_reflections):
@@ -55,10 +54,10 @@ def get_patch_temps(patch_files, margin, to_celsius_gain, to_celsius_offset):
     return temps
 
 
-def mean_over_patches(geodataframe, temps):
+def mean_over_patches(dataframe, temps):
     """Compute the mean of the module temperatures over all patches of a module."""
     for patch_area_agg in ["min", "max", "mean", "median"]:
-        geodataframe["{}_temp".format(patch_area_agg)] = pd.Series({track_id: np.mean(t[patch_area_agg]) for track_id, t in temps.items()})
+        dataframe["{}_temp".format(patch_area_agg)] = pd.Series({track_id: np.mean(t[patch_area_agg]) for track_id, t in temps.items()})
 
 
 class AnalysisModuleTemperaturesWorker(QObject):
@@ -107,7 +106,7 @@ class AnalysisModuleTemperaturesWorker(QObject):
 
     def run(self):
         file = os.path.join(self.dataset_dir, "mapping", "module_geolocations_refined.geojson")
-        gdf_corners, gdf_centers = load_modules_gdf(file)
+        df, df_corners, df_centers = load_modules(file)
 
         temps = {}
         track_ids = sorted(get_immediate_subdirectories(os.path.join(self.dataset_dir, "patches_final", "radiometric")))
@@ -126,20 +125,27 @@ class AnalysisModuleTemperaturesWorker(QObject):
             self.progress.emit(progress, False, "Computing temperature distribution...")
         self.progress_last_step = progress
                 
-        mean_over_patches(gdf_corners, temps)
-        mean_over_patches(gdf_centers, temps)
+        mean_over_patches(df_corners, temps)
+        mean_over_patches(df_centers, temps)
 
         for patch_area_agg in ["min", "max", "mean", "median"]:
             column = "{}_temp".format(patch_area_agg)
-            neighbour_mean_temps = self.get_neighbours_median_temp(gdf_centers, neighbour_radius=self.neighbour_radius, column=column)
+            neighbour_mean_temps = self.get_neighbours_median_temp(df_centers, neighbour_radius=self.neighbour_radius, column=column)
             if neighbour_mean_temps is None: # cancelled
                 return
 
-            gdf_corners["{}_corrected".format(column)] = gdf_corners.loc[:, column] - neighbour_mean_temps
-            gdf_centers["{}_corrected".format(column)] = gdf_centers.loc[:, column] - neighbour_mean_temps
+            df_corners["{}_corrected".format(column)] = df_corners.loc[:, column] - neighbour_mean_temps
+            df_centers["{}_corrected".format(column)] = df_centers.loc[:, column] - neighbour_mean_temps
 
         # merge back into single geodataframe
-        gdf_merged = gdf_corners.append(gdf_centers)
+        df_merged = df_corners.append(df_centers)
+
+        # reuse WGS84 coordinates of original dataframe
+        df_merged = df_merged.reset_index()
+        df_merged = df_merged.set_index(["track_id", "geometry_type"])
+        df = df.reset_index()
+        df = df.set_index(["track_id", "geometry_type"])
+        df_merged.update(df.loc[:, "geometry"])
 
         # write results to disk
         self.progress.emit(1, False, "Saving analysis results...")
@@ -147,8 +153,7 @@ class AnalysisModuleTemperaturesWorker(QObject):
         save_file = os.path.join(save_path, "results.geojson")
         print("Saving module temperature results in {}".format(save_file))
         os.makedirs(save_path, exist_ok=True)
-        gdf_merged = gdf_merged.to_crs(epsg=4326)
-        gdf_merged.to_file(save_file, driver='GeoJSON')
+        save_geojson(df_merged, open(save_file, "w"))
 
         print("Saving meta json in {}".format(os.path.join(save_path, "meta.json")))
         meta = {
