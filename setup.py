@@ -10,7 +10,7 @@ setup(
     name="PV-Drone-Inspect-Viewer",
     maintainer="Lukas Bommes",
     url='https://github.com/LukasBommes/PV-Drone-Inspect-Viewer',
-    version="1.0.5", 
+    version="1.0.6", 
     packages=find_packages(),   
     package_dir={name: name},    
     include_package_data=True,
