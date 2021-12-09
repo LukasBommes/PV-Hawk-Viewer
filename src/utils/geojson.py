@@ -14,7 +14,7 @@ def load_geojson(fp):
         df.append({
             "track_id": track_id, 
             "geometry_type": feature["geometry"]["type"], 
-            "geometry": shape(feature["geometry"])
+            "geometry": feature["geometry"]
         })
     df = pd.DataFrame(df)
     return df
@@ -25,6 +25,7 @@ def save_geojson(df, fp):
     Each row of the dataframe represents one GeoJSON feature. The dataframe may contian additional columns, 
     which are written into the properties of the feature."""
     features = []
+
     df = df.reset_index()
     df = df.where(pd.notnull(df), None)  # replace nan with None
     records = df.to_dict('records')
@@ -33,16 +34,18 @@ def save_geojson(df, fp):
         feature = {
             'type': 'Feature',
             'geometry': {
-                'type': mapping(record['geometry'])['type'],
-                'coordinates': np.array(mapping(record['geometry'])["coordinates"]).tolist()
+                'type': record['geometry_type'],
+                'coordinates': record['geometry']["coordinates"]
             },
             'properties': {}
-        }        
+        }
+        
         # insert properties
         for k, v in record.items():
             if k in ['index', 'level_0', 'geometry', 'geometry_type']:
                 continue
-            feature['properties'][k] = v
+            feature['properties'][k] = v            
+        
         features.append(feature)
     
     geojson = {
@@ -66,7 +69,9 @@ def coords_wgs84_to_ltp(df):
     # apply transform
     geometry_transformed = []
     for geometry in df.loc[:, "geometry"]:
-        geometry = transform(projection, geometry)
+        geometry = transform(projection, shape(geometry))
+        geometry = mapping(geometry)
+        geometry["coordinates"] = np.array(geometry["coordinates"]).tolist()
         geometry_transformed.append(geometry)
     df_transformed = df.copy()
     df_transformed.loc[:, "geometry"] = geometry_transformed

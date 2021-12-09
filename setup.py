@@ -18,13 +18,14 @@ setup(
     description="Viewer for PV Drone Inspect datasets.",
     install_requires=[
         "numpy>=1.19.1",
+        "pandas>=1.1.2",
         "matplotlib>=3.5.0rc1",
         "scikit-learn>=0.23.1",
         "opencv-python>=4.2.0.34",
         "networkx>=2.4",
         "PySide6>=6.2.1",
         "pyproj>=3.1.0",
-        "shapely>=1.7.1"
+        "shapely>=1.7.1,<2"
     ],
     python_requires='>=3.8, <4',
     entry_points={"gui_scripts": ['pvinspect = src.__main__:main']},

@@ -79,11 +79,11 @@ class AnalysisModuleTemperaturesWorker(QObject):
         self.sun_reflections = sun_reflections
         self.progress_last_step = 0.0
 
-    def get_neighbours_median_temp(self, gdf_centers, neighbour_radius=7, column="mean_of_max_temps"):
-        """Returns a list of mean temperatures of the neighbours of each module in `gdf_centers`.
+    def get_neighbours_median_temp(self, df_centers, neighbour_radius=7, column="mean_of_max_temps"):
+        """Returns a list of mean temperatures of the neighbours of each module in `df_centers`.
         The `neighbour_radius` defines the circle radius in which to look for neighbouring modules.
         The `column` specifies which temperature column to use."""
-        centers = np.array([[d.xy[0][0], d.xy[1][0]] for d in gdf_centers["geometry"]])
+        centers = np.array([[d["coordinates"][0], d["coordinates"][1]] for d in df_centers["geometry"]])
         tree = KDTree(centers)
         neighbor_idxs = tree.query_radius(centers, r=neighbour_radius)
         
@@ -97,7 +97,7 @@ class AnalysisModuleTemperaturesWorker(QObject):
                 return
 
             neighbor_idx = np.delete(neighbor_idx, np.nonzero(neighbor_idx == row_idx))  # remove the current module from list of neighbors
-            mean_temp = gdf_centers.iloc[neighbor_idx][column].median()
+            mean_temp = df_centers.iloc[neighbor_idx][column].median()
             neighbour_mean_temps.append(mean_temp)
 
             self.progress.emit(progress, False, "Computing corrected {}...".format(" ".join(column.split("_"))))
