@@ -170,6 +170,7 @@ class AnalysisController(QObject):
         if self.model.analysis_model.active_tab_widget.objectName() == "tabSunFilter":
             self.worker = AnalysisSunFilterWorker(
                 self.model.dataset_dir, 
+                self.model.dataset_version,
                 self.model.analysis_model.name,
                 self.model.dataset_settings_model.gain,
                 self.model.dataset_settings_model.offset,
@@ -180,7 +181,8 @@ class AnalysisController(QObject):
                 
         elif self.model.analysis_model.active_tab_widget.objectName() == "tabModuleTemperatures":
             self.worker = AnalysisModuleTemperaturesWorker(
-                self.model.dataset_dir, 
+                self.model.dataset_dir,
+                self.model.dataset_version,
                 self.model.analysis_model.name,
                 self.model.dataset_settings_model.gain,
                 self.model.dataset_settings_model.offset,

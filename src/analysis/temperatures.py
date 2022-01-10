@@ -64,12 +64,13 @@ class AnalysisModuleTemperaturesWorker(QObject):
     finished = Signal()
     progress = Signal(float, bool, str)
 
-    def __init__(self, dataset_dir, name, to_celsius_gain, to_celsius_offset, 
+    def __init__(self, dataset_dir, dataset_version, name, to_celsius_gain, to_celsius_offset, 
             border_margin, neighbour_radius, ignore_sun_reflections, sun_reflections):
         super().__init__()
         self.is_cancelled = False
         self.timestamp = datetime.datetime.utcnow().isoformat()
         self.dataset_dir = dataset_dir
+        self.dataset_version = dataset_version
         self.name = name
         self.to_celsius_gain = to_celsius_gain
         self.to_celsius_offset = to_celsius_offset
@@ -105,11 +106,16 @@ class AnalysisModuleTemperaturesWorker(QObject):
         return neighbour_mean_temps
 
     def run(self):
+        if self.dataset_version == "v1":
+            patches_dir = os.path.join(self.dataset_dir, "patches_final", "radiometric")
+        elif self.dataset_version == "v2":
+            patches_dir = os.path.join(self.dataset_dir, "patches", "radiometric")
+
         file = os.path.join(self.dataset_dir, "mapping", "module_geolocations_refined.geojson")
         df, df_corners, df_centers = load_modules(file)
 
         temps = {}
-        track_ids = sorted(get_immediate_subdirectories(os.path.join(self.dataset_dir, "patches_final", "radiometric")))
+        track_ids = sorted(get_immediate_subdirectories(patches_dir))
         for i, track_id in enumerate(track_ids):
             progress = (i / len(track_ids)) / 5
             if self.is_cancelled:
@@ -117,7 +123,7 @@ class AnalysisModuleTemperaturesWorker(QObject):
                 self.finished.emit()
                 return
 
-            patch_files = sorted(glob.glob(os.path.join(self.dataset_dir, "patches_final", "radiometric", track_id, "*")))
+            patch_files = sorted(glob.glob(os.path.join(patches_dir, track_id, "*")))
             if self.ignore_sun_reflections and self.sun_reflections is not None:
                 patch_files = remove_patches_with_sun_reflection(patch_files, self.sun_reflections[track_id])
             temps[track_id] = get_patch_temps(patch_files, self.border_margin, self.to_celsius_gain, self.to_celsius_offset)

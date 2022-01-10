@@ -183,12 +183,12 @@ class MainView(QMainWindow):
         #self.controller.open_dataset(dir)
 
     def valid_dataset(self, dir):
+        if not os.path.isfile(os.path.join(dir, "version.json")):
+            return False
         probe_dirs = get_immediate_subdirectories(dir)
         if not "mapping" in probe_dirs:
             return False
         if not "patches" in probe_dirs:
-            return False
-        if not "patches_final" in probe_dirs:
             return False
         if not "splitted" in probe_dirs:
             return False
@@ -428,6 +428,7 @@ class MainController(QObject):
 
     def reset(self):
         self.model.dataset_dir = None
+        self.model.dataset_version = None
         self.model.data = None
         self.model.meta = None
         self.model.patch_meta = None
@@ -444,8 +445,14 @@ class MainController(QObject):
     @Slot(str)
     def open_dataset(self, dataset_dir):
         self.model.dataset_dir = dataset_dir
-        self.model.patch_meta = pickle.load(open(os.path.join(
-            self.model.dataset_dir, "patches", "meta.pkl"), "rb"))
+        version_info = json.load(open(os.path.join(self.model.dataset_dir, "version.json"), "r"))
+        self.model.dataset_version = version_info["dataset_version"]
+        if self.model.dataset_version == "v1":
+            self.model.patch_meta = pickle.load(open(os.path.join(
+                self.model.dataset_dir, "patches", "meta.pkl"), "rb"))
+        elif self.model.dataset_version == "v2":
+            self.model.patch_meta = pickle.load(open(os.path.join(
+                self.model.dataset_dir, "quadrilaterals", "quadrilaterals.pkl"), "rb"))
         self.load_dataset_settings()
         self.load_sun_reflections()
         self.update_source_names()
@@ -624,6 +631,7 @@ class MainController(QObject):
         self.thread_dataset_stats = QThread()
         self.worker_dataset_stats = ComputeDatasetStatsWorker(
             self.model.dataset_dir,
+            self.model.dataset_version,
             self.model.data
         )
         self.worker_dataset_stats.moveToThread(self.thread_dataset_stats)
@@ -665,10 +673,11 @@ class MainController(QObject):
 class ComputeDatasetStatsWorker(QObject):
     finished = Signal(object)
 
-    def __init__(self, dataset_dir, data):
+    def __init__(self, dataset_dir, dataset_version, data):
         super().__init__()
         self.is_cancelled = False
         self.dataset_dir = dataset_dir
+        self.dataset_version = dataset_version
         self.data = data
     
     def run(self):
@@ -688,7 +697,11 @@ class ComputeDatasetStatsWorker(QObject):
 
         # num patches
         num_patches = 0
-        for _, _, files in os.walk(os.path.join(self.dataset_dir, "patches_final", "radiometric")):
+        if self.dataset_version == "v1":
+            patches_dir = os.path.join(self.dataset_dir, "patches_final", "radiometric")
+        elif self.dataset_version == "v2":
+            patches_dir = os.path.join(self.dataset_dir, "patches", "radiometric")
+        for _, _, files in os.walk(patches_dir):
             if self.is_cancelled:
                 #self.finished.emit(None)
                 print("cancelled thread")
@@ -760,6 +773,7 @@ class MainModel(QObject):
     def __init__(self):
         super().__init__()
         self.dataset_dir = None
+        self.dataset_version = None
         self.data = None
         self._meta = None
         self._sun_reflections = None

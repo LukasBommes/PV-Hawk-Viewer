@@ -147,13 +147,14 @@ class AnalysisSunFilterWorker(QObject):
     finished = Signal()
     progress = Signal(float, bool, str)
 
-    def __init__(self, dataset_dir, name, to_celsius_gain, to_celsius_offset, 
-            threshold_temp, threshold_loc, threshold_changepoint, 
+    def __init__(self, dataset_dir, dataset_version, name, to_celsius_gain, 
+            to_celsius_offset, threshold_temp, threshold_loc, threshold_changepoint, 
             segment_length_threshold):
         super().__init__()
         self.is_cancelled = False
         self.timestamp = datetime.datetime.utcnow().isoformat()
         self.dataset_dir = dataset_dir
+        self.dataset_version = dataset_version
         self.name = name
         self.to_celsius_gain = to_celsius_gain
         self.to_celsius_offset = to_celsius_offset
@@ -163,7 +164,11 @@ class AnalysisSunFilterWorker(QObject):
         self.segment_length_threshold = segment_length_threshold
 
     def run(self):
-        patch_dir = os.path.join(self.dataset_dir, "patches_final", "radiometric")
+        if self.dataset_version == "v1":
+            patch_dir = os.path.join(self.dataset_dir, "patches_final", "radiometric")
+        elif self.dataset_version == "v2":
+            patch_dir = os.path.join(self.dataset_dir, "patches", "radiometric")
+
         if not os.path.isdir(patch_dir):
             return None
 
