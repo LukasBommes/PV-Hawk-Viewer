@@ -9,7 +9,7 @@ import numpy as np
 
 from PySide6.QtWidgets import QMainWindow, QToolBar, QDockWidget, \
     QMessageBox, QFileDialog, QLabel, QMenu
-from PySide6.QtCore import Qt, Slot, QUrl, QDir, Signal, QObject
+from PySide6.QtCore import Qt, Slot, QUrl, QDir, Signal, QObject, QThread
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtGui import QIcon, QPixmap
 
@@ -124,7 +124,7 @@ class MainView(QMainWindow):
 
         # file menu
         self.ui.actionOpen_Dataset.triggered.connect(self.open_dataset)
-        self.ui.actionClose_Dataset.triggered.connect(self.controller.close_dataset_request)
+        self.ui.actionClose_Dataset.triggered.connect(self.close_dataset)
         self.ui.actionDataset_Settings.triggered.connect(lambda: self.show_child_window("dataset_settings"))
         self.ui.actionQuit.triggered.connect(self.close)
 
@@ -208,7 +208,10 @@ class MainView(QMainWindow):
             msg.exec()
             return
         self.controller.open_dataset(dir)
-            
+
+    def close_dataset(self):
+        self.controller.stop_background_threads()
+        self.controller.close_dataset_request()
 
     def dataset_opened(self):
         self.ui.actionClose_Dataset.setEnabled(True)
@@ -400,7 +403,8 @@ class MainView(QMainWindow):
 
     def closeEvent(self, event):
         """Ask whether unsaved changes should be saved"""
-        self.controller.mainwindow_close_requested.emit(event)
+        self.controller.stop_background_threads()
+        self.controller.mainwindow_close_requested.emit(event)        
 
 
 
@@ -419,6 +423,8 @@ class MainController(QObject):
     def __init__(self, model):
         super().__init__()
         self.model = model
+        self.thread_dataset_stats = None
+        self.worker_dataset_stats = None
 
     def reset(self):
         self.model.dataset_dir = None
@@ -615,46 +621,127 @@ class MainController(QObject):
         if self.model.dataset_dir is None:
             return
 
+        self.thread_dataset_stats = QThread()
+        self.worker_dataset_stats = ComputeDatasetStatsWorker(
+            self.model.dataset_dir,
+            self.model.data
+        )
+        self.worker_dataset_stats.moveToThread(self.thread_dataset_stats)
+
+        # connect signals and slots
+        self.thread_dataset_stats.started.connect(self.worker_dataset_stats.run)
+        self.worker_dataset_stats.finished.connect(self.thread_dataset_stats.quit)
+
+        def worker_finished():
+            if self.worker_dataset_stats is not None:
+                self.worker_dataset_stats.deleteLater()
+                self.worker_dataset_stats = None
+
+        def thread_finished():
+            if self.thread_dataset_stats is not None:
+                self.thread_dataset_stats.deleteLater()
+                self.thread_dataset_stats = None
+
+        self.worker_dataset_stats.finished.connect(worker_finished)
+        self.thread_dataset_stats.finished.connect(thread_finished)
+
+        self.thread_dataset_stats.start()
+
+        # update dataset stats when thread is finished
+        self.worker_dataset_stats.finished.connect(lambda stats: setattr(self.model, "dataset_stats", stats))
+
+    @Slot()
+    def stop_background_threads(self):
+        if self.thread_dataset_stats is not None and self.worker_dataset_stats is not None:
+            self.worker_dataset_stats.is_cancelled = True
+            self.thread_dataset_stats.quit()
+            self.thread_dataset_stats.wait()         
+            self.thread_dataset_stats.deleteLater()
+            self.thread_dataset_stats = None
+            self.worker_dataset_stats = None
+
+
+
+class ComputeDatasetStatsWorker(QObject):
+    finished = Signal(object)
+
+    def __init__(self, dataset_dir, data):
+        super().__init__()
+        self.is_cancelled = False
+        self.dataset_dir = dataset_dir
+        self.data = data
+    
+    def run(self):
+        print("Started background thread")
         # num modules
         num_modules = 0
-        for feature in self.model.data["features"]:
+        for feature in self.data["features"]:
+            if self.is_cancelled:
+                #self.finished.emit(None)
+                print("cancelled thread")
+                return
             geometry = feature["geometry"]["type"]
             if geometry == "Polygon":
                 num_modules += 1
 
+        print("Got num modules")
+
         # num patches
         num_patches = 0
-        for _, _, files in os.walk(os.path.join(self.model.dataset_dir, "patches_final", "radiometric")):
+        for _, _, files in os.walk(os.path.join(self.dataset_dir, "patches_final", "radiometric")):
+            if self.is_cancelled:
+                #self.finished.emit(None)
+                print("cancelled thread")
+                return
             num_patches += len(files)
+
+        print("Got num patches")
 
         # flight duration
         timestamps = []
-        with open(os.path.join(self.model.dataset_dir, "splitted", "timestamps.csv"), newline='') as csvfile:
+        with open(os.path.join(self.dataset_dir, "splitted", "timestamps.csv"), newline='') as csvfile:
             csvreader = csv.reader(csvfile, delimiter=',', quotechar='|')
             for row in csvreader:
+                if self.is_cancelled:
+                    #self.finished.emit(None)
+                    print("cancelled thread")
+                    return
                 timestamps.append(datetime.datetime.fromisoformat(*row))                
         dt = (timestamps[-1] - timestamps[0]).total_seconds()
         hours, remainder = divmod(dt, 3600)
         minutes, seconds = divmod(remainder, 60)
         flight_duration = "{:02d}:{:02d}:{:0.3f}".format(int(hours), int(minutes), seconds)
 
+        print("Got flight duration")
+
         # trajectory length
-        pose_graph = pickle.load(open(os.path.join(self.model.dataset_dir, "mapping", "pose_graph.pkl"), "rb"))
+        pose_graph = pickle.load(open(os.path.join(self.dataset_dir, "mapping", "pose_graph.pkl"), "rb"))
         positions = []
         for node_id, data in pose_graph.nodes(data=True):
+            if self.is_cancelled:
+                #self.finished.emit(None)
+                print("cancelled thread")
+                return
             pose = data["pose"][3:].reshape(3, 1)
             positions.append(pose)
         trajectory_length = 0
         for i in range(1, len(positions)):
+            if self.is_cancelled:
+                #self.finished.emit(None)
+                print("cancelled thread")
+                return
             trajectory_length += np.linalg.norm(positions[i] - positions[i-1])
 
+        print("Got trajectory length")
+
+        print("Finished computing dataset stats")    
         stats = {
             "num_modules": num_modules,
             "num_patches": num_patches,
             "flight_duration": flight_duration,
             "trajectory_length": trajectory_length,
         }
-        self.model.dataset_stats = stats
+        self.finished.emit(stats)
 
 
 

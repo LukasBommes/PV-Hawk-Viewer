@@ -1,4 +1,5 @@
 general:
+- update dataset stats in background thread otherwise it slows down opening of a new dataset
 - ensure write permission to directories are available, otherwise show error message on startup
 - provide example dataset in Readme
 - change app name in window title and about
