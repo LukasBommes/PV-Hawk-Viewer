@@ -129,7 +129,7 @@ class Ui_MainWindow(object):
     # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"PV Drone Inspect Viewer", None))
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"PV Hawk Viewer", None))
         self.actionOpen_Dataset.setText(QCoreApplication.translate("MainWindow", u"Open Dataset...", None))
         self.actionClose_Dataset.setText(QCoreApplication.translate("MainWindow", u"Close Dataset", None))
         self.actionQuit.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
