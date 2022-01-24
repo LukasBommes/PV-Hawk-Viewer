@@ -121,8 +121,12 @@ class PatchesController(QObject):
             return
 
         # load patches from directory
-        image_files = sorted(glob.glob(os.path.join(
-            self.model.dataset_dir, "patches_final", "radiometric", track_id, "*")))
+        if self.model.dataset_version == "v1":
+            patches_dir = os.path.join(self.model.dataset_dir, "patches_final", "radiometric")
+        elif self.model.dataset_version == "v2":
+            patches_dir = os.path.join(self.model.dataset_dir, "patches", "radiometric")
+
+        image_files = sorted(glob.glob(os.path.join(patches_dir, track_id, "*")))
         
         images = []
         statistics = []
