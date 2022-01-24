@@ -1,9 +1,9 @@
-# Dataset Viewer for PV Drone Inspect
+# PV Hawk Viewer
 
-This is an open-source desktop app for viewing and analyzing maps of large-scale photovoltaic (PV) plants created with [PV Drone Inspect](https://github.com/LukasBommes/PV-Drone-Inspect).
+This is an open-source desktop app for viewing and analyzing maps of large-scale photovoltaic (PV) plants created with [PV Hawk](https://github.com/LukasBommes/PV-Hawk).
 
 The app provides the following functionality:
-- View the reconstruction of your PV plant created with PV Drone Inspect
+- View the reconstruction of your PV plant created with PV Hawk
 - Browse individual PV modules and video frames
 - Perform analyses (e.g. PV module defect detection)
 - Overlay analysis results on the map
@@ -17,7 +17,7 @@ The app provides the following functionality:
 
 This app requires [Python 3](https://www.python.org/downloads/) to be installed on your machine.
 
-We recommend installing the Dataset Viewer for PV Drone Inspect in a Python virtual environment, which you can create with the following command in a new terminal
+We recommend installing the Dataset Viewer for PV Hawk in a Python virtual environment, which you can create with the following command in a new terminal
 ```
 python3 -m venv env
 ```
@@ -36,13 +36,13 @@ python3 -m pip install --upgrade pip
 ```
 and then install the dataset viewer via pip
 ```
-python3 -m pip install --upgrade PV-Drone-Inspect-Viewer
+python3 -m pip install --upgrade PV-Hawk-Viewer
 ```
 Note, that depending on your platform you will have to replace `python3` with `python` or `py` in the commands above.
 
 After successful installation you can start the dataset viewer simply by typing in the terminal
 ```
-pvinspect
+viewer
 ```
 Note, that to start the dataset viewer, you will always have to activate the Python virtual environment first.
 
@@ -54,7 +54,7 @@ After startup the app shows an empty map.
 
 ### Opening a dataset
 
-First, you have to open a PV Drone Inspect dataset by clicking *File -> Open Dataset...* (An example dataset can be downloaded from [here]()). When the dataset is loaded correctly the map updates and shows a map of the PV plant. You can click individual PV modules and the app will retrieve all image patches of that module as well as the video frame of which the first patch was extracted.
+First, you have to open a PV Hawk dataset by clicking *File -> Open Dataset...* (An example dataset can be downloaded from [here]()). When the dataset is loaded correctly the map updates and shows a map of the PV plant. You can click individual PV modules and the app will retrieve all image patches of that module as well as the video frame of which the first patch was extracted.
 
 ![screenshot dataset opened](docs/screenshots/screenshot_dataset_opened.png)
 
@@ -101,7 +101,7 @@ You can export the string annotation for further use by clicking *Annotation -> 
 
 ## Available analyses
 
-As mentioned above the dataset viewer allows you to perform some analyses on the PV Drone Inspect dataset. We will explain those in more detail here.
+As mentioned above the dataset viewer allows you to perform some analyses on the PV Hawk dataset. We will explain those in more detail here.
 
 ### Sun reflection filter
 
@@ -133,11 +133,11 @@ This software is written by Lukas Bommes, M.Sc. - [Helmholtz Institute Erlangen-
 
 ### License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/LukasBommes/PV-Drone-Inspect-Viewer/blob/master/LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/LukasBommes/PV-Hawk-Viewer/blob/master/LICENSE) file for details.
 
 ### Citation
 
-If you use PV Drone Inspect or the Dataset Viewer for PV Drone Inspect in your research please consider citing our works listed [here](https://github.com/LukasBommes/PV-Drone-Inspect#citation).
+If you use PV Hawk or the Dataset Viewer for PV Hawk in your research please consider citing our works listed [here](https://lukasbommes.github.io/PV-Hawk/about.html).
 
 ### Build with
 - [Python](https://www.python.org/)

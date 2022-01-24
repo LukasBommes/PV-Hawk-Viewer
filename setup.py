@@ -7,15 +7,15 @@ name = "src"
 sys.path.insert(0, realpath(dirname(__file__))+"/"+name)
 
 setup(
-    name="PV-Drone-Inspect-Viewer",
+    name="PV-Hawk-Viewer",
     maintainer="Lukas Bommes",
-    url='https://github.com/LukasBommes/PV-Drone-Inspect-Viewer',
-    version="1.0.6", 
+    url='https://github.com/LukasBommes/PV-Hawk-Viewer',
+    version="1.0.0", 
     packages=find_packages(),   
     package_dir={name: name},    
     include_package_data=True,
     license="MIT",
-    description="Viewer for PV Drone Inspect datasets.",
+    description="Viewer for PV Hawk datasets.",
     install_requires=[
         "numpy>=1.19.1",
         "pandas>=1.1.2",
@@ -28,8 +28,8 @@ setup(
         "shapely>=1.7.1,<2"
     ],
     python_requires='>=3.8, <4',
-    entry_points={"gui_scripts": ['pvinspect = src.__main__:main']},
-    keywords=["PV Drone Inspect", "Photovoltaic", "Defects", "Mapping", "PV Plant", "Drone", "Thermography"],
+    entry_points={"gui_scripts": ['viewer = src.__main__:main']},
+    keywords=["PV Hawk", "Photovoltaic", "Defects", "Mapping", "PV Plant", "Drone", "Thermography"],
     classifiers=['Operating System :: OS Independent',
                 'Programming Language :: Python :: 3',
                 ],
