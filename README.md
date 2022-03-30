@@ -52,13 +52,17 @@ After startup the app shows an empty map.
 
 ![screenshot app started](docs/screenshots/screenshot_app_started.png)
 
+### Get an example dataset
+
+You can download an example dataset from [here](https://drive.google.com/file/d/1UK_OYz9_fWDKHJS_agp52ZoszdqqleS7/view?usp=sharing)). This dataset corresponds to the output generated in the [PV Hawk tutorial](https://lukasbommes.github.io/PV-Hawk/tutorial.html).
+
 ### Opening a dataset
 
-First, you have to open a PV Hawk dataset by clicking *File -> Open Dataset...* (An example dataset can be downloaded from [here]()). When the dataset is loaded correctly the map updates and shows a map of the PV plant. You can click individual PV modules and the app will retrieve all image patches of that module as well as the video frame of which the first patch was extracted.
+First, you have to open a PV Hawk dataset by clicking *File -> Open Dataset...*. When the dataset is loaded correctly the map updates and shows a map of the PV plant. You can click individual PV modules and the app will retrieve all image patches of that module as well as the video frame of which the first patch was extracted.
 
 ![screenshot dataset opened](docs/screenshots/screenshot_dataset_opened.png)
 
-Note, that you may have to set the gain and offset for conversion of raw image values into Celsius scala. If the values are wrong, you may not be able to see the infrared video frame when clicking onto a PV module. You can modify the gain and offset values under *File -> Dataset Settings* Please refer to the manual of your thermal camera for the respective values.
+Note, that you may have to set the gain and offset for conversion of raw image values into Celsius scala. If the values are wrong, you may not be able to see the infrared video frame when clicking onto a PV module. You can modify the gain and offset values under *File -> Dataset Settings*. Please refer to the manual of your thermal camera for the respective values. Default values are 0.04 for the gain and -273.15 for the offset and are suitable for the example dataset.
 
 ### Performing an analysis on the data
 

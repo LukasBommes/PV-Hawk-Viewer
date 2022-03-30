@@ -1,3 +1,11 @@
+### Create a Release
+
+Tag the commit (on master branch)
+```
+git tag vx.x.x
+```
+and create a release on GitHub using that tag.
+
 ### Build and Upload to PyPI
 
 Upgrade build environment
