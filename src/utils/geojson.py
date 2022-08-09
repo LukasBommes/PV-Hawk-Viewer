@@ -27,7 +27,7 @@ def save_geojson(df, fp):
     features = []
 
     df = df.reset_index()
-    df = df.where(pd.notnull(df), None)  # replace nan with None
+    df = df.replace({np.nan: None})  # replace nan with None
     records = df.to_dict('records')
     for record in records:
         # assemble feature
