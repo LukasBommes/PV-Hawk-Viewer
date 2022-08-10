@@ -52,9 +52,14 @@ After startup the app shows an empty map.
 
 ![screenshot app started](docs/screenshots/screenshot_app_started.png)
 
-### Get an example dataset
+### Get the example dataset
 
-You can download an example dataset from [here](https://drive.google.com/file/d/1UK_OYz9_fWDKHJS_agp52ZoszdqqleS7/view?usp=sharing)). This dataset corresponds to the output generated in the [PV Hawk tutorial](https://lukasbommes.github.io/PV-Hawk/tutorial.html).
+You can download an example dataset from [here](https://github.com/LukasBommes/PV-Hawk-Viewer/releases/tag/v1.0.0)) ([part 1](https://github.com/LukasBommes/PV-Hawk-Viewer/releases/download/v1.0.0/example_data_double_row_reconstructed.z01), [part 2](https://github.com/LukasBommes/PV-Hawk-Viewer/releases/download/v1.0.0/example_data_double_row_reconstructed.z02), [part 3](https://github.com/LukasBommes/PV-Hawk-Viewer/releases/download/v1.0.0/example_data_double_row_reconstructed.zip)). This dataset corresponds to the output generated in the [PV Hawk tutorial](https://lukasbommes.github.io/PV-Hawk/tutorial.html). Due to file size limitations of GitHub, the dataset is split into multiple parts. After downloading all the parts, you have to first combine them into a single zip archive and then unzip them into a single directory with the following commands
+```
+zip -F example_data_double_row_reconstructed.zip --out example_data_double_row_reconstructed_full.zip
+unzip example_data_double_row_reconstructed_full.zip
+```
+You can then open this dataset in PV Hawk Viewer as outlined in the next section.
 
 ### Opening a dataset
 
