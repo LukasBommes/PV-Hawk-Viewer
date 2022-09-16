@@ -66,24 +66,22 @@ class SourceFrameControllerRGB(QObject):
             self.model.source_frame_model_rgb.frame = None
             return None
 
-        if self.model.dataset_version == "v1":
-            patches_dir = os.path.join(self.model.dataset_dir, "patches_final", "radiometric")
-        elif self.model.dataset_version == "v2":
-            patches_dir = os.path.join(self.model.dataset_dir, "patches", "radiometric")        
-
+        # v1 dataset never has rgb frames, so this widget will only be active for v2 datasets
+        #if self.model.dataset_version == "v1":
+        #    patches_dir = os.path.join(self.model.dataset_dir, "patches_final", "radiometric")
+        #elif self.model.dataset_version == "v2":
+        patches_dir = os.path.join(self.model.dataset_dir, "patches", "radiometric")
         image_files = sorted(glob.glob(os.path.join(patches_dir, self.model.track_id, "*")))
         image_file = image_files[0]  # TODO: set based on heuristic, e.g. select patch with maximum temperature (make setting for this in preferences)
         source_frame_idx = int(re.findall(r'\d+', os.path.basename(image_file))[0])
         source_frame_file = os.path.join(
-            self.model.dataset_dir, "splitted", "radiometric", "frame_{:06d}.tiff".format(source_frame_idx))
+            self.model.dataset_dir, "splitted", "rgb", "frame_{:06d}.jpg".format(source_frame_idx))
 
         # load frame
-        source_frame = cv2.imread(source_frame_file, cv2.IMREAD_ANYDEPTH)
-        source_frame = to_celsius(source_frame, self.model.dataset_settings_model.gain, self.model.dataset_settings_model.offset)
-        source_frame = normalize(source_frame, vmin=0, vmax=30)
-        source_frame = cv2.cvtColor(source_frame, cv2.COLOR_GRAY2BGR)
+        source_frame = cv2.imread(source_frame_file, cv2.IMREAD_COLOR)
 
         # load quadrilateral of module and draw onto frame using opencv
+        # TODO: we have to determine whether dataset is RGB/IR or both
         image_file = str.split(os.path.basename(image_file), ".")[0]
         frame_name = image_file[:12]
         mask_name = image_file[13:]
