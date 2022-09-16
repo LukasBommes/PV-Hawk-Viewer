@@ -1,4 +1,5 @@
 import os
+import glob
 import json
 import csv
 import shutil
@@ -120,7 +121,8 @@ class MainView(QMainWindow):
         self.addDockWidget(Qt.LeftDockWidgetArea, self.sourceFrameWidgetIR)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.sourceFrameWidgetRGB)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.patchesWidget)
-        self.tabifyDockWidget(self.patchesWidget, self.sourceFrameWidgetIR)
+        self.tabifyDockWidget(self.patchesWidget, self.sourceFrameWidgetRGB)
+        self.tabifyDockWidget(self.sourceFrameWidgetRGB, self.sourceFrameWidgetIR)
 
         # setup status bar
         self.moduleIdLabel = QLabel()
@@ -460,6 +462,7 @@ class MainController(QObject):
         elif self.model.dataset_version == "v2":
             self.model.patch_meta = pickle.load(open(os.path.join(
                 self.model.dataset_dir, "quadrilaterals", "quadrilaterals.pkl"), "rb"))
+        self.determine_ir_or_rgb()
         self.load_dataset_settings()
         self.load_sun_reflections()
         self.update_source_names()
@@ -510,6 +513,25 @@ class MainController(QObject):
                 self.model.dataset_dir, "analyses", "Sun Filter", "sun_filter.json"), "r"))
         except FileNotFoundError:
             pass
+
+    def determine_ir_or_rgb(self):
+        if self.model.dataset_version == "v1":
+            patches_dir = os.path.join(self.model.dataset_dir, "patches_final", "radiometric")
+        elif self.model.dataset_version == "v2":
+            patches_dir = os.path.join(self.model.dataset_dir, "patches", "radiometric")
+        try:
+            first_track_id = os.listdir(patches_dir)[0]
+        except KeyError:
+            raise RuntimeError("Could not find any patches in dataset. Dataset is invalid.")
+        else:
+            is_rgb = len(glob.glob(os.path.join(patches_dir, first_track_id, "*.jpg"))) > 0
+            is_ir = len(glob.glob(os.path.join(patches_dir, first_track_id, "*.tiff"))) > 0                
+            if is_rgb and not is_ir:
+                self.model.ir_or_rgb = "rgb"
+            elif is_ir and not is_rgb:
+                self.model.ir_or_rgb = "ir"
+            else:
+                raise RuntimeError("Could not determine whether this is an IR or RGB dataset. Dataset is invalid.")
     
     @Slot()
     def load_dataset_settings(self):
@@ -793,6 +815,7 @@ class MainModel(QObject):
         self._selected_column = None
         self._track_id = None
         self._dataset_stats = None
+        self._ir_or_rgb = None
 
     @property
     def meta(self):
@@ -878,3 +901,11 @@ class MainModel(QObject):
     def sun_reflections(self, value):
         self._sun_reflections = value
         self.sun_reflections_changed.emit(value)
+
+    @property
+    def ir_or_rgb(self):
+        return self._ir_or_rgb
+
+    @ir_or_rgb.setter
+    def ir_or_rgb(self, value):
+        self._ir_or_rgb = value

@@ -124,11 +124,12 @@ class SourceFrameControllerIR(QObject):
             source_frame = cv2.applyColorMap(source_frame, colormap)
 
         # load quadrilateral of module and draw onto frame using opencv
-        image_file = str.split(os.path.basename(image_file), ".")[0]
-        frame_name = image_file[:12]
-        mask_name = image_file[13:]
-        quadrilateral = np.array(self.model.patch_meta[(self.model.track_id, frame_name, mask_name)]["quadrilateral"])
-        source_frame = cv2.polylines(source_frame, [quadrilateral], isClosed=True, color=(0, 255, 0), thickness=3)
+        if self.model.ir_or_rgb == "ir":
+            image_file = str.split(os.path.basename(image_file), ".")[0]
+            frame_name = image_file[:12]
+            mask_name = image_file[13:]
+            quadrilateral = np.array(self.model.patch_meta[(self.model.track_id, frame_name, mask_name)]["quadrilateral"])
+            source_frame = cv2.polylines(source_frame, [quadrilateral], isClosed=True, color=(0, 255, 0), thickness=3)
 
         # update source frame
         source_frame = cv2.cvtColor(source_frame, cv2.COLOR_BGR2RGB)
