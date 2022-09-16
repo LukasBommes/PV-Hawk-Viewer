@@ -1,8 +1,5 @@
 general:
-- update dataset stats in background thread otherwise it slows down opening of a new dataset
 - ensure write permission to directories are available, otherwise show error message on startup
-- provide example dataset in Readme
-- change app name in window title and about
 - show error traceback in GUI window
 - fix key error when clicking 7th module in 3rd row
 - make conversion from raw TIFF values to Celsius dynamic (encode this info somehow in the images or dataset)

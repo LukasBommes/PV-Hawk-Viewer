@@ -13,7 +13,7 @@ from ..ui.ui_source_frame import Ui_SourceFrame
 from ..utils.common import to_celsius, normalize
 
 
-class SourceFrameView(QWidget):
+class SourceFrameViewIR(QWidget):
     def __init__(self, model, controller, parent=None):
         super().__init__(parent)
         self.model = model
@@ -28,24 +28,24 @@ class SourceFrameView(QWidget):
         # connect signals and slots
         self.model.dataset_opened.connect(self.enable)
         self.model.dataset_closed.connect(self.disable)
-        self.model.track_id_changed.connect(lambda _: self.controller.source_frame_controller.update_source_frame())
+        self.model.track_id_changed.connect(lambda _: self.controller.source_frame_controller_ir.update_source_frame())
         self.ui.minTempSpinBox.editingFinished.connect(self.set_min_temp)
-        self.model.source_frame_model.min_temp_changed.connect(self.ui.minTempSpinBox.setValue)
+        self.model.source_frame_model_ir.min_temp_changed.connect(self.ui.minTempSpinBox.setValue)
         self.ui.maxTempSpinBox.editingFinished.connect(self.set_max_temp)
-        self.model.source_frame_model.max_temp_changed.connect(self.ui.maxTempSpinBox.setValue)
-        self.ui.colormapComboBox.currentIndexChanged.connect(lambda value: setattr(self.model.source_frame_model, 'colormap', value))
-        self.model.source_frame_model.colormap_changed.connect(self.ui.colormapComboBox.setCurrentIndex)
-        self.model.source_frame_model.min_temp_changed.connect(lambda _: self.controller.source_frame_controller.update_source_frame())
-        self.model.source_frame_model.max_temp_changed.connect(lambda _: self.controller.source_frame_controller.update_source_frame())
-        self.model.source_frame_model.colormap_changed.connect(lambda _: self.controller.source_frame_controller.update_source_frame())
-        self.model.source_frame_model.frame_changed.connect(self.update_source_frame_label)
-        self.controller.source_deleted.connect(lambda: setattr(self.model.source_frame_model, 'frame', None))
+        self.model.source_frame_model_ir.max_temp_changed.connect(self.ui.maxTempSpinBox.setValue)
+        self.ui.colormapComboBox.currentIndexChanged.connect(lambda value: setattr(self.model.source_frame_model_ir, 'colormap', value))
+        self.model.source_frame_model_ir.colormap_changed.connect(self.ui.colormapComboBox.setCurrentIndex)
+        self.model.source_frame_model_ir.min_temp_changed.connect(lambda _: self.controller.source_frame_controller_ir.update_source_frame())
+        self.model.source_frame_model_ir.max_temp_changed.connect(lambda _: self.controller.source_frame_controller_ir.update_source_frame())
+        self.model.source_frame_model_ir.colormap_changed.connect(lambda _: self.controller.source_frame_controller_ir.update_source_frame())
+        self.model.source_frame_model_ir.frame_changed.connect(self.update_source_frame_label)
+        self.controller.source_deleted.connect(lambda: setattr(self.model.source_frame_model_ir, 'frame', None))
 
         # set default values
-        self.model.source_frame_model.min_temp = 30
-        self.model.source_frame_model.max_temp = 50
-        self.model.source_frame_model.colormap = 0
-        self.model.source_frame_model.frame = None
+        self.model.source_frame_model_ir.min_temp = 30
+        self.model.source_frame_model_ir.max_temp = 50
+        self.model.source_frame_model_ir.colormap = 0
+        self.model.source_frame_model_ir.frame = None
 
     @Slot(object)
     def update_source_frame_label(self, frame):
@@ -54,7 +54,7 @@ class SourceFrameView(QWidget):
         self.ui.sourceFrameLabel.setPixmap(frame.scaled(w, h, Qt.KeepAspectRatio))
 
     def resizeEvent(self, event):
-        self.update_source_frame_label(self.model.source_frame_model.frame)
+        self.update_source_frame_label(self.model.source_frame_model_ir.frame)
 
     def disable(self):
         self.ui.minTempSpinBox.setEnabled(False)
@@ -69,22 +69,22 @@ class SourceFrameView(QWidget):
     @Slot()
     def set_min_temp(self):
         value = self.ui.minTempSpinBox.value()
-        if value < self.model.source_frame_model.max_temp:
-            self.model.source_frame_model.min_temp = value
+        if value < self.model.source_frame_model_ir.max_temp:
+            self.model.source_frame_model_ir.min_temp = value
         else:
-            self.ui.minTempSpinBox.setValue(self.model.source_frame_model.min_temp)
+            self.ui.minTempSpinBox.setValue(self.model.source_frame_model_ir.min_temp)
 
     @Slot()
     def set_max_temp(self):
         value = self.ui.maxTempSpinBox.value()
-        if value > self.model.source_frame_model.min_temp:
-            self.model.source_frame_model.max_temp = value
+        if value > self.model.source_frame_model_ir.min_temp:
+            self.model.source_frame_model_ir.max_temp = value
         else:
-            self.ui.maxTempSpinBox.setValue(self.model.source_frame_model.min_temp)
+            self.ui.maxTempSpinBox.setValue(self.model.source_frame_model_ir.min_temp)
 
 
 
-class SourceFrameController(QObject):
+class SourceFrameControllerIR(QObject):
     def __init__(self, model):
         super().__init__()
         self.model = model
@@ -92,11 +92,11 @@ class SourceFrameController(QObject):
     @Slot()
     def update_source_frame(self):
         if not self.model.dataset_is_open:
-            self.model.source_frame_model.frame = None
+            self.model.source_frame_model_ir.frame = None
             return None
 
         if self.model.track_id is None:
-            self.model.source_frame_model.frame = None
+            self.model.source_frame_model_ir.frame = None
             return None
 
         if self.model.dataset_version == "v1":
@@ -113,14 +113,14 @@ class SourceFrameController(QObject):
         # load frame
         source_frame = cv2.imread(source_frame_file, cv2.IMREAD_ANYDEPTH)
         source_frame = to_celsius(source_frame, self.model.dataset_settings_model.gain, self.model.dataset_settings_model.offset)
-        source_frame = normalize(source_frame, vmin=self.model.source_frame_model.min_temp, vmax=self.model.source_frame_model.max_temp)
+        source_frame = normalize(source_frame, vmin=self.model.source_frame_model_ir.min_temp, vmax=self.model.source_frame_model_ir.max_temp)
         source_frame = cv2.cvtColor(source_frame, cv2.COLOR_GRAY2BGR)
-        if self.model.source_frame_model.colormap > 0:
+        if self.model.source_frame_model_ir.colormap > 0:
             colormaps = {
                 1: cv2.COLORMAP_PLASMA,
                 2: cv2.COLORMAP_JET
             }
-            colormap = colormaps[self.model.source_frame_model.colormap]
+            colormap = colormaps[self.model.source_frame_model_ir.colormap]
             source_frame = cv2.applyColorMap(source_frame, colormap)
 
         # load quadrilateral of module and draw onto frame using opencv
@@ -137,11 +137,11 @@ class SourceFrameController(QObject):
         qt_source_frame = QImage(
             source_frame.data, width, height, bytesPerLine, QImage.Format_RGB888)
 
-        self.model.source_frame_model.frame = QPixmap(qt_source_frame)
+        self.model.source_frame_model_ir.frame = QPixmap(qt_source_frame)
 
 
 
-class SourceFrameModel(QObject):
+class SourceFrameModelIR(QObject):
     min_temp_changed = Signal(int)
     max_temp_changed = Signal(int)
     colormap_changed = Signal(int)

@@ -20,7 +20,8 @@ from .map import MapView, ColorbarView, DataColumnSelectionView, \
     DataRangeView, ColormapSelectionView, LayerSelectionView
 from .annotation_editor import AnnotationEditorView
 from .data_sources import DataSourcesView
-from .source_frame import SourceFrameView
+from .source_frame_ir import SourceFrameViewIR
+from .source_frame_rgb import SourceFrameViewRGB
 from .patches import PatchesView
 from .analysis import AnalysisView
 from .analysis_details import AnalysisDetailsView
@@ -97,9 +98,13 @@ class MainView(QMainWindow):
         self.string_editor = StringEditorView(self.model, self.controller, parent=self)
         self.stringEditorWidget.setWidget(self.string_editor)
 
-        self.sourceFrameWidget = QDockWidget(u"Source Frame", self)
-        self.source_frame = SourceFrameView(self.model, self.controller, parent=self)
-        self.sourceFrameWidget.setWidget(self.source_frame)
+        self.sourceFrameWidgetIR = QDockWidget(u"Source Frame (IR)", self)
+        self.source_frame_ir = SourceFrameViewIR(self.model, self.controller, parent=self)
+        self.sourceFrameWidgetIR.setWidget(self.source_frame_ir)
+
+        self.sourceFrameWidgetRGB = QDockWidget(u"Source Frame (RGB)", self)
+        self.source_frame_rgb = SourceFrameViewRGB(self.model, self.controller, parent=self)
+        self.sourceFrameWidgetRGB.setWidget(self.source_frame_rgb)
 
         self.patchesWidget = QDockWidget(u"Patches", self)
         self.patches = PatchesView(self.model, self.controller, parent=self)
@@ -112,9 +117,10 @@ class MainView(QMainWindow):
         self.addDockWidget(Qt.LeftDockWidgetArea, self.stringEditorWidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.dataSourcesWidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.annotationEditorWidget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.sourceFrameWidget)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.sourceFrameWidgetIR)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.sourceFrameWidgetRGB)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.patchesWidget)
-        self.tabifyDockWidget(self.patchesWidget, self.sourceFrameWidget)
+        self.tabifyDockWidget(self.patchesWidget, self.sourceFrameWidgetIR)
 
         # setup status bar
         self.moduleIdLabel = QLabel()
@@ -144,7 +150,8 @@ class MainView(QMainWindow):
         self.ui.menuView.addAction(self.dataSourcesWidget.toggleViewAction())
         self.ui.menuView.addAction(self.stringEditorWidget.toggleViewAction())
         self.ui.menuView.addAction(self.annotationEditorWidget.toggleViewAction())
-        self.ui.menuView.addAction(self.sourceFrameWidget.toggleViewAction())
+        self.ui.menuView.addAction(self.sourceFrameWidgetIR.toggleViewAction())
+        self.ui.menuView.addAction(self.sourceFrameWidgetRGB.toggleViewAction())
         self.ui.menuView.addAction(self.patchesWidget.toggleViewAction())
         self.toolbar_view_menu = QMenu(u"Toolbars")
         self.toolbar_view_menu.addAction(self.toolBarDataColumnSelection.toggleViewAction())

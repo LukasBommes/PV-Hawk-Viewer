@@ -5,7 +5,8 @@ def main():
 
     from .components.mainwindow import MainController, MainView, MainModel
     from .components.analysis import AnalysisController, AnalysisModel
-    from .components.source_frame import SourceFrameController, SourceFrameModel
+    from .components.source_frame_ir import SourceFrameControllerIR, SourceFrameModelIR
+    from .components.source_frame_rgb import SourceFrameControllerRGB, SourceFrameModelRGB
     from .components.patches import PatchesController, PatchesModel
     from .components.map import MapModel
     from .components.annotation_editor import AnnotationEditorController, AnnotationEditorModel
@@ -20,7 +21,8 @@ def main():
 
             # models
             self.main_model = MainModel()
-            self.main_model.source_frame_model = SourceFrameModel()
+            self.main_model.source_frame_model_ir = SourceFrameModelIR()
+            self.main_model.source_frame_model_rgb = SourceFrameModelRGB()
             self.main_model.patches_model = PatchesModel()
             self.main_model.analysis_model = AnalysisModel()
             self.main_model.map_model = MapModel()
@@ -30,7 +32,8 @@ def main():
 
             # controllers
             self.main_controller = MainController(self.main_model)
-            self.main_controller.source_frame_controller = SourceFrameController(self.main_model)
+            self.main_controller.source_frame_controller_ir = SourceFrameControllerIR(self.main_model)
+            self.main_controller.source_frame_controller_rgb = SourceFrameControllerRGB(self.main_model)
             self.main_controller.patches_controller = PatchesController(self.main_model)
             self.main_controller.analysis_controller = AnalysisController(self.main_model)
             self.main_controller.annotation_editor_controller = AnnotationEditorController(self.main_model)

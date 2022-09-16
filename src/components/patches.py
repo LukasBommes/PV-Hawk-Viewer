@@ -24,9 +24,9 @@ class PatchesView(QWidget):
         # connect signals and slots
         self.model.track_id_changed.connect(lambda _: self.controller.patches_controller.update_patches())
         self.model.patches_model.patches_changed.connect(self.update_patches_labels)
-        self.model.source_frame_model.min_temp_changed.connect(lambda _: self.controller.patches_controller.update_patches())
-        self.model.source_frame_model.max_temp_changed.connect(lambda _: self.controller.patches_controller.update_patches())
-        self.model.source_frame_model.colormap_changed.connect(lambda _: self.controller.patches_controller.update_patches())
+        self.model.source_frame_model_ir.min_temp_changed.connect(lambda _: self.controller.patches_controller.update_patches())
+        self.model.source_frame_model_ir.max_temp_changed.connect(lambda _: self.controller.patches_controller.update_patches())
+        self.model.source_frame_model_ir.colormap_changed.connect(lambda _: self.controller.patches_controller.update_patches())
         self.controller.source_deleted.connect(lambda: setattr(self.model.patches_model, 'patches', None))
         self.model.sun_reflections_changed.connect(self.controller.patches_controller.update_patches)
 
@@ -144,14 +144,14 @@ class PatchesController(QObject):
                 patch_name = os.path.splitext(os.path.basename(image_file))[0]
                 stats["sun_reflection"] = (patch_name in self.model.sun_reflections[track_id])
 
-            image = normalize(image, vmin=self.model.source_frame_model.min_temp, vmax=self.model.source_frame_model.max_temp)
+            image = normalize(image, vmin=self.model.source_frame_model_ir.min_temp, vmax=self.model.source_frame_model_ir.max_temp)
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-            if self.model.source_frame_model.colormap > 0:
+            if self.model.source_frame_model_ir.colormap > 0:
                 colormaps = {
                     1: cv2.COLORMAP_PLASMA,
                     2: cv2.COLORMAP_JET
                 }
-                colormap = colormaps[self.model.source_frame_model.colormap]
+                colormap = colormaps[self.model.source_frame_model_ir.colormap]
                 image = cv2.applyColorMap(image, colormap)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             images.append(image)
