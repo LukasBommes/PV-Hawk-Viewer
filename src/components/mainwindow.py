@@ -1,4 +1,5 @@
 import os
+import glob
 import json
 import csv
 import shutil
@@ -20,7 +21,8 @@ from .map import MapView, ColorbarView, DataColumnSelectionView, \
     DataRangeView, ColormapSelectionView, LayerSelectionView
 from .annotation_editor import AnnotationEditorView
 from .data_sources import DataSourcesView
-from .source_frame import SourceFrameView
+from .source_frame_ir import SourceFrameViewIR
+from .source_frame_rgb import SourceFrameViewRGB
 from .patches import PatchesView
 from .analysis import AnalysisView
 from .analysis_details import AnalysisDetailsView
@@ -97,9 +99,13 @@ class MainView(QMainWindow):
         self.string_editor = StringEditorView(self.model, self.controller, parent=self)
         self.stringEditorWidget.setWidget(self.string_editor)
 
-        self.sourceFrameWidget = QDockWidget(u"Source Frame", self)
-        self.source_frame = SourceFrameView(self.model, self.controller, parent=self)
-        self.sourceFrameWidget.setWidget(self.source_frame)
+        self.sourceFrameWidgetIR = QDockWidget(u"Source Frame (IR)", self)
+        self.source_frame_ir = SourceFrameViewIR(self.model, self.controller, parent=self)
+        self.sourceFrameWidgetIR.setWidget(self.source_frame_ir)
+
+        self.sourceFrameWidgetRGB = QDockWidget(u"Source Frame (RGB)", self)
+        self.source_frame_rgb = SourceFrameViewRGB(self.model, self.controller, parent=self)
+        self.sourceFrameWidgetRGB.setWidget(self.source_frame_rgb)
 
         self.patchesWidget = QDockWidget(u"Patches", self)
         self.patches = PatchesView(self.model, self.controller, parent=self)
@@ -112,9 +118,11 @@ class MainView(QMainWindow):
         self.addDockWidget(Qt.LeftDockWidgetArea, self.stringEditorWidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.dataSourcesWidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.annotationEditorWidget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.sourceFrameWidget)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.sourceFrameWidgetIR)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.sourceFrameWidgetRGB)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.patchesWidget)
-        self.tabifyDockWidget(self.patchesWidget, self.sourceFrameWidget)
+        self.tabifyDockWidget(self.patchesWidget, self.sourceFrameWidgetRGB)
+        self.tabifyDockWidget(self.sourceFrameWidgetRGB, self.sourceFrameWidgetIR)
 
         # setup status bar
         self.moduleIdLabel = QLabel()
@@ -144,7 +152,8 @@ class MainView(QMainWindow):
         self.ui.menuView.addAction(self.dataSourcesWidget.toggleViewAction())
         self.ui.menuView.addAction(self.stringEditorWidget.toggleViewAction())
         self.ui.menuView.addAction(self.annotationEditorWidget.toggleViewAction())
-        self.ui.menuView.addAction(self.sourceFrameWidget.toggleViewAction())
+        self.ui.menuView.addAction(self.sourceFrameWidgetIR.toggleViewAction())
+        self.ui.menuView.addAction(self.sourceFrameWidgetRGB.toggleViewAction())
         self.ui.menuView.addAction(self.patchesWidget.toggleViewAction())
         self.toolbar_view_menu = QMenu(u"Toolbars")
         self.toolbar_view_menu.addAction(self.toolBarDataColumnSelection.toggleViewAction())
@@ -453,6 +462,7 @@ class MainController(QObject):
         elif self.model.dataset_version == "v2":
             self.model.patch_meta = pickle.load(open(os.path.join(
                 self.model.dataset_dir, "quadrilaterals", "quadrilaterals.pkl"), "rb"))
+        self.determine_ir_or_rgb()
         self.load_dataset_settings()
         self.load_sun_reflections()
         self.update_source_names()
@@ -503,6 +513,31 @@ class MainController(QObject):
                 self.model.dataset_dir, "analyses", "Sun Filter", "sun_filter.json"), "r"))
         except FileNotFoundError:
             pass
+
+    def determine_ir_or_rgb(self):
+        if self.model.dataset_version == "v1":
+            patches_dir = os.path.join(self.model.dataset_dir, "patches_final", "radiometric")
+            self.model.ir_or_rgb = "ir"
+            self.model._has_ir_source_frames = True
+            self.model._has_rgb_source_frames = False
+            return
+        elif self.model.dataset_version == "v2":
+            patches_dir = os.path.join(self.model.dataset_dir, "patches", "radiometric")
+            self.model._has_ir_source_frames = os.path.isdir(os.path.join(self.model.dataset_dir, "splitted", "radiometric"))
+            self.model._has_rgb_source_frames = os.path.isdir(os.path.join(self.model.dataset_dir, "splitted", "rgb"))
+        try:
+            first_track_id = os.listdir(patches_dir)[0]
+        except KeyError:
+            raise RuntimeError("Could not find any patches in dataset. Dataset is invalid.")
+        else:
+            is_rgb = len(glob.glob(os.path.join(patches_dir, first_track_id, "*.jpg"))) > 0
+            is_ir = len(glob.glob(os.path.join(patches_dir, first_track_id, "*.tiff"))) > 0     
+            if is_rgb and not is_ir:
+                self.model.ir_or_rgb = "rgb"
+            elif is_ir and not is_rgb:
+                self.model.ir_or_rgb = "ir"
+            else:
+                raise RuntimeError("Could not determine whether this is an IR or RGB dataset. Dataset is invalid.")
     
     @Slot()
     def load_dataset_settings(self):
@@ -786,6 +821,9 @@ class MainModel(QObject):
         self._selected_column = None
         self._track_id = None
         self._dataset_stats = None
+        self._ir_or_rgb = None
+        self._has_ir_source_frames = None
+        self._has_rgb_source_frames = None
 
     @property
     def meta(self):
@@ -871,3 +909,27 @@ class MainModel(QObject):
     def sun_reflections(self, value):
         self._sun_reflections = value
         self.sun_reflections_changed.emit(value)
+
+    @property
+    def ir_or_rgb(self):
+        return self._ir_or_rgb
+
+    @ir_or_rgb.setter
+    def ir_or_rgb(self, value):
+        self._ir_or_rgb = value
+
+    @property
+    def has_ir_source_frames(self):
+        return self._has_ir_source_frames
+
+    @has_ir_source_frames.setter
+    def has_ir_source_frames(self, value):
+        self._has_ir_source_frames = value
+
+    @property
+    def has_rgb_source_frames(self):
+        return self._has_rgb_source_frames
+
+    @has_rgb_source_frames.setter
+    def has_rgb_source_frames(self, value):
+        self._has_rgb_source_frames = value

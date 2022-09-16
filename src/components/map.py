@@ -353,7 +353,8 @@ class MapModel(QObject):
         self._min_val = None
         self._max_val = None
         self._colormap = None
-        self._colormaps = sorted(plt.colormaps(), key=lambda x: str.lower(x))
+        colormaps = sorted(plt.colormaps(), key=lambda x: str.lower(x))
+        self._colormaps = [c for c in colormaps if c[-2:] != "_r"]
         self._show_strings = None
     
     @property

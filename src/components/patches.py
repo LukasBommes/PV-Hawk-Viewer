@@ -24,9 +24,9 @@ class PatchesView(QWidget):
         # connect signals and slots
         self.model.track_id_changed.connect(lambda _: self.controller.patches_controller.update_patches())
         self.model.patches_model.patches_changed.connect(self.update_patches_labels)
-        self.model.source_frame_model.min_temp_changed.connect(lambda _: self.controller.patches_controller.update_patches())
-        self.model.source_frame_model.max_temp_changed.connect(lambda _: self.controller.patches_controller.update_patches())
-        self.model.source_frame_model.colormap_changed.connect(lambda _: self.controller.patches_controller.update_patches())
+        self.model.source_frame_model_ir.min_temp_changed.connect(lambda _: self.controller.patches_controller.update_patches())
+        self.model.source_frame_model_ir.max_temp_changed.connect(lambda _: self.controller.patches_controller.update_patches())
+        self.model.source_frame_model_ir.colormap_changed.connect(lambda _: self.controller.patches_controller.update_patches())
         self.controller.source_deleted.connect(lambda: setattr(self.model.patches_model, 'patches', None))
         self.model.sun_reflections_changed.connect(self.controller.patches_controller.update_patches)
 
@@ -80,25 +80,31 @@ class PatchesView(QWidget):
             label = QLabel(self)
             patch = patch.scaled(display_width, display_height)
 
-            tooltip = ("Mean Temp: {:0.2f} °C<br>".format(stats["mean_temp"]) + 
-                "Max Temp: {:0.2f} °C<br>".format(stats["max_temp"]) +
-                "Size: {} x {} px<br>".format(*stats["shape"]))
+            if self.model.ir_or_rgb == "ir":
+                tooltip = ("Mean Temp: {:0.2f} °C<br>".format(stats["mean_temp"]) + 
+                    "Max Temp: {:0.2f} °C<br>".format(stats["max_temp"]) +
+                    "Size: {} x {} px<br>".format(*stats["shape"]))
 
-            if "sun_reflection" in stats:
-                if stats["sun_reflection"]:
-                    tooltip += "Sun Reflection: yes"
-                    has_sun_reflection_icon = QPixmap(pkg_resources.resource_filename("src.resources", "sun_icon.png"))
+                if "sun_reflection" in stats:
+                    if stats["sun_reflection"]:
+                        tooltip += "Sun Reflection: yes"
+                        has_sun_reflection_icon = QPixmap(pkg_resources.resource_filename("src.resources", "sun_icon.png"))
+                    else:
+                        tooltip += "Sun Reflection: no"
+                        has_sun_reflection_icon = QPixmap(pkg_resources.resource_filename("src.resources", "no_sun_icon.png"))
+
+                    # draw sun icon to indicate whether patch has sun reflection
+                    has_sun_reflection_icon = has_sun_reflection_icon.scaled(16, 16)
+                    patch = self.overlay_pixmaps(patch, has_sun_reflection_icon)
                 else:
-                    tooltip += "Sun Reflection: no"
-                    has_sun_reflection_icon = QPixmap(pkg_resources.resource_filename("src.resources", "no_sun_icon.png"))
-
-                # draw sun icon to indicate whether patch has sun reflection
-                has_sun_reflection_icon = has_sun_reflection_icon.scaled(16, 16)
-                label.setPixmap(self.overlay_pixmaps(patch, has_sun_reflection_icon))
+                    tooltip += "Sun Reflection: n.A."
+                    
+            elif self.model.ir_or_rgb == "rgb":
+                tooltip = ("Size: {} x {} px".format(*stats["shape"]))
             else:
-                tooltip += "Sun Reflection: n.A."
-                label.setPixmap(patch)
+                raise RuntimeError("Unknown whether this is an IR or RGB dataset.")
 
+            label.setPixmap(patch)
             label.setToolTip(tooltip)
             self.inner.layout().addWidget(label)
 
@@ -131,29 +137,41 @@ class PatchesController(QObject):
         images = []
         statistics = []
         for image_file in image_files:
-            image = cv2.imread(image_file, cv2.IMREAD_ANYDEPTH)
-            image = to_celsius(image, self.model.dataset_settings_model.gain, self.model.dataset_settings_model.offset)
-            image_cropped = truncate_patch(image, margin=0.05)
-            stats = {
-                "max_temp": image_cropped.max(),
-                "mean_temp": image_cropped.mean(),
-                "shape": image.shape[:2]
-            }
-
-            if self.model.sun_reflections is not None:
-                patch_name = os.path.splitext(os.path.basename(image_file))[0]
-                stats["sun_reflection"] = (patch_name in self.model.sun_reflections[track_id])
-
-            image = normalize(image, vmin=self.model.source_frame_model.min_temp, vmax=self.model.source_frame_model.max_temp)
-            image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-            if self.model.source_frame_model.colormap > 0:
-                colormaps = {
-                    1: cv2.COLORMAP_PLASMA,
-                    2: cv2.COLORMAP_JET
+            if self.model.ir_or_rgb == "ir":
+                image = cv2.imread(image_file, cv2.IMREAD_ANYDEPTH)
+                image = to_celsius(image, self.model.dataset_settings_model.gain, self.model.dataset_settings_model.offset)
+                image_cropped = truncate_patch(image, margin=0.05)
+                stats = {
+                    "max_temp": image_cropped.max(),
+                    "mean_temp": image_cropped.mean(),
+                    "shape": image.shape[:2]
                 }
-                colormap = colormaps[self.model.source_frame_model.colormap]
-                image = cv2.applyColorMap(image, colormap)
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+                if self.model.sun_reflections is not None:
+                    patch_name = os.path.splitext(os.path.basename(image_file))[0]
+                    stats["sun_reflection"] = (patch_name in self.model.sun_reflections[track_id])
+
+                image = normalize(image, vmin=self.model.source_frame_model_ir.min_temp, vmax=self.model.source_frame_model_ir.max_temp)
+                image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                if self.model.source_frame_model_ir.colormap > 0:
+                    colormaps = {
+                        1: cv2.COLORMAP_PLASMA,
+                        2: cv2.COLORMAP_JET
+                    }
+                    colormap = colormaps[self.model.source_frame_model_ir.colormap]
+                    image = cv2.applyColorMap(image, colormap)
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+            elif self.model.ir_or_rgb == "rgb":
+                image = cv2.imread(image_file, cv2.IMREAD_COLOR)
+                stats = {
+                    "shape": image.shape[:2]
+                }
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+            else:
+                raise RuntimeError("Unknown whether this is an IR or RGB dataset.")
+
             images.append(image)
             statistics.append(stats)
         
