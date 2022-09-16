@@ -517,15 +517,21 @@ class MainController(QObject):
     def determine_ir_or_rgb(self):
         if self.model.dataset_version == "v1":
             patches_dir = os.path.join(self.model.dataset_dir, "patches_final", "radiometric")
+            self.model.ir_or_rgb = "ir"
+            self.model._has_ir_source_frames = True
+            self.model._has_rgb_source_frames = False
+            return
         elif self.model.dataset_version == "v2":
             patches_dir = os.path.join(self.model.dataset_dir, "patches", "radiometric")
+            self.model._has_ir_source_frames = os.path.isdir(os.path.join(self.model.dataset_dir, "splitted", "radiometric"))
+            self.model._has_rgb_source_frames = os.path.isdir(os.path.join(self.model.dataset_dir, "splitted", "rgb"))
         try:
             first_track_id = os.listdir(patches_dir)[0]
         except KeyError:
             raise RuntimeError("Could not find any patches in dataset. Dataset is invalid.")
         else:
             is_rgb = len(glob.glob(os.path.join(patches_dir, first_track_id, "*.jpg"))) > 0
-            is_ir = len(glob.glob(os.path.join(patches_dir, first_track_id, "*.tiff"))) > 0                
+            is_ir = len(glob.glob(os.path.join(patches_dir, first_track_id, "*.tiff"))) > 0     
             if is_rgb and not is_ir:
                 self.model.ir_or_rgb = "rgb"
             elif is_ir and not is_rgb:
@@ -816,6 +822,8 @@ class MainModel(QObject):
         self._track_id = None
         self._dataset_stats = None
         self._ir_or_rgb = None
+        self._has_ir_source_frames = None
+        self._has_rgb_source_frames = None
 
     @property
     def meta(self):
@@ -909,3 +917,19 @@ class MainModel(QObject):
     @ir_or_rgb.setter
     def ir_or_rgb(self, value):
         self._ir_or_rgb = value
+
+    @property
+    def has_ir_source_frames(self):
+        return self._has_ir_source_frames
+
+    @has_ir_source_frames.setter
+    def has_ir_source_frames(self, value):
+        self._has_ir_source_frames = value
+
+    @property
+    def has_rgb_source_frames(self):
+        return self._has_rgb_source_frames
+
+    @has_rgb_source_frames.setter
+    def has_rgb_source_frames(self, value):
+        self._has_rgb_source_frames = value

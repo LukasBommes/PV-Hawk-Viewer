@@ -66,10 +66,10 @@ class SourceFrameControllerRGB(QObject):
             self.model.source_frame_model_rgb.frame = None
             return None
 
+        if not self.model._has_rgb_source_frames:
+            return None
+
         # v1 dataset never has rgb frames, so this widget will only be active for v2 datasets
-        #if self.model.dataset_version == "v1":
-        #    patches_dir = os.path.join(self.model.dataset_dir, "patches_final", "radiometric")
-        #elif self.model.dataset_version == "v2":
         patches_dir = os.path.join(self.model.dataset_dir, "patches", "radiometric")
         image_files = sorted(glob.glob(os.path.join(patches_dir, self.model.track_id, "*")))
         image_file = image_files[0]  # TODO: set based on heuristic, e.g. select patch with maximum temperature (make setting for this in preferences)

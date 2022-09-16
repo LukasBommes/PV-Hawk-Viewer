@@ -99,6 +99,9 @@ class SourceFrameControllerIR(QObject):
             self.model.source_frame_model_ir.frame = None
             return None
 
+        if not self.model._has_ir_source_frames:
+            return None
+
         if self.model.dataset_version == "v1":
             patches_dir = os.path.join(self.model.dataset_dir, "patches_final", "radiometric")
         elif self.model.dataset_version == "v2":
