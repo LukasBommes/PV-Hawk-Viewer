@@ -10,7 +10,7 @@ setup(
     name="PV-Hawk-Viewer",
     maintainer="Lukas Bommes",
     url='https://github.com/LukasBommes/PV-Hawk-Viewer',
-    version="1.0.2", 
+    version="1.1.0", 
     packages=find_packages(),   
     package_dir={name: name},    
     include_package_data=True,
