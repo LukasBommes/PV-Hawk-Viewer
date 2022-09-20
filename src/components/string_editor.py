@@ -207,9 +207,9 @@ class StringEditorController(QObject):
 
         # check if a string with this id exists already
         string_id = "{}_{}_{}_{}".format(
+            self.model.string_editor_model.inverter_id,
             self.model.string_editor_model.tracker_id,
             self.model.string_editor_model.array_id,
-            self.model.string_editor_model.inverter_id,
             self.model.string_editor_model.string_id,
         )
         if ((self.model.string_editor_model.string_annotation_data is not None) and
@@ -315,9 +315,9 @@ class StringEditorController(QObject):
             points = temporary_string_data["points"]
             paused = temporary_string_data["paused"]
             string_id = "{}_{}_{}_{}".format(
-                self.model.string_editor_model.tracker_id,
-                self.model.string_editor_model.array_id,
                 self.model.string_editor_model.inverter_id,
+                self.model.string_editor_model.tracker_id,
+                self.model.string_editor_model.array_id,                
                 self.model.string_editor_model.string_id,
             )
 
